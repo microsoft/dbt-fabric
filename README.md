@@ -31,16 +31,10 @@ sudo apt-get install -y unixodbc-dev
 </p>
 </details>
 
-Latest version: ![PyPI](https://img.shields.io/pypi/v/dbt-fabric?label=latest%20stable&logo=pypi): TODO
+Latest version: ![PyPI](https://img.shields.io/pypi/v/dbt-fabric?label=latest&logo=pypi)
 
 ```shell
 pip install -U dbt-fabric
-```
-
-Latest pre-release: ![GitHub tag (latest SemVer pre-release)](https://img.shields.io/github/v/tag/microsoft/dbt-fabric?include_prereleases&label=latest%20pre-release&logo=pypi): TODO
-
-```shell
-pip install -U --pre dbt-fabric
 ```
 
 ## Changelog
