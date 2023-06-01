@@ -15,65 +15,69 @@ from dbt.tests.adapter.basic.test_snapshot_timestamp import BaseSnapshotTimestam
 from dbt.tests.adapter.basic.test_validate_connection import BaseValidateConnection
 
 
-class TestSimpleMaterializationsSQLServer(BaseSimpleMaterializations):
+# Need help, assertions are failing
+class TestSimpleMaterializationsFabric(BaseSimpleMaterializations):
     pass
 
 
-class TestSingularTestsSQLServer(BaseSingularTests):
+@pytest.mark.skip(reason="CTAS is not supported without a table.")
+class TestSingularTestsFabric(BaseSingularTests):
     pass
 
 
 @pytest.mark.skip(reason="ephemeral not supported")
-class TestSingularTestsEphemeralSQLServer(BaseSingularTestsEphemeral):
+class TestSingularTestsEphemeralFabric(BaseSingularTestsEphemeral):
     pass
 
 
-class TestEmptySQLServer(BaseEmpty):
+class TestEmptyFabric(BaseEmpty):
     pass
 
 
-class TestEphemeralSQLServer(BaseEphemeral):
+class TestEphemeralFabric(BaseEphemeral):
     pass
 
 
-class TestIncrementalSQLServer(BaseIncremental):
+class TestIncrementalFabric(BaseIncremental):
     pass
 
 
-class TestIncrementalNotSchemaChangeSQLServer(BaseIncrementalNotSchemaChange):
+# Modified incremental_not_schema_change.sql file to handle DATETIME compatibility issues.
+@pytest.mark.skip(reason="CTAS is not supported without a table.")
+class TestIncrementalNotSchemaChangeFabric(BaseIncrementalNotSchemaChange):
     @pytest.fixture(scope="class")
     def models(self):
-        incremental_not_schema_change_sql = """
-{{ config(
-    materialized="incremental",
-    unique_key="user_id_current_time",
-    on_schema_change="sync_all_columns") }}
+        return {
+            "incremental_not_schema_change.sql": """
+{{ config(materialized="incremental",
+unique_key="user_id_current_time",on_schema_change="sync_all_columns") }}
 select
-    1 + '-' + current_timestamp as user_id_current_time,
-    {% if is_incremental() %}
-        'thisis18characters' as platform
-    {% else %}
-        'okthisis20characters' as platform
-    {% endif %}
-            """
-        return {"incremental_not_schema_change.sql": incremental_not_schema_change_sql}
+CAST(1 + '-' + current_timestamp AS DATETIME2(6)) as user_id_current_time,
+{% if is_incremental() %}
+'thisis18characters' as platform
+{% else %}
+'okthisis20characters' as platform
+{% endif %}
+"""
+        }
 
 
-class TestGenericTestsSQLServer(BaseGenericTests):
+class TestGenericTestsFabric(BaseGenericTests):
     pass
 
 
-class TestSnapshotCheckColsSQLServer(BaseSnapshotCheckCols):
+class TestSnapshotCheckColsFabric(BaseSnapshotCheckCols):
     pass
 
 
-class TestSnapshotTimestampSQLServer(BaseSnapshotTimestamp):
+class TestSnapshotTimestampFabric(BaseSnapshotTimestamp):
     pass
 
 
-class TestBaseCachingSQLServer(BaseAdapterMethod):
+# Assertion Failed.
+class TestBaseCachingFabric(BaseAdapterMethod):
     pass
 
 
-class TestValidateConnectionSQLServer(BaseValidateConnection):
+class TestValidateConnectionFabric(BaseValidateConnection):
     pass

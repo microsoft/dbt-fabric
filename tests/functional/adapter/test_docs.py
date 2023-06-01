@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from dbt.tests.adapter.basic.expected_catalog import (
     base_expected_catalog,
@@ -14,30 +16,42 @@ from dbt.tests.adapter.basic.test_docs_generate import (
 )
 
 
-class TestDocsGenerateSQLServer(BaseDocsGenerate):
+# Assertion Failures
+class TestDocsGenerateFabric(BaseDocsGenerate):
+    @staticmethod
+    @pytest.fixture(scope="class")
+    def dbt_profile_target_update():
+        return {"schema_authorization": "{{ env_var('DBT_TEST_USER_1') }}"}
+
     @pytest.fixture(scope="class")
     def expected_catalog(self, project):
         return base_expected_catalog(
             project,
-            role="dbo",
+            role=os.getenv("DBT_TEST_USER_1"),
             id_type="int",
             text_type="varchar",
-            time_type="datetime",
+            time_type="datetime2",
             view_type="VIEW",
             table_type="BASE TABLE",
             model_stats=no_stats(),
         )
 
 
-class TestDocsGenReferencesSQLServer(BaseDocsGenReferences):
+# SQl errors
+class TestDocsGenReferencesFabric(BaseDocsGenReferences):
+    @staticmethod
+    @pytest.fixture(scope="class")
+    def dbt_profile_target_update():
+        return {"schema_authorization": "{{ env_var('DBT_TEST_USER_1') }}"}
+
     @pytest.fixture(scope="class")
     def expected_catalog(self, project):
         return expected_references_catalog(
             project,
-            role="dbo",
+            role=os.getenv("DBT_TEST_USER_1"),
             id_type="int",
             text_type="varchar",
-            time_type="datetime",
+            time_type="datetime2",
             bigint_type="int",
             view_type="VIEW",
             table_type="BASE TABLE",
