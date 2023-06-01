@@ -9,8 +9,8 @@ E.g. version 1.1.x of the adapter will be compatible with dbt-core 1.1.x.
 
 We've bundled all documentation on the dbt docs site:
 TODO
-* [Profile setup & authentication](https://docs.getdbt.com/reference/warehouse-profiles/mssql-profile)
-* [Adapter documentation, usage and important notes](https://docs.getdbt.com/reference/resource-configs/mssql-configs)
+* [Profile setup & authentication](https://docs-getdbt-com.netlify.app/reference/warehouse-setups/fabric-setup)
+* [Adapter documentation, usage and important notes](https://docs-getdbt-com.netlify.app/reference/resource-configs/fabric-configs)
 
 ## Installation
 
