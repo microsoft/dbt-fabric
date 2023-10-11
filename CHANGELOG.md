@@ -1,5 +1,10 @@
 # Changelog
 
+### v1.6.1
+
+## Behind the scenes
+
+* Add explicit support for `ActiveDirectoryServicePrincipal`
 ### v1.6.0
 
 ## Features

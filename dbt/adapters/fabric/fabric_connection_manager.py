@@ -347,6 +347,9 @@ class FabricConnectionManager(SQLConnectionManager):
             if credentials.authentication == "ActiveDirectoryPassword":
                 con_str.append(f"UID={{{credentials.UID}}}")
                 con_str.append(f"PWD={{{credentials.PWD}}}")
+            if credentials.authentication == "ActiveDirectoryServicePrincipal":
+                con_str.append(f"UID={{{credentials.client_id}}}")
+                con_str.append(f"PWD={{{credentials.client_secret}}}")
             elif credentials.authentication == "ActiveDirectoryInteractive":
                 con_str.append(f"UID={{{credentials.UID}}}")
 
