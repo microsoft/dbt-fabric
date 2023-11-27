@@ -1,5 +1,10 @@
 # Changelog
 
+### unreleased
+
+#### under the hood
+* improve connection manager logging
+
 ### v1.7.0
 
 ## Features
