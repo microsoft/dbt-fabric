@@ -1,5 +1,9 @@
 # Changelog
 
+### v1.6.2
+
+* Allowing users to provide "ServicePrincipal" as an authentication mode. Adapter will treat ServicePrincipal as ActiveDirectoryServicePrincipal authentication mode.
+
 ### v1.6.1
 
 ## Features
