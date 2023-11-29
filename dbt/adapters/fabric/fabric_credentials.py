@@ -10,14 +10,13 @@ class FabricCredentials(Credentials):
     host: str
     database: str
     schema: str
-    port: Optional[int] = 1433
     UID: Optional[str] = None
     PWD: Optional[str] = None
     windows_login: Optional[bool] = False
     tenant_id: Optional[str] = None
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
-    authentication: Optional[str] = "sql"
+    authentication: Optional[str] = "ActiveDirectoryServicePrincipal"
     encrypt: Optional[bool] = True  # default value in MS ODBC Driver 18 as well
     trust_cert: Optional[bool] = False  # default value in MS ODBC Driver 18 as well
     retries: int = 1
@@ -49,11 +48,13 @@ class FabricCredentials(Credentials):
         if self.windows_login is True:
             self.authentication = "Windows Login"
 
+        if self.authentication.lower().strip() == "serviceprincipal":
+            self.authentication = "ActiveDirectoryServicePrincipal"
+
         return (
             "server",
             "database",
             "schema",
-            "port",
             "UID",
             "client_id",
             "authentication",

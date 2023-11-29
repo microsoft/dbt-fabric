@@ -1,5 +1,39 @@
 # Changelog
 
+### v1.7.1
+
+## Features
+
+* Added capability support structure in fabric adapter
+* Added metadata freshness checks
+* Updated catalog fetch performance improvements to handle relations with many pre-existing objects
+* Added dbt-show support to 1.7.1
+
+## Enhancements
+
+* improve connection manager logging
+* Added metadata freshness checks tests
+* Added capability support tests
+* Added catalog fetch performance improvements
+* Added dbt show's --limit flag tests
+* Added storing test failures tests
+
+### v1.6.1
+
+## Features
+
+* Fabric DW now supports sp_rename. Starting v1.6.1 sp_rename is metadata operation
+* Enabled table clone feature
+
+## Enhancements
+
+* Addressed [Issue 53](https://github.com/microsoft/dbt-fabric/issues/53)
+* Added explicit support for [Issue 76 - ActiveDirectoryServicePrincipal authentication](https://github.com/microsoft/dbt-fabric/issues/74)
+* Removed port number support in connection string as it is no longer required in Microsoft Fabric DW
+* Removed MSI authentication as it does not make sense for Microsoft Fabric.
+* Table lock hints are not supported by Fabric DW
+* Supported authentication modes are ActiveDirectory* and AZ CLI
+
 ### v1.7.0
 
 ## Features

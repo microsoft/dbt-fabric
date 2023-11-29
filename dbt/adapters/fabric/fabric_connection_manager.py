@@ -9,17 +9,15 @@ import agate
 import dbt.exceptions
 import pyodbc
 from azure.core.credentials import AccessToken
-from azure.identity import (
-    AzureCliCredential,
-    ClientSecretCredential,
-    DefaultAzureCredential,
-    EnvironmentCredential,
-    ManagedIdentityCredential,
-)
+from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
 from dbt.adapters.sql import SQLConnectionManager
 from dbt.clients.agate_helper import empty_table
 from dbt.contracts.connection import AdapterResponse, Connection, ConnectionState
 from dbt.events import AdapterLogger
+from dbt.events.contextvars import get_node_info
+from dbt.events.functions import fire_event
+from dbt.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
+from dbt.utils import cast_to_str
 
 from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
@@ -113,24 +111,6 @@ def get_cli_access_token(credentials: FabricCredentials) -> AccessToken:
     return token
 
 
-def get_msi_access_token(credentials: FabricCredentials) -> AccessToken:
-    """
-    Get an Azure access token from the system's managed identity
-
-    Parameters
-    -----------
-    credentials: FabricCredentials
-        Credentials.
-
-    Returns
-    -------
-    out : AccessToken
-        The access token.
-    """
-    token = ManagedIdentityCredential().get_token(AZURE_CREDENTIAL_SCOPE)
-    return token
-
-
 def get_auto_access_token(credentials: FabricCredentials) -> AccessToken:
     """
     Get an Azure access token automatically through azure-identity
@@ -167,30 +147,8 @@ def get_environment_access_token(credentials: FabricCredentials) -> AccessToken:
     return token
 
 
-def get_sp_access_token(credentials: FabricCredentials) -> AccessToken:
-    """
-    Get an Azure access token using the SP credentials.
-
-    Parameters
-    ----------
-    credentials : FabricCredentials
-        Credentials.
-
-    Returns
-    -------
-    out : AccessToken
-        The access token.
-    """
-    token = ClientSecretCredential(
-        str(credentials.tenant_id), str(credentials.client_id), str(credentials.client_secret)
-    ).get_token(AZURE_CREDENTIAL_SCOPE)
-    return token
-
-
 AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
-    "serviceprincipal": get_sp_access_token,
     "cli": get_cli_access_token,
-    "msi": get_msi_access_token,
     "auto": get_auto_access_token,
     "environment": get_environment_access_token,
 }
@@ -335,7 +293,7 @@ class FabricConnectionManager(SQLConnectionManager):
             # SQL Server named instance. In this case then port number has to be omitted.
             con_str.append(f"SERVER={credentials.host}")
         else:
-            con_str.append(f"SERVER={credentials.host},{credentials.port}")
+            con_str.append(f"SERVER={credentials.host}")
 
         con_str.append(f"Database={credentials.database}")
 
@@ -347,14 +305,16 @@ class FabricConnectionManager(SQLConnectionManager):
             if credentials.authentication == "ActiveDirectoryPassword":
                 con_str.append(f"UID={{{credentials.UID}}}")
                 con_str.append(f"PWD={{{credentials.PWD}}}")
+            if credentials.authentication == "ActiveDirectoryServicePrincipal":
+                con_str.append(f"UID={{{credentials.client_id}}}")
+                con_str.append(f"PWD={{{credentials.client_secret}}}")
             elif credentials.authentication == "ActiveDirectoryInteractive":
                 con_str.append(f"UID={{{credentials.UID}}}")
 
         elif credentials.windows_login:
             con_str.append("trusted_connection=Yes")
         elif credentials.authentication == "sql":
-            con_str.append(f"UID={{{credentials.UID}}}")
-            con_str.append(f"PWD={{{credentials.PWD}}}")
+            raise pyodbc.DatabaseError("SQL Authentication is not supported by Microsoft Fabric")
 
         # https://docs.microsoft.com/en-us/sql/relational-databases/native-client/features/using-encryption-without-validation?view=sql-server-ver15
         assert credentials.encrypt is not None
@@ -435,13 +395,26 @@ class FabricConnectionManager(SQLConnectionManager):
         if auto_begin and connection.transaction_open is False:
             self.begin()
 
-        logger.debug('Using {} connection "{}".'.format(self.TYPE, connection.name))
+        fire_event(
+            ConnectionUsed(
+                conn_type=self.TYPE,
+                conn_name=cast_to_str(connection.name),
+                node_info=get_node_info(),
+            )
+        )
 
         with self.exception_handler(sql):
             if abridge_sql_log:
-                logger.debug("On {}: {}....".format(connection.name, sql[0:512]))
+                log_sql = "{}...".format(sql[:512])
             else:
-                logger.debug("On {}: {}".format(connection.name, sql))
+                log_sql = sql
+
+            fire_event(
+                SQLQuery(
+                    conn_name=cast_to_str(connection.name), sql=log_sql, node_info=get_node_info()
+                )
+            )
+
             pre = time.time()
 
             cursor = connection.handle.cursor()
@@ -460,9 +433,11 @@ class FabricConnectionManager(SQLConnectionManager):
             # https://github.com/mkleehammer/pyodbc/issues/134#issuecomment-281739794
             connection.handle.add_output_converter(-155, byte_array_to_datetime)
 
-            logger.debug(
-                "SQL status: {} in {:0.2f} seconds".format(
-                    self.get_response(cursor), (time.time() - pre)
+            fire_event(
+                SQLQueryStatus(
+                    status=str(self.get_response(cursor)),
+                    elapsed=round((time.time() - pre)),
+                    node_info=get_node_info(),
                 )
             )
 
@@ -498,6 +473,7 @@ class FabricConnectionManager(SQLConnectionManager):
     def execute(
         self, sql: str, auto_begin: bool = True, fetch: bool = False, limit: Optional[int] = None
     ) -> Tuple[AdapterResponse, agate.Table]:
+        sql = self._add_query_comment(sql)
         _, cursor = self.add_query(sql, auto_begin)
         response = self.get_response(cursor)
         if fetch:

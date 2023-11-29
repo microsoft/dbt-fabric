@@ -8,25 +8,26 @@ from dbt.tests.adapter.query_comment.test_query_comment import (
 )
 
 
-class TestQueryCommentsFabric(BaseQueryComments):
+# Tests #
+class TestQueryComments(BaseQueryComments):
     pass
 
 
-class TestMacroQueryCommentsFabric(BaseMacroQueryComments):
+class TestMacroQueryComments(BaseMacroQueryComments):
     pass
 
 
-class TestMacroArgsQueryCommentsFabric(BaseMacroArgsQueryComments):
+class TestMacroArgsQueryComments(BaseMacroArgsQueryComments):
     pass
 
 
-class TestMacroInvalidQueryCommentsFabric(BaseMacroInvalidQueryComments):
+class TestMacroInvalidQueryComments(BaseMacroInvalidQueryComments):
     pass
 
 
-class TestNullQueryCommentsFabric(BaseNullQueryComments):
+class TestNullQueryComments(BaseNullQueryComments):
     pass
 
 
-class TestEmptyQueryCommentsFabric(BaseEmptyQueryComments):
+class TestEmptyQueryComments(BaseEmptyQueryComments):
     pass
