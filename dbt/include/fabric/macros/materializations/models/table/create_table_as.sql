@@ -4,7 +4,6 @@
    path={"identifier": relation.identifier.replace("#", "") ~ '_temp_view'},
    type='view')-%}
    {% do run_query(fabric__drop_relation_script(tmp_relation)) %}
-   {% do run_query(fabric__drop_relation_script(relation)) %}
 
    {% set contract_config = config.get('contract') %}
 
@@ -12,7 +11,7 @@
     {% if contract_config.enforced %}
 
         CREATE TABLE [{{relation.database}}].[{{relation.schema}}].[{{relation.identifier}}]
-        {{ fabric__table_columns_and_constraints(relation) }}
+        {{ fabric__build_columns_constraints(relation) }}
         {{ get_assert_columns_equivalent(sql)  }}
 
         {% set listColumns %}
