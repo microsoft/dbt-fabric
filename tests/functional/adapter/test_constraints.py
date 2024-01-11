@@ -482,7 +482,7 @@ class BaseConstraintsRuntimeDdlEnforcement:
     @pytest.fixture(scope="class")
     def expected_sql(self):
         return """
-EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) EXEC(' alter table <model_identifier> add constraint <model_identifier> primary key nonclustered(id) not enforced; ;') EXEC(' alter table <model_identifier> add constraint <model_identifier> foreign key(id) references <foreign_key_model_identifier> (id) not enforced; ;') EXEC(' alter table <model_identifier> add constraint <model_identifier> unique nonclustered(id) not enforced; ;') INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier> EXEC('DROP view IF EXISTS <model_identifier>
+EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier> EXEC('DROP view IF EXISTS <model_identifier>
 """
 
     def test__constraints_ddl(self, project, expected_sql):
@@ -544,7 +544,7 @@ class BaseModelConstraintsRuntimeEnforcement:
     @pytest.fixture(scope="class")
     def expected_sql(self):
         return """
-EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) EXEC(' alter table <model_identifier> add constraint <model_identifier> primary key nonclustered(id) not enforced; ;') EXEC(' alter table <model_identifier> add constraint <model_identifier> unique nonclustered(color, date_day) not enforced; ;') EXEC(' alter table <model_identifier> add constraint <model_identifier> foreign key(id) references <foreign_key_model_identifier> (id) not enforced; ;') INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier> EXEC('DROP view IF EXISTS <model_identifier>
+EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier> EXEC('DROP view IF EXISTS <model_identifier>
 """
 
     def test__model_constraints_ddl(self, project, expected_sql):
@@ -612,7 +612,8 @@ class BaseConstraintsRollback:
 
         # Verify the previous table still exists
         relation = relation_from_name(project.adapter, "my_model")
-        old_model_exists_sql = f"select * from {relation}"
+        model_backup = str(relation).replace("my_model", "my_model__dbt_backup")
+        old_model_exists_sql = f"select * from {model_backup}"
         old_model_exists = project.run_sql(old_model_exists_sql, fetch="all")
         assert len(old_model_exists) == 1
         assert old_model_exists[0][1] == expected_color

@@ -1,5 +1,17 @@
 # Changelog
 
+### v1.7.3
+
+## Enhancements
+
+* Overwritten view adapter materialization and made improvements.
+* Overwritten table adapter materizalization and made improvements in handling model level constraints
+* Made Constraint name mandatory
+* Added several macros to manage indexes, dropping table dependencies and managing model level constraints
+* Bump dbt-tests-adapter requirement from ~=1.7.3 to ~=1.7.4
+* Bump py-test adapter requirement from ~=pytest==7.4.3 to ~=pytest==7.4.4
+* Bump precommit adapter requirement from ~=pre-commit==3.5.0 to ~=pre-commit==3.6.0
+
 ### v1.7.2
 
 ## Bug Fixes

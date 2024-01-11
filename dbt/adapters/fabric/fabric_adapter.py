@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import agate
+import dbt.exceptions
 from dbt.adapters.base import Column as BaseColumn
 
 # from dbt.events.functions import fire_event
@@ -201,6 +202,13 @@ class FabricAdapter(SQLAdapter):
     def render_model_constraint(cls, constraint: ModelLevelConstraint) -> Optional[str]:
         constraint_prefix = "add constraint "
         column_list = ", ".join(constraint.columns)
+
+        if constraint.name is None:
+            raise dbt.exceptions.DbtDatabaseError(
+                "Constraint name cannot be empty. Provide constraint name  - column "
+                + column_list
+                + " and run the project again."
+            )
 
         if constraint.type == ConstraintType.unique:
             return (
