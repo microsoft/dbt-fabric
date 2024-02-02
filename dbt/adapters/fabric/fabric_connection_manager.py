@@ -330,6 +330,16 @@ class FabricConnectionManager(SQLConnectionManager):
         application_name = f"dbt-{credentials.type}/{plugin_version}"
         con_str.append(f"APP={application_name}")
 
+        try:
+            if int(credentials.retries) > 0:
+                con_str.append(f"ConnectRetryCount={credentials.retries}")
+
+        except Exception as e:
+            logger.debug(
+                "Retry count should be a integer value. Skipping retries in the connection string.",
+                str(e),
+            )
+
         con_str_concat = ";".join(con_str)
 
         index = []
