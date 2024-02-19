@@ -6,18 +6,18 @@ from itertools import chain, repeat
 from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Union
 
 import agate
-import dbt.exceptions
+import dbt_common.exceptions
 import pyodbc
 from azure.core.credentials import AccessToken
 from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
+from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
+from dbt.adapters.events.logging import AdapterLogger
+from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.sql import SQLConnectionManager
-from dbt.clients.agate_helper import empty_table
-from dbt.contracts.connection import AdapterResponse, Connection, ConnectionState
-from dbt.events import AdapterLogger
-from dbt.events.contextvars import get_node_info
-from dbt.events.functions import fire_event
-from dbt.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
-from dbt.utils import cast_to_str
+from dbt_common.clients.agate_helper import empty_table
+from dbt_common.events.contextvars import get_node_info
+from dbt_common.events.functions import fire_event
+from dbt_common.utils.encoding import cast_to_str
 
 from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
@@ -265,19 +265,19 @@ class FabricConnectionManager(SQLConnectionManager):
             except pyodbc.Error:
                 logger.debug("Failed to release connection!")
 
-            raise dbt.exceptions.DbtDatabaseError(str(e).strip()) from e
+            raise dbt_common.exceptions.DbtDatabaseError(str(e).strip()) from e
 
         except Exception as e:
             logger.debug(f"Error running SQL: {sql}")
             logger.debug("Rolling back transaction.")
             self.release()
-            if isinstance(e, dbt.exceptions.DbtRuntimeError):
+            if isinstance(e, dbt_common.exceptions.DbtRuntimeError):
                 # during a sql query, an internal to dbt exception was raised.
                 # this sounds a lot like a signal handler and probably has
                 # useful information, so raise it without modification.
                 raise
 
-            raise dbt.exceptions.DbtRuntimeError(e)
+            raise dbt_common.exceptions.DbtRuntimeError(e)
 
     @classmethod
     def open(cls, connection: Connection) -> Connection:
