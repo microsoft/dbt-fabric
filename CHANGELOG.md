@@ -2,6 +2,16 @@
 
 ### v1.8.0rc1
 
+## Features
+
+Supporting dbt-core 1.8.0
+
+## Bug fixes
+
+* Refactor relations to query from sys catalog instead of information schema causing concurrency issues when running multiple threads in parallel (https://github.com/microsoft/dbt-fabric/issues/52).
+
+## Enhancements
+
 [Decouple imports](https://github.com/dbt-labs/dbt-adapters/discussions/87) to common dbt core and dbt adapter interface packages for future maintainability and extensibility.
 
 * Bump adapter packages
@@ -9,8 +19,7 @@
 
 > From now on, Apple-silicon users don't have to locally build pyodbc, because M1, M2 binaries is included in pyodbc from 5.1.0 onwards!
 
-## Enhancements
-* Refactor relations to query from sys catalog instead of information schema causing concurrency issues when running multiple threads in parallel (https://github.com/microsoft/dbt-fabric/issues/52).
+
 * Bump dev requirements
     - from pytest~=7.4. to pytest~=8.0.1
     - from twine~=4.0.2 to twine~=5.0.0
