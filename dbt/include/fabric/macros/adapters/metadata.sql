@@ -28,37 +28,49 @@
 
 {% macro fabric__list_relations_without_caching(schema_relation) -%}
   {% call statement('list_relations_without_caching', fetch_result=True) -%}
-    select
-      table_catalog as [database],
-      table_name as [name],
-      table_schema as [schema],
-      case when table_type = 'BASE TABLE' then 'table'
-           when table_type = 'VIEW' then 'view'
-           else table_type
-      end as table_type
-
-    from INFORMATION_SCHEMA.TABLES {{ information_schema_hints() }}
-    where table_schema like '{{ schema_relation.schema }}'
+    with base as (
+      select
+        DB_NAME() as [database],
+        t.name as [name],
+        SCHEMA_NAME(t.schema_id) as [schema],
+        'table' as table_type
+      from sys.tables as t {{ information_schema_hints() }}
+      union all
+      select
+        DB_NAME() as [database],
+        v.name as [name],
+        SCHEMA_NAME(v.schema_id) as [schema],
+        'view' as table_type
+      from sys.views as v {{ information_schema_hints() }}
+    )
+    select * from base
+    where [schema] like '{{ schema_relation.schema }}'
   {% endcall %}
   {{ return(load_result('list_relations_without_caching').table) }}
 {% endmacro %}
 
 {% macro fabric__get_relation_without_caching(schema_relation) -%}
-  {% call statement('list_relations_without_caching', fetch_result=True) -%}
-    select
-      table_catalog as [database],
-      table_name as [name],
-      table_schema as [schema],
-      case when table_type = 'BASE TABLE' then 'table'
-           when table_type = 'VIEW' then 'view'
-           else table_type
-      end as table_type
-
-    from INFORMATION_SCHEMA.TABLES {{ information_schema_hints() }}
-    where table_schema like '{{ schema_relation.schema }}'
-    and table_name like '{{ schema_relation.identifier }}'
+  {% call statement('get_relation_without_caching', fetch_result=True) -%}
+    with base as (
+      select
+        DB_NAME() as [database],
+        t.name as [name],
+        SCHEMA_NAME(t.schema_id) as [schema],
+        'table' as table_type
+      from sys.tables as t {{ information_schema_hints() }}
+      union all
+      select
+        DB_NAME() as [database],
+        v.name as [name],
+        SCHEMA_NAME(v.schema_id) as [schema],
+        'view' as table_type
+      from sys.views as v {{ information_schema_hints() }}
+    )
+    select * from base
+    where [schema] like '{{ schema_relation.schema }}'
+    and [name] like '{{ schema_relation.identifier }}'
   {% endcall %}
-  {{ return(load_result('list_relations_without_caching').table) }}
+  {{ return(load_result('get_relation_without_caching').table) }}
 {% endmacro %}
 
 {% macro fabric__get_relation_last_modified(information_schema, relations) -%}
