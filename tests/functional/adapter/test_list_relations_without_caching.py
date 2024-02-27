@@ -21,17 +21,23 @@ MACROS__VALIDATE__FABRIC__LIST_RELATIONS_WITHOUT_CACHING = """
 {% macro validate_list_relations_without_caching(schema_relation) -%}
 
     {% call statement('list_relations_without_caching', fetch_result=True) -%}
+        with base as (
         select
-            table_catalog as [database],
-            table_name as [name],
-            table_schema as [schema],
-            case when table_type = 'BASE TABLE' then 'table'
-                when table_type = 'VIEW' then 'view'
-                else table_type
-            end as table_type
-
-        from INFORMATION_SCHEMA.TABLES
-        where table_schema like '{{ schema_relation }}'
+            DB_NAME() as [database],
+            t.name as [name],
+            SCHEMA_NAME(t.schema_id) as [schema],
+            'table' as table_type
+        from sys.tables as t {{ information_schema_hints() }}
+        union all
+        select
+            DB_NAME() as [database],
+            v.name as [name],
+            SCHEMA_NAME(v.schema_id) as [schema],
+            'view' as table_type
+        from sys.views as v {{ information_schema_hints() }}
+        )
+        select * from base
+        where [schema] like '{{ schema_relation }}'
     {% endcall %}
 
     {% set relation_list_result = load_result('list_relations_without_caching').table %}

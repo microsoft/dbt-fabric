@@ -1,23 +1,22 @@
 from typing import List, Optional
 
 import agate
-import dbt.exceptions
+import dbt_common.exceptions
 from dbt.adapters.base import Column as BaseColumn
-
-# from dbt.events.functions import fire_event
-# from dbt.events.types import SchemaCreation
 from dbt.adapters.base.impl import ConstraintSupport
 from dbt.adapters.base.meta import available
 from dbt.adapters.base.relation import BaseRelation
 from dbt.adapters.cache import _make_ref_key_dict
 from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
-
-# from dbt.adapters.cache import _make_ref_key_msg
+from dbt.adapters.events.types import SchemaCreation
 from dbt.adapters.sql import SQLAdapter
 from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
-from dbt.contracts.graph.nodes import ColumnLevelConstraint, ConstraintType, ModelLevelConstraint
-from dbt.events.functions import fire_event
-from dbt.events.types import SchemaCreation
+from dbt_common.contracts.constraints import (
+    ColumnLevelConstraint,
+    ConstraintType,
+    ModelLevelConstraint,
+)
+from dbt_common.events.functions import fire_event
 
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
@@ -204,7 +203,7 @@ class FabricAdapter(SQLAdapter):
         column_list = ", ".join(constraint.columns)
 
         if constraint.name is None:
-            raise dbt.exceptions.DbtDatabaseError(
+            raise dbt_common.exceptions.DbtDatabaseError(
                 "Constraint name cannot be empty. Provide constraint name  - column "
                 + column_list
                 + " and run the project again."

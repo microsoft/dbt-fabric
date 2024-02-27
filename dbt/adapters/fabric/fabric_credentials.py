@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from dbt.contracts.connection import Credentials
+from dbt.adapters.contracts.connection import Credentials
 
 
 @dataclass

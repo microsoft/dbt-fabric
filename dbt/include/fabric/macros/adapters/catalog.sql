@@ -22,6 +22,7 @@
 
     tables as (
         select
+            object_id,
             name as table_name,
             schema_id as schema_id,
             principal_id as principal_id,
@@ -32,6 +33,7 @@
 
     tables_with_metadata as (
         select
+            object_id,
             table_name,
             schema_name,
             coalesce(tables.principal_id, schemas.principal_id) as owner_principal_id,
@@ -43,6 +45,7 @@
 
     views as (
         select
+            object_id,
             name as table_name,
             schema_id as schema_id,
             principal_id as principal_id,
@@ -53,6 +56,7 @@
 
     views_with_metadata as (
         select
+            object_id,
             table_name,
             schema_name,
             coalesce(views.principal_id, schemas.principal_id) as owner_principal_id,
@@ -64,6 +68,7 @@
 
     tables_and_views as (
         select
+            object_id,
             table_name,
             schema_name,
             principal_name,
@@ -73,6 +78,7 @@
         join principals on tables_with_metadata.owner_principal_id = principals.principal_id
         union all
         select
+            object_id,
             table_name,
             schema_name,
             principal_name,
@@ -85,18 +91,16 @@
     cols as (
 
         select
-            table_catalog as table_database,
-            table_schema,
-            table_name,
-            column_name,
-            ordinal_position as column_index,
-            data_type as column_type
-        from INFORMATION_SCHEMA.COLUMNS {{ information_schema_hints() }}
-
+            c.object_id,
+            c.name as column_name,
+            c.column_id as column_index,
+            t.name as column_type
+        from sys.columns as c {{ information_schema_hints() }}
+        left join sys.types as t on c.system_type_id = t.system_type_id {{ information_schema_hints() }}
     )
 
     select
-        cols.table_database,
+        DB_NAME() as table_database,
         tv.schema_name as table_schema,
         tv.table_name,
         tv.table_type,
@@ -107,7 +111,7 @@
         cols.column_type,
         null as column_comment
     from tables_and_views tv
-    join cols on tv.schema_name = cols.table_schema and tv.table_name = cols.table_name
+    join cols on tv.object_id = cols.object_id
     where ({%- for schema in schemas -%}
         upper(tv.schema_name) = upper('{{ schema }}'){%- if not loop.last %} or {% endif -%}
     {%- endfor -%})
@@ -144,6 +148,7 @@
 
     tables as (
         select
+            object_id,
             name as table_name,
             schema_id as schema_id,
             principal_id as principal_id,
@@ -154,6 +159,7 @@
 
     tables_with_metadata as (
         select
+            object_id,
             table_name,
             schema_name,
             coalesce(tables.principal_id, schemas.principal_id) as owner_principal_id,
@@ -165,6 +171,7 @@
 
     views as (
         select
+            object_id,
             name as table_name,
             schema_id as schema_id,
             principal_id as principal_id,
@@ -175,6 +182,7 @@
 
     views_with_metadata as (
         select
+            object_id,
             table_name,
             schema_name,
             coalesce(views.principal_id, schemas.principal_id) as owner_principal_id,
@@ -186,6 +194,7 @@
 
     tables_and_views as (
         select
+            object_id,
             table_name,
             schema_name,
             principal_name,
@@ -195,6 +204,7 @@
         join principals on tables_with_metadata.owner_principal_id = principals.principal_id
         union all
         select
+            object_id,
             table_name,
             schema_name,
             principal_name,
@@ -207,18 +217,16 @@
     cols as (
 
         select
-            table_catalog as table_database,
-            table_schema,
-            table_name,
-            column_name,
-            ordinal_position as column_index,
-            data_type as column_type
-        from INFORMATION_SCHEMA.COLUMNS {{ information_schema_hints() }}
-
+            c.object_id,
+            c.name as column_name,
+            c.column_id as column_index,
+            t.name as column_type
+        from sys.columns as c {{ information_schema_hints() }}
+        left join sys.types as t on c.system_type_id = t.system_type_id {{ information_schema_hints() }}
     )
 
     select
-        cols.table_database,
+        DB_NAME() as table_database,
         tv.schema_name as table_schema,
         tv.table_name,
         tv.table_type,
@@ -229,7 +237,7 @@
         cols.column_type,
         null as column_comment
     from tables_and_views tv
-    join cols on tv.schema_name = cols.table_schema and tv.table_name = cols.table_name
+    join cols on tv.object_id = cols.object_id
     where (
         {%- for relation in relations -%}
             {% if relation.schema and relation.identifier %}
