@@ -1,5 +1,11 @@
 # Changelog
 
+### v1.8.0rc2
+
+## Bug Fixes
+* Remove dbt-adapters requirement in setup.py, and specify commit SHA of dbt-core and dbt-adapters in dev_requirements.txt, to fix `make dev`
+* Fix failing test `tests/functional/adapter/test_query_comment.py::TestMacroArgsQueryComments::test_matches_comment` to use correct dbt_version, see [dbt-core](https://github.com/dbt-labs/dbt-core/blob/main/tests/functional/adapter/query_comment/test_query_comment.py)
+
 ### v1.8.0rc1
 
 ## Features
