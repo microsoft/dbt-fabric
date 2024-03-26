@@ -6,7 +6,7 @@ git+https://github.com/dbt-labs/dbt-adapters.git@4c289b150853b94beb67921f2a8dd20
 
 pytest==8.0.1
 twine==5.0.0
-wheel==0.42
+wheel==0.43.0
 pre-commit==3.5.0;python_version<"3.9"
 pre-commit==3.6.2;python_version>="3.9"
 pytest-dotenv==0.5.2
