@@ -10,6 +10,6 @@ wheel==0.42
 pre-commit==3.5.0;python_version<"3.9"
 pre-commit==3.6.2;python_version>="3.9"
 pytest-dotenv==0.5.2
-flaky==3.7.0
+flaky==3.8.1
 pytest-xdist==3.5.0
 -e .
