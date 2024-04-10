@@ -83,7 +83,7 @@ class BaseUnitTestingTypes:
                 raise AssertionError(f"unit test failed when testing model with {sql_value}")
 
 
-@pytest.skip(
+@pytest.mark.skip(
     reason="Nested CTE's are not supported by Fabric DW. Should able to run this in 6 months"
 )
 class TestPostgresUnitTestingTypes(BaseUnitTestingTypes):
