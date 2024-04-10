@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 
+# IDE extensions
+.vscode/settings.json
+.vscode/*.*
+
 # C extensions
 *.so
 
