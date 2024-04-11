@@ -91,7 +91,7 @@
   {% set tempTableName %}
     {{ relation.include(database=False).identifier.replace("#", "") }}_{{ range(21000, 109000) | random }}
   {% endset %}
-
+  {{ log("Truncate Statement is not supported, Using random table as a temp table. - " ~ tempTableName) }}
   {% call statement('truncate_relation') -%}
     CREATE TABLE {{ tempTableName }} AS SELECT * FROM {{ relation }} WHERE 1=2
     EXEC('DROP TABLE IF EXISTS {{ relation.include(database=False) }};');

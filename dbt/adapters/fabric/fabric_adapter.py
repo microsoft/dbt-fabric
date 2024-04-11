@@ -192,6 +192,13 @@ class FabricAdapter(SQLAdapter):
         else:
             return f"(select TOP {self.limit} * from {rendered}) _dbt_top_subq"
 
+    # TODO: Standardizing quote characters
+    # def quoted(self, identifier):
+    #     return "[{identifier}]".format(
+    #         quote_char=self.quote_character,
+    #         identifier=identifier,
+    #     )
+
     @available
     @classmethod
     def render_column_constraint(cls, constraint: ColumnLevelConstraint) -> Optional[str]:
