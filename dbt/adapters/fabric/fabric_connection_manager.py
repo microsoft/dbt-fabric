@@ -23,6 +23,7 @@ from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
+SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW" # https://learn.microsoft.com/en-us/azure/synapse-analytics/spark/microsoft-spark-utilities?pivots=programming-language-python#get-token
 _TOKEN: Optional[AccessToken] = None
 AZURE_AUTH_FUNCTION_TYPE = Callable[[FabricCredentials], AccessToken]
 
@@ -148,10 +149,28 @@ def get_environment_access_token(credentials: FabricCredentials) -> AccessToken:
     return token
 
 
+def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToken:
+    """
+    Get an Azure access token by using mspsarkutils
+
+    Parameters
+    -----------
+    credentials: FabricCredentials
+        Credentials.
+
+    Returns
+    -------
+    out : AccessToken
+        The access token.
+    """
+    pass
+
+
 AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
     "cli": get_cli_access_token,
     "auto": get_auto_access_token,
     "environment": get_environment_access_token,
+    "synapsespark": get_synapse_spark_access_token,
 }
 
 
