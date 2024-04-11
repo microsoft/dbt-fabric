@@ -1,58 +1,105 @@
-{% macro fabric__post_snapshot(staging_relation) %}
-  -- Clean up the snapshot temp table
-  {% do drop_relation(staging_relation) %}
-{% endmacro %}
+{% materialization snapshot, adapter='fabric' %}
 
-{% macro fabric__create_columns(relation, columns) %}
-  {# default__ macro uses "add column"
-     TSQL preferes just "add"
-  #}
+  {%- set config = model['config'] -%}
+  {%- set target_table = model.get('alias', model.get('name')) -%}
+  {%- set strategy_name = config.get('strategy') -%}
+  {%- set unique_key = config.get('unique_key') %}
+  -- grab current tables grants config for comparision later on
+  {%- set grant_config = config.get('grants') -%}
 
-  {% set columns %}
-    {% for column in columns %}
-      , CAST(NULL AS {{column.data_type}}) AS {{column_name}}
-    {% endfor %}
-  {% endset %}
+  {% set target_relation_exists, target_relation = get_or_create_relation(
+          database=model.database,
+          schema=model.schema,
+          identifier=target_table,
+          type='table') -%}
 
-  {% set tempTableName %}
-    [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}_{{ range(1300, 19000) | random }}]
-  {% endset %}
+  {%- if not target_relation.is_table -%}
+    {% do exceptions.relation_wrong_type(target_relation, 'table') %}
+  {%- endif -%}
 
-  {% set tempTable %}
-      CREATE TABLE {{tempTableName}}
-      AS SELECT * {{columns}} FROM [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}] {{ information_schema_hints() }}
-  {% endset %}
+  {{ run_hooks(pre_hooks, inside_transaction=False) }}
+  {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
-  {% call statement('create_temp_table') -%}
-      {{ tempTable }}
-  {%- endcall %}
+  {% set strategy_macro = strategy_dispatch(strategy_name) %}
+  {% set strategy = strategy_macro(model, "snapshotted_data", "source_data", config, target_relation_exists) %}
 
-  {% set dropTable %}
-      DROP TABLE [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}]
-  {% endset %}
+  {% set temp_snapshot_relation_exists, temp_snapshot_relation = get_or_create_relation(
+          database=model.database,
+          schema=model.schema,
+          identifier=target_table+"_snapshot_staging_temp_view",
+          type='view') -%}
 
-  {% call statement('drop_table') -%}
-      {{ dropTable }}
-  {%- endcall %}
+  -- Create a temporary view to manage if user SQl uses CTE
+  {% set temp_snapshot_relation_sql = model['compiled_code'].replace("'", "''") %}
+  {% call statement('create temp_snapshot_relation') %}
+    EXEC('DROP VIEW IF EXISTS {{ temp_snapshot_relation.include(database=False) }};');
+    EXEC('create view {{ temp_snapshot_relation.include(database=False) }} as {{ temp_snapshot_relation_sql }};');
+  {% endcall %}
 
-  {% set createTable %}
-      CREATE TABLE {{ relation }}
-      AS SELECT * FROM {{tempTableName}} {{ information_schema_hints() }}
-  {% endset %}
+  {% if not target_relation_exists %}
 
-  {% call statement('create_Table') -%}
-      {{ createTable }}
-  {%- endcall %}
+      {% set build_sql = build_snapshot_table(strategy, temp_snapshot_relation) %}
+      {% set final_sql = create_table_as(False, target_relation, build_sql) %}
 
-  {% set dropTempTable %}
-      DROP TABLE {{tempTableName}}
-  {% endset %}
+  {% else %}
 
-  {% call statement('drop_temp_table') -%}
-      {{ dropTempTable }}
-  {%- endcall %}
-{% endmacro %}
+      {{ adapter.valid_snapshot_target(target_relation) }}
+      {% set staging_table = build_snapshot_staging_table(strategy, temp_snapshot_relation, target_relation) %}
+      -- this may no-op if the database does not require column expansion
+      {% do adapter.expand_target_column_types(from_relation=staging_table,
+                                               to_relation=target_relation) %}
+      {% set missing_columns = adapter.get_missing_columns(staging_table, target_relation)
+                                   | rejectattr('name', 'equalto', 'dbt_change_type')
+                                   | rejectattr('name', 'equalto', 'DBT_CHANGE_TYPE')
+                                   | rejectattr('name', 'equalto', 'dbt_unique_key')
+                                   | rejectattr('name', 'equalto', 'DBT_UNIQUE_KEY')
+                                   | list %}
+      {% do create_columns(target_relation, missing_columns) %}
+      {% set source_columns = adapter.get_columns_in_relation(staging_table)
+                                   | rejectattr('name', 'equalto', 'dbt_change_type')
+                                   | rejectattr('name', 'equalto', 'DBT_CHANGE_TYPE')
+                                   | rejectattr('name', 'equalto', 'dbt_unique_key')
+                                   | rejectattr('name', 'equalto', 'DBT_UNIQUE_KEY')
+                                   | list %}
+      {% set quoted_source_columns = [] %}
+      {% for column in source_columns %}
+        {% do quoted_source_columns.append(adapter.quote(column.name)) %}
+      {% endfor %}
 
-{% macro fabric__get_true_sql() %}
-  {{ return('1=1') }}
-{% endmacro %}
+      {% set final_sql = snapshot_merge_sql(
+            target = target_relation,
+            source = staging_table,
+            insert_cols = quoted_source_columns
+         )
+      %}
+
+  {% endif %}
+
+  {% call statement('main') %}
+      {{ final_sql }}
+  {% endcall %}
+
+  fabric__drop_relation_script(temp_snapshot_relation)
+
+  {% set should_revoke = should_revoke(target_relation_exists, full_refresh_mode=False) %}
+  {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
+
+  {% do persist_docs(target_relation, model) %}
+
+  {% if not target_relation_exists %}
+    {% do create_indexes(target_relation) %}
+  {% endif %}
+
+  {{ run_hooks(post_hooks, inside_transaction=True) }}
+
+  {{ adapter.commit() }}
+
+  {% if staging_table is defined %}
+      {% do post_snapshot(staging_table) %}
+  {% endif %}
+
+  {{ run_hooks(post_hooks, inside_transaction=False) }}
+
+  {{ return({'relations': [target_relation]}) }}
+
+{% endmaterialization %}

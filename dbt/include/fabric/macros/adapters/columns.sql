@@ -79,6 +79,7 @@
     {% set tempTableName %}
         {{ relation.schema }}.{{ relation.identifier }}_{{ range(1300, 19000) | random }}
     {% endset %}
+    {{ log("Cannot Alter table type, as it is not supported. Using random table as a temp table. - " ~ tempTableName) }}
 
     {% set tempTable %}
         CREATE TABLE {{tempTableName}}
