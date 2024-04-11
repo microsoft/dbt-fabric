@@ -163,7 +163,15 @@ def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToke
     out : AccessToken
         The access token.
     """
-    pass
+    from notebookutils import mssparkutils
+    
+    aad_token = mssparkutils.credentials.getToken(SYNAPSE_SPARK_CREDENTIAL_SCOPE)
+    expires_on = int(time.time() + 4500.0)
+    token = AccessToken(
+        token=aad_token,
+        expires_on=expires_on,
+    )
+    return token
 
 
 AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
