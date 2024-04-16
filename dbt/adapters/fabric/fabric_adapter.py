@@ -183,15 +183,6 @@ class FabricAdapter(SQLAdapter):
         finally:
             conn.transaction_open = False
 
-    def render_limited(self) -> str:
-        rendered = self.render()
-        if self.limit is None:
-            return rendered
-        elif self.limit == 0:
-            return f"(select * from {rendered} where 1=0) _dbt_top_subq"
-        else:
-            return f"(select TOP {self.limit} * from {rendered}) _dbt_top_subq"
-
     # TODO: Standardizing quote characters
     # def quoted(self, identifier):
     #     return "[{identifier}]".format(
