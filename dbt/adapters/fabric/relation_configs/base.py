@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import agate
 from dbt.adapters.base.relation import Policy
-from dbt.adapters.contracts.relation import ComponentName, RelationConfig
+from dbt.adapters.contracts.relation import RelationConfig
 from dbt.adapters.relation_configs import RelationConfigBase, RelationResults
 
 from dbt.adapters.fabric.relation_configs.policies import FabricIncludePolicy, FabricQuotePolicy
@@ -47,13 +47,13 @@ class FabricRelationConfigBase(RelationConfigBase):
             "`parse_relation_results()` needs to be implemented on this RelationConfigBase instance"
         )
 
-    @classmethod
-    def _render_part(cls, component: ComponentName, value: Optional[str]) -> Optional[str]:
-        if cls.include_policy().get_part(component) and value:
-            if cls.quote_policy().get_part(component):
-                return f"[{value}]"
-            return value.lower()
-        return None
+    # @classmethod
+    # def _render_part(cls, component: ComponentName, value: Optional[str]) -> Optional[str]:
+    #     if cls.include_policy().get_part(component) and value:
+    #         if cls.quote_policy().get_part(component):
+    #             return f"[{value}]"
+    #         return value.lower()
+    #     return None
 
     @classmethod
     def _get_first_row(cls, results: agate.Table) -> agate.Row:

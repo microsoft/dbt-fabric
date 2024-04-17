@@ -21,12 +21,14 @@ from dbt_common.events.functions import fire_event
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
+from dbt.adapters.fabric.fabric_relation import FabricRelation
 
 
 class FabricAdapter(SQLAdapter):
     ConnectionManager = FabricConnectionManager
     Column = FabricColumn
     AdapterSpecificConfigs = FabricConfigs
+    Relation = FabricRelation
 
     _capabilities: CapabilityDict = CapabilityDict(
         {
@@ -182,13 +184,6 @@ class FabricAdapter(SQLAdapter):
             raise
         finally:
             conn.transaction_open = False
-
-    # TODO: Standardizing quote characters
-    # def quoted(self, identifier):
-    #     return "[{identifier}]".format(
-    #         quote_char=self.quote_character,
-    #         identifier=identifier,
-    #     )
 
     @available
     @classmethod

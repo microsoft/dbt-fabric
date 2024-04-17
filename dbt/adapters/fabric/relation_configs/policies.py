@@ -18,6 +18,6 @@ class FabricIncludePolicy(Policy):
 
 @dataclass
 class FabricQuotePolicy(Policy):
-    database: bool = False
-    schema: bool = False
-    identifier: bool = False
+    database: bool = True
+    schema: bool = True
+    identifier: bool = True

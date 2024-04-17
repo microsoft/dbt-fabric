@@ -18,7 +18,7 @@ class FabricRelation(BaseRelation):
 
     @classmethod
     def render_limited(self) -> str:
-        rendered = self.render()
+        rendered = self.render(self=self)
         if self.limit is None:
             return rendered
         elif self.limit == 0:
