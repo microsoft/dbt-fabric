@@ -11,7 +11,6 @@
 
 {% macro fabric__list_schemas(database) %}
   {% call statement('list_schemas', fetch_result=True, auto_begin=False) -%}
-
     select  name as [schema]
     from sys.schemas {{ information_schema_hints() }}
   {% endcall %}
@@ -28,6 +27,7 @@
 
 {% macro fabric__list_relations_without_caching(schema_relation) -%}
   {% call statement('list_relations_without_caching', fetch_result=True) -%}
+    USE [{{ schema_relation.database }}];
     with base as (
       select
         DB_NAME() as [database],
@@ -51,6 +51,7 @@
 
 {% macro fabric__get_relation_without_caching(schema_relation) -%}
   {% call statement('get_relation_without_caching', fetch_result=True) -%}
+    USE [{{ schema_relation.database }}];
     with base as (
       select
         DB_NAME() as [database],

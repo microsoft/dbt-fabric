@@ -39,36 +39,6 @@
           path={"schema": reference[0], "identifier": reference[1]})) }}
       {% endfor %}
     {% elif relation.type == 'table'%}
-      {# {% call statement('find_references', fetch_result=true) %}
-        USE [{{ relation.database }}];
-        SELECT  obj.name AS FK_NAME,
-        sch.name AS [schema_name],
-        tab1.name AS [table],
-        col1.name AS [column],
-        tab2.name AS [referenced_table],
-        col2.name AS [referenced_column]
-        FROM sys.foreign_key_columns fkc
-        INNER JOIN sys.objects obj
-            ON obj.object_id = fkc.constraint_object_id
-        INNER JOIN sys.tables tab1
-            ON tab1.object_id = fkc.parent_object_id
-        INNER JOIN sys.schemas sch
-            ON tab1.schema_id = sch.schema_id
-        INNER JOIN sys.columns col1
-            ON col1.column_id = parent_column_id AND col1.object_id = tab1.object_id
-        INNER JOIN sys.tables tab2
-            ON tab2.object_id = fkc.referenced_object_id
-        INNER JOIN sys.columns col2
-            ON col2.column_id = referenced_column_id AND col2.object_id = tab2.object_id
-        WHERE sch.name = '{{ relation.schema }}' and tab2.name = '{{ relation.identifier }}'
-      {% endcall %}
-      {% set references = load_result('find_references')['data'] %}
-      {% for reference in references -%}
-      -- dropping referenced table {{ reference[0] }}.{{ reference[1] }}
-        {{ fabric__drop_relation_script(relation.incorporate(
-            type="table",
-            path={"schema": reference[1], "identifier": reference[2]})) }}
-        {% endfor %} #}
       {% set object_id_type = 'U' %}
 
     {%- else -%}
