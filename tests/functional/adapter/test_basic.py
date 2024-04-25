@@ -15,8 +15,7 @@ from dbt.tests.adapter.basic.test_snapshot_timestamp import BaseSnapshotTimestam
 from dbt.tests.adapter.basic.test_validate_connection import BaseValidateConnection
 
 
-# Need help, assertions are failing
-class TestSimpleMaterializationsFabric(BaseSimpleMaterializations):
+class TestSimpleMaterializations(BaseSimpleMaterializations):
     pass
 
 

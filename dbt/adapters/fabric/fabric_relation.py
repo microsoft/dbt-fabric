@@ -1,0 +1,27 @@
+from dataclasses import dataclass, field
+from typing import Optional, Type
+
+from dbt.adapters.base.relation import BaseRelation
+from dbt.adapters.utils import classproperty
+
+from dbt.adapters.fabric.relation_configs import FabricQuotePolicy, FabricRelationType
+
+
+@dataclass(frozen=True, eq=False, repr=False)
+class FabricRelation(BaseRelation):
+    type: Optional[FabricRelationType] = None  # type: ignore
+    quote_policy: FabricQuotePolicy = field(default_factory=lambda: FabricQuotePolicy())
+
+    @classproperty
+    def get_relation_type(cls) -> Type[FabricRelationType]:
+        return FabricRelationType
+
+    @classmethod
+    def render_limited(self) -> str:
+        rendered = self.render(self=self)
+        if self.limit is None:
+            return rendered
+        elif self.limit == 0:
+            return f"(select * from {rendered} where 1=0) _dbt_top_subq"
+        else:
+            return f"(select TOP {self.limit} * from {rendered}) _dbt_top_subq"
