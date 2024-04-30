@@ -20,7 +20,7 @@
 
 {% macro drop_fk_indexes_on_table(relation) -%}
   {% call statement('find_references', fetch_result=true) %}
-      USE [{{ relation.database }}];
+      {{ get_use_database_sql(relation.database) }}
       SELECT  obj.name AS FK_NAME,
       sch.name AS [schema_name],
       tab1.name AS [table],

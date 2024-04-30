@@ -1,3 +1,16 @@
+{% macro get_use_database_sql(database) %}
+    {{ return(adapter.dispatch('get_use_database_sql', 'dbt')(database)) }}
+{% endmacro %}
+
+{%- macro default__get_use_database_sql(database) -%}
+{%- endmacro -%}
+
+
+{%- macro fabric__get_use_database_sql(database) -%}
+  USE [{{database}}];
+{%- endmacro -%}
+
+
 {% macro information_schema_hints() %}
     {{ return(adapter.dispatch('information_schema_hints')()) }}
 {% endmacro %}
@@ -27,7 +40,7 @@
 
 {% macro fabric__list_relations_without_caching(schema_relation) -%}
   {% call statement('list_relations_without_caching', fetch_result=True) -%}
-    USE [{{ schema_relation.database }}];
+    {{ get_use_database_sql(schema_relation.database) }}
     with base as (
       select
         DB_NAME() as [database],
@@ -51,7 +64,7 @@
 
 {% macro fabric__get_relation_without_caching(schema_relation) -%}
   {% call statement('get_relation_without_caching', fetch_result=True) -%}
-    USE [{{ schema_relation.database }}];
+    {{ get_use_database_sql(schema_relation.database) }}
     with base as (
       select
         DB_NAME() as [database],

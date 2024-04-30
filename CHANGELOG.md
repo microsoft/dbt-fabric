@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.8.4
+
+### Under the hood
+
+* Wrap our invocations of `USE [database];` into a new macro, `get_use_database_sql`, to allow adapters than inheirit it to disable by default where it is not supported (e.g. dbt-synapse)
+
 ### v1.8.0rc2
 
 ## Bug Fixes
