@@ -44,7 +44,6 @@ models:
         description: hello
         constraints:
           - type: not_null
-          - type: primary_key
           - type: unique
           - type: check
             expression: (id > 0)
@@ -92,7 +91,6 @@ models:
         description: hello
         constraints:
           - type: not_null
-          - type: primary_key
           - type: check
             expression: (id > 0)
         tests:
