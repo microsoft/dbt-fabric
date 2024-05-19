@@ -2,7 +2,7 @@
 
   {% if main_sql.strip().lower().startswith('with') %}
     {% set testview %}
-      {{ generate_schema_name('tests_schema') }}.testview_{{ range(1300, 19000) | random }}
+      {{ config.get('schema') }}.testview_{{ range(1300, 19000) | random }}
     {% endset %}
 
     {% set sql = main_sql.replace("'", "''")%}
