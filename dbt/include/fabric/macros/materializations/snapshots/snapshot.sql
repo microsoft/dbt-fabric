@@ -54,7 +54,10 @@
                                    | rejectattr('name', 'equalto', 'dbt_unique_key')
                                    | rejectattr('name', 'equalto', 'DBT_UNIQUE_KEY')
                                    | list %}
-      {% do create_columns(target_relation, missing_columns) %}
+      {% if missing_columns|length > 0 %}
+        {{log("Missing columns length is: "~ missing_columns|length)}}
+        {% do create_columns(target_relation, missing_columns) %}
+      {% endif %}
       {% set source_columns = adapter.get_columns_in_relation(staging_table)
                                    | rejectattr('name', 'equalto', 'dbt_change_type')
                                    | rejectattr('name', 'equalto', 'DBT_CHANGE_TYPE')
