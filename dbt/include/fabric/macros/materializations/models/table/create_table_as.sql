@@ -7,7 +7,7 @@
 
    {% set contract_config = config.get('contract') %}
 
-    {{ create_view_as(tmp_relation, sql) }}
+    {{ get_create_view_as_sql(tmp_relation, sql) }}
     {% if contract_config.enforced %}
 
         CREATE TABLE [{{relation.database}}].[{{relation.schema}}].[{{relation.identifier}}]

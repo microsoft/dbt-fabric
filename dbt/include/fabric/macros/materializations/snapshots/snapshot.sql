@@ -39,7 +39,7 @@
   {% if not target_relation_exists %}
 
       {% set build_sql = build_snapshot_table(strategy, temp_snapshot_relation) %}
-      {% set final_sql = create_table_as(False, target_relation, build_sql) %}
+      {% set final_sql = get_create_table_as_sql(False, target_relation, build_sql) %}
 
   {% else %}
 

@@ -3,7 +3,7 @@
   {%- set target_relation = this.incorporate(type='view') -%}
   {{log("Target Relation "~target_relation)}}
 
-  {%- set relation = get_relation_without_caching(this) %}
+  {%- set relation = fabric__get_relation_without_caching(this) %}
   {% set existing_relation = none %}
   {% if (relation|length == 1) %}
     {% set existing_relation = get_or_create_relation(relation[0][0], relation[0][2] , relation[0][1] , relation[0][3])[1] %}

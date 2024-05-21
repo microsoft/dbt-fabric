@@ -3,7 +3,7 @@
 
   {%- set full_refresh_mode = (should_full_refresh()) -%}
   {% set target_relation = this.incorporate(type='table') %}
-  {%- set relations_list = get_relation_without_caching(target_relation) -%}
+  {%- set relations_list = fabric__get_relation_without_caching(target_relation) -%}
 
   {%- set existing_relation = none %}
   {% if (relations_list|length == 1) and (relations_list[0][2] == target_relation.schema)
@@ -31,7 +31,7 @@
   {% if existing_relation is none %}
 
     {%- call statement('main') -%}
-      {{ create_table_as(False, target_relation, sql)}}
+      {{ get_create_table_as_sql(False, target_relation, sql)}}
     {%- endcall -%}
 
   {% elif existing_relation.is_view %}
@@ -40,19 +40,19 @@
     {{ log("Dropping relation " ~ target_relation ~ " because it is a view and this model is a table.") }}
     {{ drop_relation_if_exists(existing_relation) }}
     {%- call statement('main') -%}
-      {{ create_table_as(False, target_relation, sql)}}
+      {{ get_create_table_as_sql(False, target_relation, sql)}}
     {%- endcall -%}
 
   {% elif full_refresh_mode %}
 
     {%- call statement('main') -%}
-      {{ create_table_as(False, target_relation, sql)}}
+      {{ get_create_table_as_sql(False, target_relation, sql)}}
     {%- endcall -%}
 
   {% else %}
 
     {%- call statement('create_tmp_relation') -%}
-      {{ create_table_as(True, temp_relation, sql)}}
+      {{ get_create_table_as_sql(True, temp_relation, sql)}}
     {%- endcall -%}
     {% do adapter.expand_target_column_types(
              from_relation=temp_relation,
