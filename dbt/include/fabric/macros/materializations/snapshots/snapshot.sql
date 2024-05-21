@@ -75,15 +75,13 @@
             insert_cols = quoted_source_columns
          )
       %}
-
   {% endif %}
 
   {% call statement('main') %}
       {{ final_sql }}
   {% endcall %}
 
-  fabric__drop_relation_script(temp_snapshot_relation)
-
+  {{ drop_relation_if_exists(temp_snapshot_relation) }}
   {% set should_revoke = should_revoke(target_relation_exists, full_refresh_mode=False) %}
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
 
@@ -94,7 +92,6 @@
   {% endif %}
 
   {{ run_hooks(post_hooks, inside_transaction=True) }}
-
   {{ adapter.commit() }}
 
   {% if staging_table is defined %}
@@ -102,7 +99,6 @@
   {% endif %}
 
   {{ run_hooks(post_hooks, inside_transaction=False) }}
-
   {{ return({'relations': [target_relation]}) }}
 
 {% endmaterialization %}

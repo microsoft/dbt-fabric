@@ -3,15 +3,15 @@
   {%- set target_relation = this.incorporate(type='view') -%}
   {{log("Target Relation "~target_relation)}}
 
-  {%- set relation = fabric__get_relation_without_caching(this) %}
+  {%- set relation = get_relation_without_caching(this) %}
   {% set existing_relation = none %}
   {% if (relation|length == 1) %}
     {% set existing_relation = get_or_create_relation(relation[0][0], relation[0][2] , relation[0][1] , relation[0][3])[1] %}
   {% endif %}
-  {{log("Existing Relation "~existing_relation)}}
+  {# {{log("Existing Relation "~existing_relation)}} #}
 
   {%- set backup_relation = none %}
-  {{log("Existing Relation type is "~ existing_relation.type)}}
+  {# {{log("Existing Relation type is "~ existing_relation.type)}} #}
   {% if (existing_relation != none and existing_relation.type == "table") %}
       {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
   {% elif (existing_relation != none and existing_relation.type == "view") %}
