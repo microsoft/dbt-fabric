@@ -3,8 +3,9 @@
 
   {%- set full_refresh_mode = (should_full_refresh()) -%}
   {% set target_relation = this.incorporate(type='table') %}
-  {%- set relations_list = fabric__get_relation_without_caching(target_relation) -%}
+  {%- set existing_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
 
+  {# {%- set relations_list = fabric__get_relation_without_caching(target_relation) -%}
   {%- set existing_relation = none %}
   {% if (relations_list|length == 1) and (relations_list[0][2] == target_relation.schema)
         and (relations_list[0][1] ==  target_relation.identifier) and  (relations_list[0][3] ==  target_relation.type)%}
@@ -12,7 +13,7 @@
   {% elif (relations_list|length == 1) and (relations_list[0][2] == target_relation.schema)
         and (relations_list[0][1] ==  target_relation.identifier) and  (relations_list[0][3] !=  target_relation.type) %}
       {% set existing_relation = get_or_create_relation(relations_list[0][0], relations_list[0][2] , relations_list[0][1] , relations_list[0][3])[1] %}
-  {% endif %}
+  {% endif %} #}
 
   {# {{ log("Full refresh mode" ~ full_refresh_mode)}}
   {{ log("existing relation : "~existing_relation ~ " type  "~ existing_relation.type ~ " is view?  "~existing_relation.is_view)  }}
@@ -38,7 +39,7 @@
 
     {#-- Can't overwrite a view with a table - we must drop --#}
     {{ log("Dropping relation " ~ target_relation ~ " because it is a view and this model is a table.") }}
-    {{ drop_relation_if_exists(existing_relation) }}
+    {{ drop_relation(existing_relation) }}
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
     {%- endcall -%}
@@ -72,7 +73,7 @@
     {%- endcall -%}
   {% endif %}
 
-  {% do drop_relation_if_exists(temp_relation) %}
+  {% do drop_relation(temp_relation) %}
   {{ run_hooks(post_hooks, inside_transaction=True) }}
 
   {% set target_relation = target_relation.incorporate(type='table') %}

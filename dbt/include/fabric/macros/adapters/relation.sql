@@ -16,7 +16,7 @@
 
     {% if relation.type == 'view' -%}
       {% call statement('find_references', fetch_result=true) %}
-      USE [{{ relation.database }}];
+      {{ get_use_database_sql(relation.database) }}
       select
           sch.name as schema_name,
           obj.name as view_name
@@ -44,13 +44,13 @@
     {%- else -%}
         {{ exceptions.raise_not_implemented('Invalid relation being dropped: ' ~ relation) }}
     {% endif %}
-    USE [{{ relation.database }}];
+    {{ get_use_database_sql(relation.database) }}
     EXEC('DROP {{ relation.type }} IF EXISTS {{ relation.include(database=False) }};');
 {% endmacro %}
 
 {% macro fabric__rename_relation(from_relation, to_relation) -%}
   {% call statement('rename_relation') -%}
-     USE [{{ from_relation.database }}];
+     {{ get_use_database_sql(from_relation.database) }}
       EXEC sp_rename '{{ from_relation.schema }}.{{ from_relation.identifier }}', '{{ to_relation.identifier }}'
   {%- endcall %}
 {% endmacro %}

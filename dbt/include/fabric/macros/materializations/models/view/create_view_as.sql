@@ -6,7 +6,7 @@
 
     {%- set temp_view_sql = sql.replace("'", "''") -%}
 
-    USE [{{ relation.database }}];
+    {{ get_use_database_sql(relation.database) }}
     {% set contract_config = config.get('contract') %}
     {% if contract_config.enforced %}
         {{ get_assert_columns_equivalent(sql) }}

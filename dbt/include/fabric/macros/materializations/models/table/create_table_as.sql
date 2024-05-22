@@ -3,7 +3,7 @@
    {% set tmp_relation = relation.incorporate(
    path={"identifier": relation.identifier.replace("#", "") ~ '_temp_view'},
    type='view')-%}
-   {% do run_query(drop_relation_if_exists(tmp_relation)) %}
+   {% do run_query(drop_relation(tmp_relation)) %}
 
    {% set contract_config = config.get('contract') %}
 
@@ -27,6 +27,6 @@
       EXEC('CREATE TABLE [{{relation.database}}].[{{relation.schema}}].[{{relation.identifier}}] AS (SELECT * FROM [{{tmp_relation.database}}].[{{tmp_relation.schema}}].[{{tmp_relation.identifier}}]);');
     {% endif %}
 
-    {{ drop_relation_if_exists(tmp_relation) }}
+    {{ drop_relation(tmp_relation) }}
 
 {% endmacro %}
