@@ -3,8 +3,14 @@
 
   {%- set full_refresh_mode = (should_full_refresh()) -%}
   {% set target_relation = this.incorporate(type='table') %}
-  {%- set existing_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
+  {%- set relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
 
+  {%- set existing_relation = none %}
+  {% if (relation.type ==  target_relation.type) and (relation.identifier == target_relation.identifier) and (relation.schema == target_relation.schema) and (relation.database == target_relation.database) %}
+    {% set existing_relation = target_relation %}
+  {% elif (relation.type !=  target_relation.type) and (relation.identifier == target_relation.identifier) and (relation.schema == target_relation.schema) and (relation.database == target_relation.database) %}
+    {% set existing_relation = get_or_create_relation(relation.database, relation.schema, relation.identifier, relation.type)[1] %}
+  {% endif %}
   {# {%- set relations_list = fabric__get_relation_without_caching(target_relation) -%}
   {%- set existing_relation = none %}
   {% if (relations_list|length == 1) and (relations_list[0][2] == target_relation.schema)
@@ -19,6 +25,9 @@
   {{ log("existing relation : "~existing_relation ~ " type  "~ existing_relation.type ~ " is view?  "~existing_relation.is_view)  }}
   {{ log("target relation: " ~target_relation ~ " type  "~ target_relation.type ~ " is view?  "~target_relation.is_view) }} #}
 
+  {{ log("existing relation : "~existing_relation ~ " type  "~ existing_relation.type ~ " is view?  "~existing_relation.is_view)  }}
+  {{ log("target relation: " ~target_relation ~ " type  "~ target_relation.type ~ " is view?  "~target_relation.is_view) }}
+
   -- configs
   {%- set unique_key = config.get('unique_key') -%}
   {% set incremental_strategy = config.get('incremental_strategy') or 'default' %}
@@ -30,28 +39,25 @@
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
   {% if existing_relation is none %}
-
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
     {%- endcall -%}
 
   {% elif existing_relation.is_view %}
-
     {#-- Can't overwrite a view with a table - we must drop --#}
     {{ log("Dropping relation " ~ target_relation ~ " because it is a view and this model is a table.") }}
-    {{ drop_relation(existing_relation) }}
+    {{ drop_relation_if_exists(existing_relation) }}
+
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
     {%- endcall -%}
 
   {% elif full_refresh_mode %}
-
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
     {%- endcall -%}
 
   {% else %}
-
     {%- call statement('create_tmp_relation') -%}
       {{ get_create_table_as_sql(True, temp_relation, sql)}}
     {%- endcall -%}
@@ -73,7 +79,7 @@
     {%- endcall -%}
   {% endif %}
 
-  {% do drop_relation(temp_relation) %}
+  {% do drop_relation_if_exists(temp_relation) %}
   {{ run_hooks(post_hooks, inside_transaction=True) }}
 
   {% set target_relation = target_relation.incorporate(type='table') %}

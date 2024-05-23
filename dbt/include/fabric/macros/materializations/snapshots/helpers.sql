@@ -1,6 +1,6 @@
 {% macro fabric__post_snapshot(staging_relation) %}
   -- Clean up the snapshot temp table
-  {% do drop_relation(staging_relation) %}
+  {% do drop_relation_if_exists(staging_relation) %}
 {% endmacro %}
 
 --Due to Alter not being supported, have to rely on this for temporarily

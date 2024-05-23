@@ -13,7 +13,7 @@
 
   {% if (existing_relation != none) %}
     -- drop the temp relations if they exist already in the database
-    {{ drop_relation(backup_relation) }}
+    {{ drop_relation_if_exists(backup_relation) }}
     -- Rename target relation as backup relation
     {{ adapter.rename_relation(existing_relation, backup_relation) }}
   {% endif %}
@@ -41,7 +41,7 @@
     -- finally, drop the foreign key references if exists
     {{ drop_fk_indexes_on_table(backup_relation) }}
     -- drop existing/backup relation after the commit
-    {{ drop_relation(backup_relation) }}
+    {{ drop_relation_if_exists(backup_relation) }}
    {% endif %}
   -- Add constraints including FK relation.
   {{ fabric__build_model_constraints(target_relation) }}

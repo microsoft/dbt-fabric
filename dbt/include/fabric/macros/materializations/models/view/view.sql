@@ -12,7 +12,7 @@
 
   {% if (existing_relation != none) %}
     -- drop the temp relations if they exist already in the database
-    {{ drop_relation(backup_relation) }}
+    {{ drop_relation_if_exists(backup_relation) }}
     -- Rename target relation as backup relation
     {{ adapter.rename_relation(existing_relation, backup_relation) }}
   {% endif %}
@@ -35,7 +35,7 @@
   {{ run_hooks(post_hooks, inside_transaction=True) }}
   {{ adapter.commit() }}
   {% if (backup_relation != none) %}
-    {{ drop_relation(backup_relation) }}
+    {{ drop_relation_if_exists(backup_relation) }}
   {% endif %}
   {{ run_hooks(post_hooks, inside_transaction=False) }}
   {{ return({'relations': [target_relation]}) }}
