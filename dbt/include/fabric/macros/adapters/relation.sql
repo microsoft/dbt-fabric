@@ -6,7 +6,7 @@
     {{ return(temp_relation) }}
 {% endmacro %}
 
-{% macro fabric__drop_relation(relation) -%}
+{% macro fabric__get_drop_sql(relation) -%}
   {% if relation.type == 'view' -%}
       {% call statement('find_references', fetch_result=true) %}
         {{ get_use_database_sql(relation.database) }}
@@ -27,19 +27,17 @@
       {% set references = load_result('find_references')['data'] %}
       {% for reference in references -%}
         -- dropping referenced view {{ reference[0] }}.{{ reference[1] }}
-        {{ drop_relation_if_exists(relation.incorporate(
+        {% do adapter.drop_relation(relation.incorporate(
             type="view",
-            path={"schema": reference[0], "identifier": reference[1]})) }}
+            path={"schema": reference[0], "identifier": reference[1]})) %}
       {% endfor %}
-      {{ get_use_database_sql(relation.database) }}
-      EXEC('DROP VIEW IF EXISTS {{ relation.include(database=False) }};');
     {% elif relation.type == 'table'%}
       {% set object_id_type = 'U' %}
-      {{ get_use_database_sql(relation.database) }}
-      EXEC('DROP TABLE IF EXISTS {{ relation.include(database=False) }};');
     {%- else -%}
         {{ exceptions.raise_not_implemented('Invalid relation being dropped: ' ~ relation) }}
     {% endif %}
+    {{ get_use_database_sql(relation.database) }}
+    EXEC('DROP {{ relation.type }} IF EXISTS {{ relation.include(database=False) }};');
 {% endmacro %}
 
 {% macro fabric__rename_relation(from_relation, to_relation) -%}

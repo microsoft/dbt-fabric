@@ -46,7 +46,7 @@
   {% elif existing_relation.is_view %}
     {#-- Can't overwrite a view with a table - we must drop --#}
     {{ log("Dropping relation " ~ target_relation ~ " because it is a view and this model is a table.") }}
-    {{ drop_relation_if_exists(existing_relation) }}
+    {% do adapter.drop_relation(existing_relation) %}
 
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
@@ -79,7 +79,7 @@
     {%- endcall -%}
   {% endif %}
 
-  {% do drop_relation_if_exists(temp_relation) %}
+  {% do adapter.drop_relation(temp_relation) %}
   {{ run_hooks(post_hooks, inside_transaction=True) }}
 
   {% set target_relation = target_relation.incorporate(type='table') %}

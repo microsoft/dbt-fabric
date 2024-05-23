@@ -81,7 +81,7 @@
       {{ final_sql }}
   {% endcall %}
 
-  {{ drop_relation_if_exists(temp_snapshot_relation) }}
+  {% do adapter.drop_relation(temp_snapshot_relation) %}
   {% set should_revoke = should_revoke(target_relation_exists, full_refresh_mode=False) %}
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
 

@@ -19,12 +19,11 @@ class TestSimpleMaterializations(BaseSimpleMaterializations):
     pass
 
 
-@pytest.mark.skip(reason="CTAS is not supported without a table.")
 class TestSingularTestsFabric(BaseSingularTests):
     pass
 
 
-@pytest.mark.skip(reason="ephemeral not supported")
+@pytest.mark.skip(reason="Nested CTE is not supported")
 class TestSingularTestsEphemeralFabric(BaseSingularTestsEphemeral):
     pass
 
@@ -41,8 +40,6 @@ class TestIncrementalFabric(BaseIncremental):
     pass
 
 
-# Modified incremental_not_schema_change.sql file to handle DATETIME compatibility issues.
-@pytest.mark.skip(reason="CTAS is not supported without a table.")
 class TestIncrementalNotSchemaChangeFabric(BaseIncrementalNotSchemaChange):
     @pytest.fixture(scope="class")
     def models(self):
@@ -73,7 +70,6 @@ class TestSnapshotTimestampFabric(BaseSnapshotTimestamp):
     pass
 
 
-# Assertion Failed.
 class TestBaseCachingFabric(BaseAdapterMethod):
     pass
 

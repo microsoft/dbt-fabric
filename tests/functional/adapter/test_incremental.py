@@ -87,12 +87,13 @@ from source_data
 """
 
 
-@pytest.mark.skip(reason="CTAS is not supported without a table.")
 class TestBaseIncrementalUniqueKeyFabric(BaseIncrementalUniqueKey):
     pass
 
 
-@pytest.mark.skip(reason="CTAS is not supported without a table.")
+@pytest.mark.skip(
+    "The specified ALTER TABLE statement is not supported in this edition of SQL Server."
+)
 class TestIncrementalOnSchemaChangeFabric(BaseIncrementalOnSchemaChange):
     @pytest.fixture(scope="class")
     def models(self):
@@ -112,12 +113,10 @@ class TestIncrementalOnSchemaChangeFabric(BaseIncrementalOnSchemaChange):
         }
 
 
-@pytest.mark.skip(reason="CTAS is not supported without a table.")
 class TestIncrementalPredicatesDeleteInsertFabric(BaseIncrementalPredicates):
     pass
 
 
-@pytest.mark.skip(reason="CTAS is not supported without a table.")
 class TestPredicatesDeleteInsertFabric(BaseIncrementalPredicates):
     @pytest.fixture(scope="class")
     def project_config_update(self):

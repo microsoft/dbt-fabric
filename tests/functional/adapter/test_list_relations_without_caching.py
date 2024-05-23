@@ -108,8 +108,6 @@ class TestListRelationsWithoutCachingSingle:
         schemas = project.created_schemas
 
         for schema in schemas:
-            # schema_relation = BaseRelation.create(schema=schema, database=database)
-            # schema_relation = f"{database}.{schema}"
             kwargs = {"schema_relation": schema}
             _, log_output = run_dbt_and_capture(
                 [
@@ -121,13 +119,6 @@ class TestListRelationsWithoutCachingSingle:
                     str(kwargs),
                 ]
             )
-
-            # parsed_logs = parse_json_logs(log_output)
-            # print(parsed_logs)
-            # n_relations = find_result_in_parsed_logs(parsed_logs, "n_relations")
-
-            # assert n_relations == "n_relations: 1"
-            # assert "n_relations: 1" in log_output
             assert "n_relations: 2" in log_output
 
 
@@ -166,9 +157,4 @@ class TestListRelationsWithoutCachingFull:
                     str(kwargs),
                 ]
             )
-
-            # parsed_logs = parse_json_logs(log_output)
-            # n_relations = find_result_in_parsed_logs(parsed_logs, "n_relations")
-
-            # assert n_relations == f"n_relations: {NUM_EXPECTED_RELATIONS}"
             assert "n_relations: 12" in log_output

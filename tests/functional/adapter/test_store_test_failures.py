@@ -18,7 +18,6 @@ from dbt.tests.util import check_relations_equal, run_dbt
 #     TestStoreTestFailures,
 # )
 
-
 tests__passing_test = """
 select * from {{ ref('fine_model') }}
 where 1=2
