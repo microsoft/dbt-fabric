@@ -26,10 +26,18 @@
   -- `BEGIN` happens here:
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
+  -- creating a temp relation
+  {% set tmp_relation = target_relation.incorporate(
+   path={"identifier": target_relation.identifier.replace("#", "") ~ '_temp_view'},
+   type='view')-%}
+
   -- build model
   {% call statement('main') -%}
     {{ get_create_table_as_sql(False, target_relation, sql) }}
   {%- endcall %}
+
+  -- drop temp relation
+  {% do adapter.drop_relation(tmp_relation) %}
 
   -- cleanup
   {{ run_hooks(post_hooks, inside_transaction=True) }}
