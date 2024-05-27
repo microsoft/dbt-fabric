@@ -39,7 +39,14 @@
   {% if not target_relation_exists %}
 
       {% set build_sql = build_snapshot_table(strategy, temp_snapshot_relation) %}
+
+      -- naming a temp relation
+      {% set tmp_relation_view = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+      -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
+      -- drop temp relation if exists
+      {% do adapter.drop_relation(tmp_relation_view) %}
       {% set final_sql = get_create_table_as_sql(False, target_relation, build_sql) %}
+      {% do adapter.drop_relation(tmp_relation_view) %}
 
   {% else %}
 

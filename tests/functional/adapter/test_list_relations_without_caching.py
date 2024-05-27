@@ -119,7 +119,7 @@ class TestListRelationsWithoutCachingSingle:
                     str(kwargs),
                 ]
             )
-            assert "n_relations: 2" in log_output
+            assert "n_relations: 1" in log_output
 
 
 class TestListRelationsWithoutCachingFull:
@@ -157,4 +157,4 @@ class TestListRelationsWithoutCachingFull:
                     str(kwargs),
                 ]
             )
-            assert "n_relations: 12" in log_output
+            assert f"n_relations: {NUM_EXPECTED_RELATIONS}" in log_output

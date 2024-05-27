@@ -16,7 +16,7 @@
 {% endmacro %}
 
 {% macro build_model_constraints(relation) %}
-    {{ return(adapter.dispatch('build_columns_constraints', 'dbt')(relation)) }}
+    {{ return(adapter.dispatch('build_model_constraints', 'dbt')(relation)) }}
 {% endmacro %}
 
 {%- macro default__build_model_constraints(relation) -%}

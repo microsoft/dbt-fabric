@@ -22,6 +22,13 @@
 
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
+  -- naming a temp relation
+  {% set tmp_relation_view = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+
+  -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
+  -- drop temp relation if exists
+  {% do adapter.drop_relation(tmp_relation_view) %}
+
   {% if existing_relation is none %}
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
@@ -63,14 +70,12 @@
     {%- endcall -%}
   {% endif %}
 
+  {% do adapter.drop_relation(tmp_relation_view) %}
   {% do adapter.drop_relation(temp_relation) %}
   {{ run_hooks(post_hooks, inside_transaction=True) }}
-
   {% set target_relation = target_relation.incorporate(type='table') %}
-
   {% set should_revoke = should_revoke(existing_relation, full_refresh_mode) %}
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
-
   {% do persist_docs(target_relation, model) %}
   {% do adapter.commit() %}
   {{ return({'relations': [target_relation]}) }}
