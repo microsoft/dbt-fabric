@@ -11,22 +11,6 @@
   {% elif (relation.type !=  target_relation.type) and (relation.identifier == target_relation.identifier) and (relation.schema == target_relation.schema) and (relation.database == target_relation.database) %}
     {% set existing_relation = get_or_create_relation(relation.database, relation.schema, relation.identifier, relation.type)[1] %}
   {% endif %}
-  {# {%- set relations_list = fabric__get_relation_without_caching(target_relation) -%}
-  {%- set existing_relation = none %}
-  {% if (relations_list|length == 1) and (relations_list[0][2] == target_relation.schema)
-        and (relations_list[0][1] ==  target_relation.identifier) and  (relations_list[0][3] ==  target_relation.type)%}
-    {% set existing_relation = target_relation %}
-  {% elif (relations_list|length == 1) and (relations_list[0][2] == target_relation.schema)
-        and (relations_list[0][1] ==  target_relation.identifier) and  (relations_list[0][3] !=  target_relation.type) %}
-      {% set existing_relation = get_or_create_relation(relations_list[0][0], relations_list[0][2] , relations_list[0][1] , relations_list[0][3])[1] %}
-  {% endif %} #}
-
-  {# {{ log("Full refresh mode" ~ full_refresh_mode)}}
-  {{ log("existing relation : "~existing_relation ~ " type  "~ existing_relation.type ~ " is view?  "~existing_relation.is_view)  }}
-  {{ log("target relation: " ~target_relation ~ " type  "~ target_relation.type ~ " is view?  "~target_relation.is_view) }} #}
-
-  {{ log("existing relation : "~existing_relation ~ " type  "~ existing_relation.type ~ " is view?  "~existing_relation.is_view)  }}
-  {{ log("target relation: " ~target_relation ~ " type  "~ target_relation.type ~ " is view?  "~target_relation.is_view) }}
 
   -- configs
   {%- set unique_key = config.get('unique_key') -%}
@@ -62,8 +46,8 @@
       {{ get_create_table_as_sql(True, temp_relation, sql)}}
     {%- endcall -%}
     {% do adapter.expand_target_column_types(
-             from_relation=temp_relation,
-             to_relation=target_relation) %}
+              from_relation=temp_relation,
+              to_relation=target_relation) %}
     {#-- Process schema changes. Returns dict of changes if successful. Use source columns for upserting/merging --#}
     {% set dest_columns = process_schema_changes(on_schema_change, temp_relation, existing_relation) %}
     {% if not dest_columns %}
