@@ -37,6 +37,7 @@
   {%- endcall %}
 
   -- drop temp relation
+  {{log ("I am here")}}
   {% do adapter.drop_relation(tmp_relation) %}
 
   -- cleanup
