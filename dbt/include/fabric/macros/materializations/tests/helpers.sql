@@ -1,12 +1,18 @@
 {% macro fabric__get_test_sql(main_sql, fail_calc, warn_if, error_if, limit) -%}
 
+  -- Create target schema if it does not
+  USE [{{ target.database }}];
+  IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '{{ target.schema }}')
+  BEGIN
+    EXEC('CREATE SCHEMA [{{ target.schema }}]')
+  END
+
   {% if main_sql.strip().lower().startswith('with') %}
     {% set testview %}
-      {{ config.get('schema') }}.testview_{{ range(1300, 19000) | random }}
+      {{ target.schema }}.testview_{{ range(1300, 19000) | random }}
     {% endset %}
 
     {% set sql = main_sql.replace("'", "''")%}
-
     EXEC('create view {{testview}} as {{ sql }};')
     select
       {{ "top (" ~ limit ~ ')' if limit != none }}

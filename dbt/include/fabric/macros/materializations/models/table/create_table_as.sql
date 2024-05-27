@@ -21,4 +21,5 @@
     {%- else %}
         EXEC('CREATE TABLE [{{relation.database}}].[{{relation.schema}}].[{{relation.identifier}}] AS (SELECT * FROM [{{tmp_relation.database}}].[{{tmp_relation.schema}}].[{{tmp_relation.identifier}}]);');
     {% endif %}
+    {% do adapter.drop_relation(tmp_relation)%}
 {% endmacro %}
