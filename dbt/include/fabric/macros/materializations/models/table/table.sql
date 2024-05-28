@@ -2,7 +2,7 @@
 
   -- Load target relation
   {%- set target_relation = this.incorporate(type='table') %}
-    {%- set existing_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
+  {%- set existing_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
 
   {%- set backup_relation = none %}
   {% if (existing_relation != none and existing_relation.type == "table") %}
@@ -32,7 +32,7 @@
   -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
   -- drop temp relation if exists
   {% do adapter.drop_relation(tmp_relation) %}
-
+  {{ log("printing target relation - "~target_relation)}}
   -- build model
   {% call statement('main') -%}
     {{ get_create_table_as_sql(False, target_relation, sql) }}
