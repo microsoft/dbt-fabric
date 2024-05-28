@@ -12,7 +12,6 @@
   {% endif %}
 
   {% if (existing_relation != none) %}
-
     -- drop the temp relations if they exist already in the database
     {% do adapter.drop_relation(backup_relation) %}
     -- Rename target relation as backup relation
@@ -32,7 +31,7 @@
   -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
   -- drop temp relation if exists
   {% do adapter.drop_relation(tmp_relation) %}
-  {{ log("printing target relation - "~target_relation)}}
+
   -- build model
   {% call statement('main') -%}
     {{ get_create_table_as_sql(False, target_relation, sql) }}
