@@ -568,8 +568,6 @@ EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identi
             generated_sql_generic, "foreign_key_model", "<foreign_key_model_identifier>"
         )
         generated_sql_wodb = generated_sql_generic.replace("USE [" + project.database + "];", "")
-        print("Expected:", expected_sql.strip())
-        print("Generated:", generated_sql_wodb.strip())
         assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
             generated_sql_wodb.strip()
         )

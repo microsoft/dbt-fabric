@@ -1,14 +1,13 @@
-
 {% materialization incremental, adapter='fabric' -%}
 
   {%- set full_refresh_mode = (should_full_refresh()) -%}
   {% set target_relation = this.incorporate(type='table') %}
-{%- set relation = load_cached_relation(this) -%}
+  {%- set relation = load_cached_relation(this) -%}
 
   {%- set existing_relation = none %}
-  {% if (relation.type ==  target_relation.type) and (relation.identifier == target_relation.identifier) and (relation.schema == target_relation.schema) and (relation.database == target_relation.database) %}
+  {% if relation.type ==  'table' %}
     {% set existing_relation = target_relation %}
-  {% elif (relation.type !=  target_relation.type) and (relation.identifier == target_relation.identifier) and (relation.schema == target_relation.schema) and (relation.database == target_relation.database) %}
+  {% elif relation.type ==  'view' %}
     {% set existing_relation = get_or_create_relation(relation.database, relation.schema, relation.identifier, relation.type)[1] %}
   {% endif %}
 

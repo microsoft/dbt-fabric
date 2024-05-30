@@ -13,10 +13,6 @@
     {{ return(adapter.dispatch('get_use_database_sql', 'dbt')(database)) }}
 {% endmacro %}
 
-{%- macro default__get_use_database_sql(database) -%}
-{%- endmacro -%}
-
-
 {%- macro fabric__get_use_database_sql(database) -%}
   USE [{{database}}];
 {%- endmacro -%}

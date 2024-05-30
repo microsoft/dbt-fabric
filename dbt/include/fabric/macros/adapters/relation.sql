@@ -27,9 +27,10 @@
       {% set references = load_result('find_references')['data'] %}
       {% for reference in references -%}
         -- dropping referenced view {{ reference[0] }}.{{ reference[1] }}
-        {% do adapter.drop_relation(relation.incorporate(
-            type="view",
-            path={"schema": reference[0], "identifier": reference[1]})) %}
+        {% do adapter.drop_relation
+          (api.Relation.create(
+            identifier = reference[1], schema = reference[0], database = relation.database, type='view'
+          ))%}
       {% endfor %}
     {% elif relation.type == 'table'%}
       {% set object_id_type = 'U' %}
