@@ -6,51 +6,44 @@
     {{ return(temp_relation) }}
 {% endmacro %}
 
-{% macro fabric__drop_relation(relation) -%}
-  {% call statement('drop_relation', auto_begin=False) -%}
-    {{ fabric__drop_relation_script(relation) }}
-  {%- endcall %}
-{% endmacro %}
-
-{% macro fabric__drop_relation_script(relation) -%}
-
-    {% if relation.type == 'view' -%}
+{% macro fabric__get_drop_sql(relation) -%}
+  {% if relation.type == 'view' -%}
       {% call statement('find_references', fetch_result=true) %}
-      USE [{{ relation.database }}];
-      select
-          sch.name as schema_name,
-          obj.name as view_name
-      from sys.sql_expression_dependencies refs
-      inner join sys.objects obj
-      on refs.referencing_id = obj.object_id
-      inner join sys.schemas sch
-      on obj.schema_id = sch.schema_id
-      where refs.referenced_database_name = '{{ relation.database }}'
-      and refs.referenced_schema_name = '{{ relation.schema }}'
-      and refs.referenced_entity_name = '{{ relation.identifier }}'
-      and refs.referencing_class = 1
-      and obj.type = 'V'
+        {{ get_use_database_sql(relation.database) }}
+        select
+            sch.name as schema_name,
+            obj.name as view_name
+        from sys.sql_expression_dependencies refs
+        inner join sys.objects obj
+        on refs.referencing_id = obj.object_id
+        inner join sys.schemas sch
+        on obj.schema_id = sch.schema_id
+        where refs.referenced_database_name = '{{ relation.database }}'
+        and refs.referenced_schema_name = '{{ relation.schema }}'
+        and refs.referenced_entity_name = '{{ relation.identifier }}'
+        and refs.referencing_class = 1
+        and obj.type = 'V'
       {% endcall %}
       {% set references = load_result('find_references')['data'] %}
       {% for reference in references -%}
-      -- dropping referenced view {{ reference[0] }}.{{ reference[1] }}
-      {{ fabric__drop_relation_script(relation.incorporate(
-          type="view",
-          path={"schema": reference[0], "identifier": reference[1]})) }}
+        -- dropping referenced view {{ reference[0] }}.{{ reference[1] }}
+        {% do adapter.drop_relation
+          (api.Relation.create(
+            identifier = reference[1], schema = reference[0], database = relation.database, type='view'
+          ))%}
       {% endfor %}
     {% elif relation.type == 'table'%}
       {% set object_id_type = 'U' %}
-
     {%- else -%}
         {{ exceptions.raise_not_implemented('Invalid relation being dropped: ' ~ relation) }}
     {% endif %}
-    USE [{{ relation.database }}];
+    {{ get_use_database_sql(relation.database) }}
     EXEC('DROP {{ relation.type }} IF EXISTS {{ relation.include(database=False) }};');
 {% endmacro %}
 
 {% macro fabric__rename_relation(from_relation, to_relation) -%}
   {% call statement('rename_relation') -%}
-     USE [{{ from_relation.database }}];
+     {{ get_use_database_sql(from_relation.database) }}
       EXEC sp_rename '{{ from_relation.schema }}.{{ from_relation.identifier }}', '{{ to_relation.identifier }}'
   {%- endcall %}
 {% endmacro %}

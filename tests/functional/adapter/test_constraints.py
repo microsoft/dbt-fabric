@@ -480,8 +480,10 @@ class BaseConstraintsRuntimeDdlEnforcement:
     @pytest.fixture(scope="class")
     def expected_sql(self):
         return """
-EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier> EXEC('DROP view IF EXISTS <model_identifier>
+EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier>
 """
+
+    # EXEC('DROP view IF EXISTS <model_identifier>
 
     def test__constraints_ddl(self, project, expected_sql):
         unformatted_constraint_schema_yml = read_file("models", "constraints_schema.yml")
@@ -501,7 +503,9 @@ EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identi
             generated_sql_generic, "foreign_key_model", "<foreign_key_model_identifier>"
         )
         generated_sql_wodb = generated_sql_generic.replace("USE [" + project.database + "];", "")
-        assert _normalize_whitespace(expected_sql) == _normalize_whitespace(generated_sql_wodb)
+        assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
+            generated_sql_wodb.strip()
+        )
 
 
 class TestTableConstraintsRuntimeDdlEnforcement(BaseConstraintsRuntimeDdlEnforcement):
@@ -542,8 +546,10 @@ class BaseModelConstraintsRuntimeEnforcement:
     @pytest.fixture(scope="class")
     def expected_sql(self):
         return """
-EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier> EXEC('DROP view IF EXISTS <model_identifier>
+EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color, 1 as id, ''2019-01-01'' as date_day;'); CREATE TABLE <model_identifier> ( id int not null, color varchar(100), date_day varchar(100) ) INSERT INTO <model_identifier> ( [id], [color], [date_day] ) SELECT [id], [color], [date_day] FROM <model_identifier>
 """
+
+    # EXEC('DROP view IF EXISTS <model_identifier>
 
     def test__model_constraints_ddl(self, project, expected_sql):
         unformatted_constraint_schema_yml = read_file("models", "constraints_schema.yml")
@@ -562,7 +568,9 @@ EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identi
             generated_sql_generic, "foreign_key_model", "<foreign_key_model_identifier>"
         )
         generated_sql_wodb = generated_sql_generic.replace("USE [" + project.database + "];", "")
-        assert _normalize_whitespace(expected_sql) == _normalize_whitespace(generated_sql_wodb)
+        assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
+            generated_sql_wodb.strip()
+        )
 
 
 class TestModelConstraintsRuntimeEnforcement(BaseModelConstraintsRuntimeEnforcement):

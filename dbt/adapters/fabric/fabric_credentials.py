@@ -13,6 +13,7 @@ class FabricCredentials(Credentials):
     UID: Optional[str] = None
     PWD: Optional[str] = None
     windows_login: Optional[bool] = False
+    trace_flag: Optional[bool] = False
     tenant_id: Optional[str] = None
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
@@ -36,6 +37,7 @@ class FabricCredentials(Credentials):
         "app_secret": "client_secret",
         "TrustServerCertificate": "trust_cert",
         "schema_auth": "schema_authorization",
+        "SQL_ATTR_TRACE": "trace_flag",
     }
 
     @property
@@ -63,6 +65,7 @@ class FabricCredentials(Credentials):
             "retries",
             "login_timeout",
             "query_timeout",
+            "trace_flag",
         )
 
     @property

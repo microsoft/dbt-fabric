@@ -55,6 +55,7 @@ def _profile_ci_azure_base():
             "database": os.getenv("DBT_AZURESQL_DB"),
             "encrypt": True,
             "trust_cert": True,
+            "trace_flag":False,
         },
     }
 

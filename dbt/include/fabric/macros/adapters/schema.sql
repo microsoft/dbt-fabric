@@ -10,7 +10,7 @@
 
 {% macro fabric__create_schema_with_authorization(relation, schema_authorization) -%}
   {% call statement('create_schema') -%}
-    USE [{{ relation.database }}];
+    {{ get_use_database_sql(relation.database) }}
     IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '{{ relation.schema }}')
     BEGIN
     EXEC('CREATE SCHEMA [{{ relation.schema }}] AUTHORIZATION [{{ schema_authorization }}]')
@@ -27,7 +27,7 @@
                                                identifier=row[1],
                                                type=row[3]
                                                ) -%}
-    {% do drop_relation(schema_relation) %}
+    {% do adapter.drop_relation(schema_relation) %}
   {%- endfor %}
 
   {% call statement('drop_schema') -%}

@@ -24,7 +24,7 @@
         {%- set target_relation = this.incorporate(type='table') -%}
 
         {% call statement('main') %}
-            {{ fabric__drop_relation_script(target_relation) }}
+            {% do adapter.drop_relation(target_relation) %}
             {{ create_or_replace_clone(target_relation, defer_relation) }}
         {% endcall %}
         {{ return({'relations': [target_relation]}) }}

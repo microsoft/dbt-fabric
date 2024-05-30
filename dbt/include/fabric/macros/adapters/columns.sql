@@ -54,8 +54,8 @@
 
 {% macro fabric__alter_column_type(relation, column_name, new_column_type) %}
 
-    {%- set table_name= tmp_relation.include(database=False).include(schema=False)-%}
-    {%- set schema_name = tmp_relation.include(database=False).include(identifier=False) -%}
+    {%- set table_name= relation.identifier -%}
+    {%- set schema_name = relation.schema -%}
 
     {% set generate_tmp_relation_script %}
         SELECT TRIM(REPLACE(STRING_AGG(ColumnName + ' ', ',-'), '-', CHAR(10)))  AS ColumnDef

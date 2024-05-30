@@ -323,6 +323,12 @@ class FabricConnectionManager(SQLConnectionManager):
 
         con_str.append(f"Database={credentials.database}")
 
+        #Enabling trace flag
+        if credentials.trace_flag:
+            con_str.append("SQL_ATTR_TRACE=SQL_OPT_TRACE_ON")
+        else:
+            con_str.append("SQL_ATTR_TRACE=SQL_OPT_TRACE_OFF")
+
         assert credentials.authentication is not None
 
         if "ActiveDirectory" in credentials.authentication:

@@ -1,33 +1,16 @@
 import pytest
-from dbt.tests.adapter.store_test_failures_tests import basic
-from dbt.tests.adapter.store_test_failures_tests.fixtures import (
-    models__file_model_but_with_a_no_good_very_long_name,
-    models__fine_model,
-    models__problematic_model,
-    properties__schema_yml,
-    seeds__expected_accepted_values,
-    seeds__expected_failing_test,
-    seeds__expected_not_null_problematic_model_id,
-    seeds__expected_unique_problematic_model_id,
-    seeds__people,
-    tests__failing_test,
-)
+from dbt.tests.adapter.store_test_failures_tests import basic, fixtures
 from dbt.tests.util import check_relations_equal, run_dbt
-
-# from dbt.tests.adapter.store_test_failures_tests.test_store_test_failures import (
-#     TestStoreTestFailures,
-# )
-
-
-tests__passing_test = """
-select * from {{ ref('fine_model') }}
-where 1=2
-"""
 
 # used to rename test audit schema to help test schema meet max char limit
 # the default is _dbt_test__audit but this runs over the postgres 63 schema name char limit
 # without which idempotency conditions will not hold (i.e. dbt can't drop the schema properly)
 TEST_AUDIT_SCHEMA_SUFFIX = "dbt_test__aud"
+
+tests__passing_test = """
+select * from {{ ref('fine_model') }}
+where 1=2
+"""
 
 
 class StoreTestFailuresBase:
@@ -40,30 +23,30 @@ class StoreTestFailuresBase:
     @pytest.fixture(scope="class")
     def seeds(self):
         return {
-            "people.csv": seeds__people,
-            "expected_accepted_values.csv": seeds__expected_accepted_values,
-            "expected_failing_test.csv": seeds__expected_failing_test,
-            "expected_not_null_problematic_model_id.csv": seeds__expected_not_null_problematic_model_id,
-            "expected_unique_problematic_model_id.csv": seeds__expected_unique_problematic_model_id,
+            "people.csv": fixtures.seeds__people,
+            "expected_accepted_values.csv": fixtures.seeds__expected_accepted_values,
+            "expected_failing_test.csv": fixtures.seeds__expected_failing_test,
+            "expected_not_null_problematic_model_id.csv": fixtures.seeds__expected_not_null_problematic_model_id,
+            "expected_unique_problematic_model_id.csv": fixtures.seeds__expected_unique_problematic_model_id,
         }
 
     @pytest.fixture(scope="class")
     def tests(self):
         return {
-            "failing_test.sql": tests__failing_test,
+            "failing_test.sql": fixtures.tests__failing_test,
             "passing_test.sql": tests__passing_test,
         }
 
     @pytest.fixture(scope="class")
     def properties(self):
-        return {"schema.yml": properties__schema_yml}
+        return {"schema.yml": fixtures.properties__schema_yml}
 
     @pytest.fixture(scope="class")
     def models(self):
         return {
-            "fine_model.sql": models__fine_model,
-            "fine_model_but_with_a_no_good_very_long_name.sql": models__file_model_but_with_a_no_good_very_long_name,
-            "problematic_model.sql": models__problematic_model,
+            "fine_model.sql": fixtures.models__fine_model,
+            "fine_model_but_with_a_no_good_very_long_name.sql": fixtures.models__file_model_but_with_a_no_good_very_long_name,
+            "problematic_model.sql": fixtures.models__problematic_model,
         }
 
     @pytest.fixture(scope="class")
@@ -73,7 +56,7 @@ class StoreTestFailuresBase:
                 "quote_columns": False,
                 "test": self.column_type_overrides(),
             },
-            "tests": {"+schema": TEST_AUDIT_SCHEMA_SUFFIX},
+            "data_tests": {"+schema": TEST_AUDIT_SCHEMA_SUFFIX},
         }
 
     def column_type_overrides(self):
@@ -138,7 +121,7 @@ class StoreTestFailuresBase:
         )
 
 
-class TestStoreTestFailures(StoreTestFailuresBase):
+class BaseStoreTestFailures(StoreTestFailuresBase):
     @pytest.fixture(scope="function")
     def clean_up(self, project):
         yield
@@ -172,11 +155,7 @@ class TestStoreTestFailures(StoreTestFailuresBase):
         self.run_tests_store_failures_and_assert(project)
 
 
-class TestFabricStoreTestFailures(TestStoreTestFailures):
-    pass
-
-
-class TestStoreTestFailuresAsInteractions(basic.StoreTestFailuresAsInteractions):
+class TestStoreTestFailures(BaseStoreTestFailures):
     pass
 
 

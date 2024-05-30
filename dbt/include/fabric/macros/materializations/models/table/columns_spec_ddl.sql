@@ -1,3 +1,7 @@
+{% macro build_columns_constraints(relation) %}
+    {{ return(adapter.dispatch('build_columns_constraints', 'dbt')(relation)) }}
+{% endmacro %}
+
 {% macro fabric__build_columns_constraints(relation) %}
   {# loop through user_provided_columns to create DDL with data types and constraints #}
     {%- set raw_column_constraints = adapter.render_raw_columns_constraints(raw_columns=model['columns']) -%}
@@ -6,6 +10,10 @@
         {{ c }}{{ "," if not loop.last }}
       {% endfor %}
     )
+{% endmacro %}
+
+{% macro build_model_constraints(relation) %}
+    {{ return(adapter.dispatch('build_model_constraints', 'dbt')(relation)) }}
 {% endmacro %}
 
 {% macro fabric__build_model_constraints(relation) %}

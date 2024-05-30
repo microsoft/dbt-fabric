@@ -10,7 +10,6 @@ from dbt.tests.adapter.query_comment.test_query_comment import (
 )
 
 
-# Tests #
 class TestQueryComments(BaseQueryComments):
     pass
 
