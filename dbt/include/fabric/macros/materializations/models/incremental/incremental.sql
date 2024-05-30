@@ -3,7 +3,7 @@
 
   {%- set full_refresh_mode = (should_full_refresh()) -%}
   {% set target_relation = this.incorporate(type='table') %}
-  {%- set relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
+{%- set relation = load_cached_relation(this) -%}
 
   {%- set existing_relation = none %}
   {% if (relation.type ==  target_relation.type) and (relation.identifier == target_relation.identifier) and (relation.schema == target_relation.schema) and (relation.database == target_relation.database) %}
