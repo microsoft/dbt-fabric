@@ -3,7 +3,7 @@
   {%- set full_refresh_mode = (should_full_refresh()) -%}
   {% set target_relation = this.incorporate(type='table') %}
   {%- set relation = load_cached_relation(this) -%}
-
+  {%- set temp_relation = make_temp_relation(target_relation)-%}
   {%- set existing_relation = none %}
   {% if relation.type ==  'table' %}
     {% set existing_relation = target_relation %}
@@ -14,19 +14,11 @@
   -- configs
   {%- set unique_key = config.get('unique_key') -%}
   {% set incremental_strategy = config.get('incremental_strategy') or 'default' %}
-  {%- set temp_relation = make_temp_relation(target_relation)-%}
 
   {% set grant_config = config.get('grants') %}
   {%- set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') -%}
 
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
-
-  -- naming a temp relation
-  {% set tmp_relation_view = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-
-  -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
-  -- drop temp relation if exists
-  {% do adapter.drop_relation(tmp_relation_view) %}
 
   {% if existing_relation is none %}
     {%- call statement('main') -%}
@@ -36,7 +28,7 @@
   {% elif existing_relation.is_view %}
     {#-- Can't overwrite a view with a table - we must drop --#}
     {{ log("Dropping relation " ~ target_relation ~ " because it is a view and this model is a table.") }}
-    {% do adapter.drop_relation(existing_relation) %}
+    {{ adapter.drop_relation(existing_relation) }}
 
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
@@ -69,8 +61,7 @@
     {%- endcall -%}
   {% endif %}
 
-  {% do adapter.drop_relation(tmp_relation_view) %}
-  {% do adapter.drop_relation(temp_relation) %}
+  {{ adapter.drop_relation(temp_relation) }}
   {{ run_hooks(post_hooks, inside_transaction=True) }}
   {% set target_relation = target_relation.incorporate(type='table') %}
   {% set should_revoke = should_revoke(existing_relation, full_refresh_mode) %}
