@@ -44,9 +44,9 @@
       {% set tmp_relation_view = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
       -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
       -- drop temp relation if exists
-      {% do adapter.drop_relation(tmp_relation_view) %}
+      {{ adapter.drop_relation(tmp_relation_view) }}
       {% set final_sql = get_create_table_as_sql(False, target_relation, build_sql) %}
-      {% do adapter.drop_relation(tmp_relation_view) %}
+      {{ adapter.drop_relation(tmp_relation_view) }}
 
   {% else %}
 
@@ -88,7 +88,7 @@
       {{ final_sql }}
   {% endcall %}
 
-  {% do adapter.drop_relation(temp_snapshot_relation) %}
+  {{ adapter.drop_relation(temp_snapshot_relation) }}
   {% set should_revoke = should_revoke(target_relation_exists, full_refresh_mode=False) %}
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
 

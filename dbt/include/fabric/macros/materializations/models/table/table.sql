@@ -20,7 +20,9 @@
   -- Drop temp relation if it exists before materializing temp relation
   {{ adapter.drop_relation(temp_relation) }}
 
-  {% set tmp_vw_relation = temp_relation.incorporate(path={"identifier": temp_relation.identifier ~ '_vw'}, type='view')-%}
+  {% set tmp_vw_relation = temp_relation.incorporate(path={"identifier": temp_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+
+  {{ adapter.drop_relation(tmp_vw_relation) }}
 
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
   -- `BEGIN` happens here:
