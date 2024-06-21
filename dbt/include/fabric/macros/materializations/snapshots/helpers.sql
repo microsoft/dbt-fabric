@@ -190,6 +190,8 @@
 
 {% macro build_snapshot_staging_table(strategy, temp_snapshot_relation, target_relation) %}
     {% set temp_relation = make_temp_relation(target_relation) %}
+    {{ adapter.drop_relation(temp_relation) }}
+
     {% set select = snapshot_staging_table(strategy, temp_snapshot_relation, target_relation) %}
 
     {% set tmp_tble_vw_relation = temp_relation.incorporate(path={"identifier": temp_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}

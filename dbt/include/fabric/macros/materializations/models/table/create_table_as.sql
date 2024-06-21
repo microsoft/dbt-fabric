@@ -1,6 +1,7 @@
 {% macro fabric__create_table_as(temporary, relation, sql) -%}
 
     {% set tmp_vw_relation = relation.incorporate(path={"identifier": relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+    {% do adapter.drop_relation(tmp_vw_relation) %}
     {{ get_create_view_as_sql(tmp_vw_relation, sql) }}
 
     {% set contract_config = config.get('contract') %}
@@ -21,6 +22,4 @@
     {%- else %}
         EXEC('CREATE TABLE {{relation}} AS SELECT * FROM {{tmp_vw_relation}};');
     {% endif %}
-    -- To clean up test_store tests
-    {% do adapter.drop_relation(tmp_vw_relation) %}
 {% endmacro %}

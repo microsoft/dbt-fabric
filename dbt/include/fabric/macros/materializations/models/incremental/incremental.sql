@@ -27,6 +27,8 @@
     {% set tmp_vw_relation = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
     -- Dropping temp view relation if it exists
     {{ adapter.drop_relation(tmp_vw_relation) }}
+    -- Dropping target relation if exists
+    {{ adapter.drop_relation(target_relation) }}
 
     {%- call statement('main') -%}
       {{ get_create_table_as_sql(False, target_relation, sql)}}
@@ -38,6 +40,7 @@
   {% else %}
 
     {%- set temp_relation = make_temp_relation(target_relation)-%}
+    {{ adapter.drop_relation(temp_relation) }}
     {% set tmp_tble_vw_relation = temp_relation.incorporate(path={"identifier": temp_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
     -- Dropping temp view relation if it exists
     {{ adapter.drop_relation(tmp_tble_vw_relation) }}
