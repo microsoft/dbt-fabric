@@ -1,3 +1,10 @@
+
+{% macro apply_label() %}
+    {{ log (config.get('query_tag','dbt-fabric'))}}
+    {%- set query_label = config.get('query_tag','dbt-fabric-dw') -%}
+    OPTION (LABEL = '{{query_label}}');
+{% endmacro %}
+
 {% macro information_schema_hints() %}
     {{ return(adapter.dispatch('information_schema_hints')()) }}
 {% endmacro %}
@@ -20,15 +27,14 @@
 {% macro fabric__list_schemas(database) %}
   {% call statement('list_schemas', fetch_result=True, auto_begin=False) -%}
     select  name as [schema]
-    from sys.schemas {{ information_schema_hints() }}
+    from sys.schemas {{ information_schema_hints() }} {{ apply_label() }}
   {% endcall %}
   {{ return(load_result('list_schemas').table) }}
 {% endmacro %}
 
 {% macro fabric__check_schema_exists(information_schema, schema) -%}
   {% call statement('check_schema_exists', fetch_result=True, auto_begin=False) -%}
-
-    SELECT count(*) as schema_exist FROM sys.schemas WHERE name = '{{ schema }}'
+    SELECT count(*) as schema_exist FROM sys.schemas WHERE name = '{{ schema }}' {{ apply_label() }}
   {%- endcall %}
   {{ return(load_result('check_schema_exists').table) }}
 {% endmacro %}
@@ -53,6 +59,7 @@
     )
     select * from base
     where [schema] like '{{ schema_relation.schema }}'
+    {{ apply_label() }}
   {% endcall %}
   {{ return(load_result('list_relations_without_caching').table) }}
 {% endmacro %}
@@ -78,6 +85,7 @@
     select * from base
     where [schema] like '{{ schema_relation.schema }}'
     and [name] like '{{ schema_relation.identifier }}'
+    {{ apply_label() }}
   {% endcall %}
   {{ return(load_result('get_relation_without_caching').table) }}
 {% endmacro %}
@@ -97,6 +105,7 @@
                 upper(o.name) = upper('{{ relation.identifier }}')){%- if not loop.last %} or {% endif -%}
             {%- endfor -%}
         )
+        {{ apply_label() }}
   {%- endcall -%}
   {{ return(load_result('last_modified')) }}
 

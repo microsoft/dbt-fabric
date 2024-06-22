@@ -23,6 +23,7 @@
         and refs.referenced_entity_name = '{{ relation.identifier }}'
         and refs.referencing_class = 1
         and obj.type = 'V'
+        {{ apply_label() }}
       {% endcall %}
       {% set references = load_result('find_references')['data'] %}
       {% for reference in references -%}

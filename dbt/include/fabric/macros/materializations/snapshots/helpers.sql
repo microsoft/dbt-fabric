@@ -22,7 +22,7 @@
 
   {% set tempTable %}
       CREATE TABLE {{tempTableName}}
-      AS SELECT * {{columns}} FROM [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}] {{ information_schema_hints() }}
+      AS SELECT * {{columns}} FROM [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}] {{ information_schema_hints() }} {{ apply_label() }}
   {% endset %}
 
   {% call statement('create_temp_table') -%}
@@ -39,7 +39,7 @@
 
   {% set createTable %}
       CREATE TABLE {{ relation }}
-      AS SELECT * FROM {{tempTableName}} {{ information_schema_hints() }}
+      AS SELECT * FROM {{tempTableName}} {{ information_schema_hints() }} {{ apply_label() }}
   {% endset %}
 
   {% call statement('create_Table') -%}
