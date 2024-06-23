@@ -1,5 +1,11 @@
 # Changelog
 
+### V1.8.7
+* Improving table materialization to minimize downtime #189
+* Handling temp tables in incremental models #188
+* Add label support to filter queries #181
+* Addressed bug - incremental models cannot full refresh #179 
+
 ### v1.8.0rc2
 
 ## Bug Fixes
