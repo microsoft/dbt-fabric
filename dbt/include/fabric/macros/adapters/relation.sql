@@ -1,4 +1,4 @@
-{% macro fabric__make_temp_relation(base_relation, suffix) %}
+{% macro fabric__make_temp_relation(base_relation, suffix='__dbt_temp') %}
     {%- set temp_identifier = base_relation.identifier ~ suffix -%}
     {%- set temp_relation = base_relation.incorporate(
                                 path={"identifier": temp_identifier}) -%}
@@ -23,6 +23,7 @@
         and refs.referenced_entity_name = '{{ relation.identifier }}'
         and refs.referencing_class = 1
         and obj.type = 'V'
+        {{ apply_label() }}
       {% endcall %}
       {% set references = load_result('find_references')['data'] %}
       {% for reference in references -%}

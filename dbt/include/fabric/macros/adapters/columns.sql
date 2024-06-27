@@ -11,42 +11,46 @@
 {% endmacro %}
 
 {% macro fabric__get_columns_in_relation(relation) -%}
-  {% call statement('get_columns_in_relation', fetch_result=True) %}
+    {% set query_label = apply_label() %}
+    {% call statement('get_columns_in_relation', fetch_result=True) %}
 
-    with mapping as (
+        with mapping as (
+            select
+                row_number() over (partition by object_name(c.object_id) order by c.column_id) as ordinal_position,
+                c.name collate database_default as column_name,
+                t.name as data_type,
+                c.max_length as character_maximum_length,
+                c.precision as numeric_precision,
+                c.scale as numeric_scale
+            from [{{ 'tempdb' if '#' in relation.identifier else relation.database }}].sys.columns c {{ information_schema_hints() }}
+            inner join sys.types t {{ information_schema_hints() }}
+            on c.user_type_id = t.user_type_id
+            where c.object_id = object_id('{{ 'tempdb..' ~ relation.include(database=false, schema=false) if '#' in relation.identifier else relation }}')
+        )
+
         select
-            row_number() over (partition by object_name(c.object_id) order by c.column_id) as ordinal_position,
-            c.name collate database_default as column_name,
-            t.name as data_type,
-            c.max_length as character_maximum_length,
-            c.precision as numeric_precision,
-            c.scale as numeric_scale
-        from [{{ 'tempdb' if '#' in relation.identifier else relation.database }}].sys.columns c {{ information_schema_hints() }}
-        inner join sys.types t {{ information_schema_hints() }}
-        on c.user_type_id = t.user_type_id
-        where c.object_id = object_id('{{ 'tempdb..' ~ relation.include(database=false, schema=false) if '#' in relation.identifier else relation }}')
-    )
+            column_name,
+            data_type,
+            character_maximum_length,
+            numeric_precision,
+            numeric_scale
+        from mapping
+        order by ordinal_position
+        {{ query_label }}
 
-    select
-        column_name,
-        data_type,
-        character_maximum_length,
-        numeric_precision,
-        numeric_scale
-    from mapping
-    order by ordinal_position
-
-  {% endcall %}
-  {% set table = load_result('get_columns_in_relation').table %}
-  {{ return(sql_convert_columns_in_relation(table)) }}
+    {% endcall %}
+    {% set table = load_result('get_columns_in_relation').table %}
+    {{ return(sql_convert_columns_in_relation(table)) }}
 {% endmacro %}
 
 {% macro fabric__get_columns_in_query(select_sql) %}
+    {% set query_label = apply_label() %}
     {% call statement('get_columns_in_query', fetch_result=True, auto_begin=False) -%}
         select TOP 0 * from (
             {{ select_sql }}
         ) as __dbt_sbq
         where 0 = 1
+        {{ query_label }}
     {% endcall %}
 
     {{ return(load_result('get_columns_in_query').table.columns | map(attribute='name') | list) }}
@@ -84,6 +88,7 @@
     {% set tempTable %}
         CREATE TABLE {{tempTableName}}
         AS SELECT {{query_result_text}}, CAST({{ column_name }} AS {{new_column_type}}) AS {{column_name}} FROM {{ relation.schema }}.{{ relation.identifier }}
+        {{ apply_label() }}
     {% endset %}
 
     {% call statement('create_temp_table') -%}
@@ -100,7 +105,7 @@
 
     {% set createTable %}
         CREATE TABLE {{ relation.schema }}.{{ relation.identifier }}
-        AS SELECT * FROM {{tempTableName}}
+        AS SELECT * FROM {{tempTableName}} {{ apply_label() }}
     {% endset %}
 
     {% call statement('create_Table') -%}

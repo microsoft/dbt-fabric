@@ -1,12 +1,13 @@
 {% macro fabric__create_table_as(temporary, relation, sql) -%}
-
-    {% set tmp_relation = relation.incorporate(path={"identifier": relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-    {{ get_create_view_as_sql(tmp_relation, sql) }}
+    {% set query_label = apply_label() %}
+    {% set tmp_vw_relation = relation.incorporate(path={"identifier": relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+    {% do adapter.drop_relation(tmp_vw_relation) %}
+    {{ get_create_view_as_sql(tmp_vw_relation, sql) }}
 
     {% set contract_config = config.get('contract') %}
     {% if contract_config.enforced %}
 
-        CREATE TABLE [{{relation.database}}].[{{relation.schema}}].[{{relation.identifier}}]
+        CREATE TABLE {{relation}}
         {{ build_columns_constraints(relation) }}
         {{ get_assert_columns_equivalent(sql)  }}
         {% set listColumns %}
@@ -15,11 +16,11 @@
             {% endfor %}
         {%endset%}
 
-        INSERT INTO [{{relation.database}}].[{{relation.schema}}].[{{relation.identifier}}]
-        ({{listColumns}}) SELECT {{listColumns}} FROM [{{tmp_relation.database}}].[{{tmp_relation.schema}}].[{{tmp_relation.identifier}}];
+        INSERT INTO {{relation}} ({{listColumns}})
+        SELECT {{listColumns}} FROM {{tmp_vw_relation}} {{ query_label }}
 
     {%- else %}
-        EXEC('CREATE TABLE [{{relation.database}}].[{{relation.schema}}].[{{relation.identifier}}] AS (SELECT * FROM [{{tmp_relation.database}}].[{{tmp_relation.schema}}].[{{tmp_relation.identifier}}]);');
+        {%- set query_label_option = query_label.replace("'", "''") -%}
+        EXEC('CREATE TABLE {{relation}} AS SELECT * FROM {{tmp_vw_relation}} {{ query_label_option }}');
     {% endif %}
-    {% do adapter.drop_relation(tmp_relation)%}
 {% endmacro %}

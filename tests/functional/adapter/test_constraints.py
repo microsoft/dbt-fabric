@@ -503,8 +503,11 @@ EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identi
             generated_sql_generic, "foreign_key_model", "<foreign_key_model_identifier>"
         )
         generated_sql_wodb = generated_sql_generic.replace("USE [" + project.database + "];", "")
+        generated_sql_option_cluase = generated_sql_wodb.replace(
+            "OPTION (LABEL = 'dbt-fabric-dw');", ""
+        )
         assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
-            generated_sql_wodb.strip()
+            generated_sql_option_cluase.strip()
         )
 
 
@@ -568,8 +571,11 @@ EXEC('create view <model_identifier> as -- depends_on: <foreign_key_model_identi
             generated_sql_generic, "foreign_key_model", "<foreign_key_model_identifier>"
         )
         generated_sql_wodb = generated_sql_generic.replace("USE [" + project.database + "];", "")
+        generated_sql_option_cluase = generated_sql_wodb.replace(
+            "OPTION (LABEL = 'dbt-fabric-dw');", ""
+        )
         assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
-            generated_sql_wodb.strip()
+            generated_sql_option_cluase.strip()
         )
 
 
@@ -618,7 +624,10 @@ class BaseConstraintsRollback:
 
         # Verify the previous table still exists
         relation = relation_from_name(project.adapter, "my_model")
-        model_backup = str(relation).replace("my_model", "my_model__dbt_backup")
+        # table materialization does not rename existing relation to back)up relation
+        # Rather, a new relation is created with __dbt_temp suffix.
+        # If model creation is successful, then the existing model is renamed as backup and then dropped
+        model_backup = str(relation).replace("my_model", "my_model")
         old_model_exists_sql = f"select * from {model_backup}"
         old_model_exists = project.run_sql(old_model_exists_sql, fetch="all")
         assert len(old_model_exists) == 1

@@ -43,6 +43,7 @@
               {%- endfor -%})
               {%- if not loop.last%},{%- endif %}
           {%- endfor %}
+          {{ apply_label()}}
       {% endset %}
 
       {% do adapter.add_query(sql, bindings=bindings, abridge_sql_log=True) %}

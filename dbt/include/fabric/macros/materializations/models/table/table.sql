@@ -4,41 +4,60 @@
   {%- set target_relation = this.incorporate(type='table') %}
   {%- set existing_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
 
-  {%- set backup_relation = none %}
-  {% if (existing_relation != none and existing_relation.type == "table") %}
-      {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
-  {% elif (existing_relation != none and existing_relation.type == "view") %}
-      {%- set backup_relation = make_backup_relation(target_relation, 'view') -%}
-  {% endif %}
-
-  {% if (existing_relation != none) %}
-    -- drop the temp relations if they exist already in the database
-    {% do adapter.drop_relation(backup_relation) %}
-    -- Rename target relation as backup relation
-    {{ adapter.rename_relation(existing_relation, backup_relation) }}
+  {#-- Drop the relation if it was a view to "convert" it in a table. This may lead to
+    -- downtime, but it should be a relatively infrequent occurrence  #}
+  {% if existing_relation is not none and not existing_relation.is_table %}
+    {{ log("Dropping relation " ~ existing_relation ~ " because it is of type " ~ existing_relation.type) }}
+    {{ adapter.drop_relation(existing_relation) }}
   {% endif %}
 
   -- grab current tables grants config for comparision later on
   {% set grant_config = config.get('grants') %}
 
+  -- Making a temp relation
+  {% set temp_relation = make_temp_relation(target_relation, '__dbt_temp') %}
+
+  -- Drop temp relation if it exists before materializing temp relation
+  {{ adapter.drop_relation(temp_relation) }}
+
+  {% set tmp_vw_relation = temp_relation.incorporate(path={"identifier": temp_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+
+  {{ adapter.drop_relation(tmp_vw_relation) }}
+
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
   -- `BEGIN` happens here:
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
-  -- naming a temp relation
-  {% set tmp_relation = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-
-  -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
-  -- drop temp relation if exists
-  {% do adapter.drop_relation(tmp_relation) %}
-
   -- build model
   {% call statement('main') -%}
-    {{ get_create_table_as_sql(False, target_relation, sql) }}
-  {%- endcall %}
+    {{ create_table_as(False, temp_relation, sql) }}
+  {% endcall %}
 
-  -- drop temp relation if exists
-  {% do adapter.drop_relation(tmp_relation) %}
+  {% if existing_relation is not none and existing_relation.is_table %}
+
+      -- making a backup relation, this will come in use when contract is enforced or not
+      {%- set backup_relation = make_backup_relation(existing_relation, 'table') -%}
+
+      -- Dropping a temp relation if it exists
+      {{ adapter.drop_relation(backup_relation) }}
+
+      -- Rename existing relation to back up relation
+      {{ adapter.rename_relation(existing_relation, backup_relation) }}
+
+      -- Renaming temp relation as main relation
+      {{ adapter.rename_relation(temp_relation, target_relation) }}
+
+      -- Drop backup relation
+      {{ adapter.drop_relation(backup_relation) }}
+
+  {%- else %}
+
+      -- Renaming temp relation as main relation
+      {{ adapter.rename_relation(temp_relation, target_relation) }}
+
+  {% endif %}
+
+  {{ adapter.drop_relation(tmp_vw_relation) }}
 
   -- cleanup
   {{ run_hooks(post_hooks, inside_transaction=True) }}
@@ -47,13 +66,6 @@
   {% do persist_docs(target_relation, model) %}
   -- `COMMIT` happens here
   {{ adapter.commit() }}
-
-  {% if (backup_relation != none) %}
-    -- finally, drop the foreign key references if exists
-    {{ drop_fk_indexes_on_table(backup_relation) }}
-    -- drop existing/backup relation after the commit
-    {% do adapter.drop_relation(backup_relation) %}
-   {% endif %}
 
   -- Add constraints including FK relation.
   {{ build_model_constraints(target_relation) }}
