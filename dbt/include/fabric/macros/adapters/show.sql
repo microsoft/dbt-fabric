@@ -1,4 +1,4 @@
-{% macro fabric__get_limit_subquery_sql(sql, limit) %}
+{% macro fabric__get_limit_sql(sql, limit) %}
 
     {% if sql.strip().lower().startswith('with') %}
         {{ sql }} order by (select null)
