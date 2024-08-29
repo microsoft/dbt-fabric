@@ -49,21 +49,8 @@
   {%- endcall %}
 {% endmacro %}
 
--- DROP fabric__truncate_relation when TRUNCATE TABLE is supported
 {% macro fabric__truncate_relation(relation) -%}
-  {% set random_int %}
-    {{ range(21000, 109000) | random }}
-  {% endset %}
-
-  {% set temp_relation = relation.incorporate(path={ "identifier": relation.identifier ~ random_int }, type='table')-%}
-  {# {% set tempTableName %}
-    {{ relation.identifier.replace("#", "") }}_{{ range(21000, 109000) | random }}
-  {% endset %} #}
-  {{ log("Truncate Statement is not supported, Using random table as a temp table. - " ~ tempTableName) }}
   {% call statement('truncate_relation') -%}
-    CREATE TABLE {{ temp_relation}} AS SELECT * FROM {{ relation }} WHERE 1=2
-    DROP TABLE IF EXISTS {{ relation }}
-     EXEC sp_rename '{{temp_relation.include(database=False)}}','{{relation.identifier}}'
-  {%- endcall %}
-
+        truncate table {{ relation }}
+    {%- endcall %}
 {% endmacro %}
