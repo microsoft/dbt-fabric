@@ -10,7 +10,6 @@ class FabricColumn(Column):
         "FLOAT": "FLOAT",
         "INTEGER": "INT",
         "BOOLEAN": "BIT",
-        "DATETIME2(6)": "DATETIME2(6)",
     }
 
     @classmethod
