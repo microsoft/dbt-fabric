@@ -11,7 +11,7 @@
 
   {% set columns %}
     {% for column in columns %}
-      , CAST(NULL AS {{column.data_type}}) AS {{column_name}}
+      , CAST(NULL AS {{column.data_type}}) AS {{column.name}}
     {% endfor %}
   {% endset %}
 
