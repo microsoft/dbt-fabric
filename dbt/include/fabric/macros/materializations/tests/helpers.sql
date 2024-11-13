@@ -9,7 +9,7 @@
 
   {% if main_sql.strip().lower().startswith('with') %}
     {% set testview %}
-      [{{ target.schema }}.testview_{{ range(1300, 19000) | random }}]
+      [{{ target.schema }}.testview_{{ local_md5(model.name ~ invocation_id) }}]
     {% endset %}
 
     {% set sql = main_sql.replace("'", "''")%}
