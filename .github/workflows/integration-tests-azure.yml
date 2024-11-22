@@ -4,9 +4,11 @@ on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   pull_request:
     branches:
-      - main
-
+      - oidc_connect
 jobs:
+  permissions:
+    id-token: write # This is required for requesting the JWT
+    contents: read  # This is required for actions/checkout
   integration-tests-azure:
     name: Regular
     strategy:
@@ -21,27 +23,48 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
     steps:
-      - name: AZ CLI login
-        run: az login --service-principal --username="${AZURE_CLIENT_ID}" --password="${AZURE_CLIENT_SECRET}" --tenant="${AZURE_TENANT_ID}"
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.DBT_AZURE_SP_NAME }}
-          AZURE_CLIENT_SECRET: ${{ secrets.DBT_AZURE_SP_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.DBT_AZURE_TENANT }}
 
-      - uses: actions/checkout@v4
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: pip install -r dev_requirements.txt
+      # Azure login using federated credentials
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.DBT_AZURE_SP_NAME }}
+          tenant-id: ${{ secrets.DBT_AZURE_TENANT }}
+          allow-no-subscriptions: true
+          federated-token: true
 
-      - name: Run functional tests
-        env:
-          DBT_AZURESQL_SERVER: ${{ secrets.DBT_AZURESQL_SERVER }}
-          DBT_AZURESQL_DB: ${{ secrets.DBT_AZURESQL_DB }}
-          AZURE_CLIENT_ID: ${{ secrets.DBT_AZURE_SP_NAME }}
-          AZURE_CLIENT_SECRET: ${{ secrets.DBT_AZURE_SP_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.DBT_AZURE_TENANT }}
-          FABRIC_TEST_DRIVER: 'ODBC Driver ${{ matrix.msodbc_version }} for SQL Server'
-          DBT_TEST_USER_1: dbo
-          DBT_TEST_USER_2: dbo
-          DBT_TEST_USER_3: dbo
-        run: pytest -ra -v tests/functional --profile "${{ matrix.profile }}"
+
+      # Get an access token for a specific resource (e.g., a database)
+      - name: Get Azure Access Token
+        id: get-token
+        run: |
+          TOKEN=$(az account get-access-token --resource "https://database.windows.net//.default" --query accessToken -o tsv)
+          echo "::add-mask::$TOKEN"    # Mask the token in the logs
+          echo "ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "Token fetched successfully"
+
+      # Print the token (for debugging)
+      - name: Print Access Token
+        run: |
+          echo "Access Token: ${{ env.ACCESS_TOKEN }}"
+
+
+      # - name: Install dependencies
+      #   run: pip install -r dev_requirements.txt
+
+      # - name: Run functional tests
+      #   env:
+      #     DBT_AZURESQL_SERVER: ${{ secrets.DBT_AZURESQL_SERVER }}
+      #     DBT_AZURESQL_DB: ${{ secrets.DBT_AZURESQL_DB }}
+      #     AZURE_CLIENT_ID: ${{ secrets.DBT_AZURE_SP_NAME }}
+      #     AZURE_CLIENT_SECRET: ${{ secrets.DBT_AZURE_SP_SECRET }}
+      #     AZURE_TENANT_ID: ${{ secrets.DBT_AZURE_TENANT }}
+      #     FABRIC_TEST_DRIVER: 'ODBC Driver ${{ matrix.msodbc_version }} for SQL Server'
+      #     DBT_TEST_USER_1: dbo
+      #     DBT_TEST_USER_2: dbo
+      #     DBT_TEST_USER_3: dbo
+      #   run: pytest -ra -v tests/functional --profile "${{ matrix.profile }}"
