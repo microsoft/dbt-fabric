@@ -22,13 +22,19 @@ jobs:
         msodbc_version: ["17", "18"]
 
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
     steps:
+
+
 
       # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image
+        run: docker pull ghcr.io/microsoft/dbt-fabric:CI-3.11-msodbc17
 
       # Azure login using federated credentials
       - name: Azure login with OIDC
