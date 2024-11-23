@@ -64,7 +64,8 @@ jobs:
           )
 
           access_token = token.token
-          print(access_token)
+          print(connection_string)
+          logging.info("connection strin is: ", connection_string)
           connection = pyodbc.connect(connection_string, attrs_before={1256: access_token})
           cursor = connection.cursor()
 
