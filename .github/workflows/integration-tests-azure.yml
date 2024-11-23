@@ -34,6 +34,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: List containers in GitHub Container Registry
+        run: docker images ghcr.io/microsoft/dbt-fabric
+
       - name: Pull Docker image
         run: docker pull ghcr.io/microsoft/dbt-fabric:CI-3.11-msodbc17
 
