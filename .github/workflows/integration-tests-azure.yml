@@ -57,10 +57,10 @@ jobs:
           token = credential.get_token("https://database.windows.net/.default")
 
           connection_string = (
-              "Driver={ODBC Driver 18 for SQL Server};"
+              "Driver={{ODBC Driver 18 for SQL Server}};"
               "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com;"
               "Database=permissionstest;"
-              "Authentication=ActiveDirectoryAccessToken;"
+              "Authentication=ActiveDirectoryAccessToken"
           )
 
           access_token = token.token
