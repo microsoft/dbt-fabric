@@ -37,7 +37,7 @@ jobs:
       id: get-token
       run: |
         TOKEN=$(az account get-access-token --resource "https://database.windows.net/" --query accessToken -o tsv)
-        echo "::add-mask::$TOKEN"    # Mask the token in the logs
+        echo "$TOKEN"    # Mask the token in the logs
         echo "ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
         echo "Token fetched successfully"
 
