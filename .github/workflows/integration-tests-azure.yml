@@ -32,16 +32,45 @@ jobs:
         allow-no-subscriptions: true
         federated-token: true
 
-    # Get an access token for a specific resource (e.g., a database)
-    - name: Get Azure Access Token
-      id: get-token
+    - name: Install ODBC Driver 18 for SQL Server (Ubuntu)
       run: |
-        TOKEN=$(az account get-access-token --resource "https://database.windows.net/" --query accessToken -o tsv)
-        echo "ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
-        # Output the token (slightly modified to bypass masking)
-        echo "Access Token: ${TOKEN::-4}****"
+        sudo apt-get update
+        sudo apt-get install -y gnupg
+        curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+        curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+        sudo apt-get update
+        sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
 
-    # Print the token (for debugging)
-    - name: Print Access Token
+    - name: Install Python dependencies
       run: |
-        echo "Access Token: ${{ env.ACCESS_TOKEN }}"
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install azure-identity pyodbc
+
+    - name: Connect to Azure SQL Database
+      run: |
+        python - <<EOF
+        from azure.identity import DefaultAzureCredential
+        import pyodbc
+
+        credential = DefaultAzureCredential()
+        token = credential.get_token("https://database.windows.net/.default")
+
+        connection_string = (
+            "Driver={ODBC Driver 18 for SQL Server};"
+            "Server=x6eps4xrq2xudenlfv6naeo3i4-og453ge3xn7utn6wff5ltyqjta.daily-datawarehouse.fabric.microsoft.com"
+            "Database=collationtest"
+            "Authentication=ActiveDirectoryAccessToken;"
+        )
+
+        access_token = token.token
+        connection = pyodbc.connect(connection_string, attrs_before={1256: access_token})
+        cursor = connection.cursor()
+
+        cursor.execute("SELECT TOP 10 * FROM dbo.Trip")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+
+        connection.close()
+        EOF
