@@ -51,25 +51,29 @@ jobs:
         from azure.core.credentials import AccessToken
         from azure.identity import DefaultAzureCredential
         import pyodbc
+        import logging
+        try:
+          credential = DefaultAzureCredential()
+          token = credential.get_token("https://database.windows.net/.default")
 
-        credential = DefaultAzureCredential()
-        token = credential.get_token("https://database.windows.net/.default")
+          connection_string = (
+              "Driver={ODBC Driver 18 for SQL Server};"
+              "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com"
+              "Database=permissionstest"
+              "Authentication=ActiveDirectoryAccessToken;"
+          )
 
-        connection_string = (
-            "Driver={ODBC Driver 18 for SQL Server};"
-            "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com"
-            "Database=permissionstest"
-            "Authentication=ActiveDirectoryAccessToken;"
-        )
+          access_token = token.token
+          print(access_token)
+          connection = pyodbc.connect(connection_string, attrs_before={1256: access_token})
+          cursor = connection.cursor()
 
-        access_token = token.token
-        connection = pyodbc.connect(connection_string, attrs_before={1256: access_token})
-        cursor = connection.cursor()
+          cursor.execute("SELECT TOP 10 * FROM dbo.Trip")
+          rows = cursor.fetchall()
+          for row in rows:
+              print(row)
 
-        cursor.execute("SELECT TOP 10 * FROM dbo.Trip")
-        rows = cursor.fetchall()
-        for row in rows:
-            print(row)
-
-        connection.close()
+          connection.close()
+        except pyodbc.Error as e:
+          logging.error("Error occurred while connecting to the database.", exc_info=True)
         EOF
