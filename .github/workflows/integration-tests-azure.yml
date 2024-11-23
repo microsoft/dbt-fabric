@@ -35,7 +35,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: List containers in GitHub Container Registry
-        run: docker images ghcr.io/${{ github.repository }}
+        run: docker images
+
+      - name: List containers with GitHub API
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/orgs/microsoft/packages?package_type=container
 
       - name: Pull Docker image
         run: docker pull ghcr.io/microsoft/dbt-fabric:CI-3.11-msodbc17
