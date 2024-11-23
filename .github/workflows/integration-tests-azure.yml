@@ -45,11 +45,12 @@ jobs:
       run: |
         python3 -m venv venv
         source venv/bin/activate
-        pip install azure-identity pyodbc
+        pip install azure-identity pyodbc azure-core
 
     - name: Connect to Azure SQL Database
       run: |
         python - <<EOF
+        from azure.core.credentials import AccessToken
         from azure.identity import DefaultAzureCredential
         import pyodbc
 
