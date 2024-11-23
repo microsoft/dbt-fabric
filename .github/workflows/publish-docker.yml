@@ -39,7 +39,7 @@ jobs:
           build-args: PYTHON_VERSION=${{ matrix.python_version }}
           file: devops/CI.Dockerfile
           push: true
-          platforms: ubuntu
+          platforms: linux/amd64
           target: ${{ matrix.docker_target }}
           tags: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-${{ matrix.docker_target }}
 
