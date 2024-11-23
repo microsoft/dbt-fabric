@@ -23,11 +23,25 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-
-    - name: Azure Login
-      uses: azure/login@v1
+    # Azure login using federated credentials
+    - name: Azure login with OIDC
+      uses: azure/login@v2
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        federated-token: ${{ secrets.GITHUB_TOKEN }}
+        client-id: ${{ secrets.DBT_AZURE_SP_NAME }}
+        tenant-id: ${{ secrets.DBT_AZURE_TENANT }}
         allow-no-subscriptions: true
+        federated-token: true
+
+    # Get an access token for a specific resource (e.g., a database)
+    - name: Get Azure Access Token
+      id: get-token
+      run: |
+        TOKEN=$(az account get-access-token --resource "https://database.windows.net/" --query accessToken -o tsv)
+        echo "::add-mask::$TOKEN"    # Mask the token in the logs
+        echo "ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
+        echo "Token fetched successfully"
+
+    # Print the token (for debugging)
+    - name: Print Access Token
+      run: |
+        echo "Access Token: ${{ env.ACCESS_TOKEN }}"
