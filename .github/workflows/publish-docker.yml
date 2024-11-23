@@ -42,3 +42,6 @@ jobs:
           platforms: linux/amd64
           target: ${{ matrix.docker_target }}
           tags: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-${{ matrix.docker_target }}
+
+      - name: List Docker images
+        run: docker images ghcr.io/${{ github.repository }}
