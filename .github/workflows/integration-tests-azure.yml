@@ -58,8 +58,8 @@ jobs:
 
           connection_string = (
               "Driver={ODBC Driver 18 for SQL Server};"
-              "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com"
-              "Database=permissionstest"
+              "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com;"
+              "Database=permissionstest;"
               "Authentication=ActiveDirectoryAccessToken;"
           )
 
