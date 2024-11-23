@@ -36,7 +36,7 @@ jobs:
     - name: Get Azure Access Token
       id: get-token
       run: |
-        TOKEN=$(az account get-access-token --resource "https://database.windows.net/.default" --query accessToken -o tsv)
+        TOKEN=$(az account get-access-token --resource "https://database.windows.net/" --query accessToken -o tsv)
         echo "ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
         # Output the token (slightly modified to bypass masking)
         echo "Access Token: ${TOKEN::-4}****"
