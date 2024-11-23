@@ -1,6 +1,7 @@
 ---
 name: Publish Docker images for CI/CD
 on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
   push:
     paths:
       - 'devops/**'
@@ -8,6 +9,7 @@ on:  # yamllint disable-line rule:truthy
     branches:
       - main
       - v*
+      - oidc_connect
 
 jobs:
   publish-docker-client:
