@@ -38,8 +38,6 @@ jobs:
 
     - name: Connect to Azure SQL Database
       run: |
-        python3 -m venv venv
-        source venv/bin/activate
         pip install azure-identity pyodbc azure-core
 
         python - <<EOF
