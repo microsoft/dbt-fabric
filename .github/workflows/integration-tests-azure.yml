@@ -21,8 +21,9 @@ jobs:
 
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
-      contents: read
+      contents: read   # Required to access repository files
+      packages: read   # Grant explicit read access to packages
+      id-token: write  # Needed if using OIDC authentication
     container:
       image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
     steps:
@@ -71,7 +72,7 @@ jobs:
           SQL_COPT_SS_ACCESS_TOKEN = 1256  # This connection option is defined by microsoft in msodbcsql.h
           connection = pyodbc.connect(connection_string, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct})
 
-          logging.info("connection strin is: ", connection)
+          logging.info("connection strin is: ", token_struct)
           cursor = connection.cursor()
 
           cursor.execute("SELECT TOP 10 * FROM dbo.Trip")
