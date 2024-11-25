@@ -22,6 +22,8 @@ jobs:
         msodbc_version: ["17", "18"]
 
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
     steps:
     # Azure login using federated credentials
     - name: Azure login with OIDC
