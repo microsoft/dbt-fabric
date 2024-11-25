@@ -52,6 +52,7 @@ jobs:
         from azure.identity import DefaultAzureCredential
         import pyodbc
         import logging
+        import struct
         try:
           credential = DefaultAzureCredential()
           token = credential.get_token("https://database.windows.net/.default")
