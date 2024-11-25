@@ -61,7 +61,6 @@ jobs:
           SQL_COPT_SS_ACCESS_TOKEN = 1256  # This connection option is defined by microsoft in msodbcsql.h
           connection = pyodbc.connect(connection_string, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct})
 
-          print("access token is ", access_token)
           print("token is ", token.token)
           cursor = connection.cursor()
 
