@@ -6,9 +6,7 @@ on:  # yamllint disable-line rule:truthy
     branches:
       - oidc_connect
 
-permissions:
-  id-token: write
-  contents: read
+
 
 jobs:
   integration-tests-fabric-dw:
@@ -22,6 +20,9 @@ jobs:
         msodbc_version: ["17", "18"]
 
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     container:
       image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
     steps:
