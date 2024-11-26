@@ -361,7 +361,10 @@ class FabricConnectionManager(SQLConnectionManager):
 
         assert credentials.authentication is not None
 
-        if "ActiveDirectory" in credentials.authentication:
+        if (
+            "ActiveDirectory" in credentials.authentication
+            and credentials.authentication != "ActiveDirectoryAccessToken"
+        ):
             con_str.append(f"Authentication={credentials.authentication}")
 
             if credentials.authentication == "ActiveDirectoryPassword":
