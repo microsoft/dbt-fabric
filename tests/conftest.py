@@ -27,6 +27,8 @@ def dbt_profile_target(request: FixtureRequest, dbt_profile_target_update):
         target = _profile_ci_azure_environment()
     elif profile == "user_azure":
         target = _profile_user_azure()
+    elif profile == "integration_tests":
+        target = _profile_integration_tests()
     else:
         raise ValueError(f"Unknown profile: {profile}")
 
@@ -55,7 +57,7 @@ def _profile_ci_azure_base():
             "database": os.getenv("DBT_AZURESQL_DB"),
             "encrypt": True,
             "trust_cert": True,
-            "trace_flag":False,
+            "trace_flag": False,
         },
     }
 
@@ -99,6 +101,21 @@ def _profile_user_azure():
             "client_id": os.getenv("FABRIC_TEST_CLIENT_ID"),
             "client_secret": os.getenv("FABRIC_TEST_CLIENT_SECRET"),
             "tenant_id": os.getenv("FABRIC_TEST_TENANT_ID"),
+        },
+    }
+    return profile
+
+
+def _profile_integration_tests():
+    profile = {
+        **_all_profiles_base(),
+        **{
+            "host": os.getenv("FABRIC_TEST_HOST"),
+            "authentication": os.getenv("FABRIC_TEST_AUTH", "ActiveDirectoryAccessToken"),
+            "encrypt": True,
+            "trust_cert": True,
+            "database": os.getenv("FABRIC_TEST_DBNAME"),
+            "access_token": os.getenv("FABRIC_INTEGRATION_TESTS_TOKEN"),
         },
     }
     return profile

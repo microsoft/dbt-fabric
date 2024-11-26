@@ -1,12 +1,9 @@
----
 name: Integration tests on Fabric DW
-on:  # yamllint disable-line rule:truthy
+on:   # yamllint disable-line rule:truthy
   workflow_dispatch:
   pull_request:
     branches:
       - oidc_connect
-
-
 
 jobs:
   integration-tests-fabric-dw:
@@ -15,9 +12,9 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        profile: ["ci_azure_auto"]
+        profile: ["integration_tests"]
         python_version: ["3.11"]
-        msodbc_version: ["17", "18"]
+        msodbc_version: ["18"]
 
     runs-on: ubuntu-latest
     permissions:
@@ -27,49 +24,65 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
     steps:
-    # Azure login using federated credentials
-    - name: Azure login with OIDC
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.DBT_AZURE_SP_NAME }}
-        tenant-id: ${{ secrets.DBT_AZURE_TENANT }}
-        allow-no-subscriptions: true
-        federated-token: true
+      # Azure login using federated credentials
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.DBT_AZURE_SP_NAME }}
+          tenant-id: ${{ secrets.DBT_AZURE_TENANT }}
+          allow-no-subscriptions: true
+          federated-token: true
 
-    - name: Connect to Azure SQL Database
-      run: |
-        pip install azure-identity pyodbc azure-core
+      - name: Connect to Fabric Warehouse to Retrieve Token
+        id: fetch_token
+        run: |
+          pip install azure-identity pyodbc azure-core
 
-        python - <<EOF
-        from azure.core.credentials import AccessToken
-        from azure.identity import DefaultAzureCredential
-        import pyodbc
-        import logging
-        import struct
-        try:
-          credential = DefaultAzureCredential()
-          token = credential.get_token("https://database.windows.net/.default")
+          python - <<EOF
+          from azure.core.credentials import AccessToken
+          from azure.identity import DefaultAzureCredential
+          import pyodbc
+          import logging
+          import struct
+          try:
+            credential = DefaultAzureCredential()
+            token = credential.get_token("https://database.windows.net/.default")
 
-          connection_string = (
-              "Driver={ODBC Driver 18 for SQL Server};"
-              "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com;"
-              "Database=permissionstest;"
-          )
+            connection_string = (
+                "Driver={ODBC Driver 18 for SQL Server};"
+                "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com;"
+                "Database=permissionstest;"
+            )
+            print(f"::set-output name=access_token::{token.token}")
+            access_token_utf16 = token.token.encode('utf-16-le')
+            token_struct = struct.pack(f'<I{len(access_token_utf16)}s', len(access_token_utf16), access_token_utf16)
+            SQL_COPT_SS_ACCESS_TOKEN = 1256  # This connection option is defined by microsoft in msodbcsql.h
+            connection = pyodbc.connect(connection_string, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct})
 
-          access_token = token.token.encode('utf-16-le')
-          token_struct = struct.pack(f'<I{len(access_token)}s', len(access_token), access_token)
-          SQL_COPT_SS_ACCESS_TOKEN = 1256  # This connection option is defined by microsoft in msodbcsql.h
-          connection = pyodbc.connect(connection_string, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct})
+            cursor = connection.cursor()
 
-          print("token is ", token.token)
-          cursor = connection.cursor()
+            cursor.execute("SELECT TOP 10 * FROM dbo.Trip")
+            rows = cursor.fetchall()
+            for row in rows:
+                print(row)
 
-          cursor.execute("SELECT TOP 10 * FROM dbo.Trip")
-          rows = cursor.fetchall()
-          for row in rows:
-              print(row)
+            connection.close()
+          except pyodbc.Error as e:
+            logging.error("Error occurred while connecting to the database.", exc_info=True)
+          EOF
 
-          connection.close()
-        except pyodbc.Error as e:
-          logging.error("Error occurred while connecting to the database.", exc_info=True)
-        EOF
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install -r dev_requirements.txt
+
+      - name: Run functional tests
+        env:
+          DBT_AZURESQL_SERVER: ${{ secrets.DBT_AZURESQL_SERVER }}
+          DBT_AZURESQL_DB: ${{ secrets.DBT_AZURESQL_DB }}
+          FABRIC_INTEGRATION_TESTS_TOKEN: ${{ steps.fetch_token.outputs.access_token }}
+          FABRIC_TEST_DRIVER: 'ODBC Driver ${{ matrix.msodbc_version }} for SQL Server'
+          DBT_TEST_USER_1: dbo
+          DBT_TEST_USER_2: dbo
+          DBT_TEST_USER_3: dbo
+        run: pytest -ra -v tests/functional/adapter/test_empty.py --profile "${{ matrix.profile }}"

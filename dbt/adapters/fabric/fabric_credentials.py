@@ -17,6 +17,7 @@ class FabricCredentials(Credentials):
     tenant_id: Optional[str] = None
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
+    access_token: Optional[str] = None
     authentication: Optional[str] = "ActiveDirectoryServicePrincipal"
     encrypt: Optional[bool] = True  # default value in MS ODBC Driver 18 as well
     trust_cert: Optional[bool] = False  # default value in MS ODBC Driver 18 as well
