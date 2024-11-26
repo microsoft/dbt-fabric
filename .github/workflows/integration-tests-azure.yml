@@ -33,7 +33,7 @@ jobs:
           allow-no-subscriptions: true
           federated-token: true
 
-      - name: Connect to Fabric Warehouse to Retrieve Token
+      - name: Test Connection To Fabric Data Warehouse
         id: fetch_token
         run: |
           pip install azure-identity pyodbc azure-core
@@ -47,26 +47,7 @@ jobs:
           try:
             credential = DefaultAzureCredential()
             token = credential.get_token("https://database.windows.net/.default")
-
-            connection_string = (
-                "Driver={ODBC Driver 18 for SQL Server};"
-                "Server=x6eps4xrq2xudenlfv6naeo3i4-6xw4uystlgdevluyqmndlcagwe.msit-datawarehouse.fabric.microsoft.com;"
-                "Database=permissionstest;"
-            )
             print(f"::set-output name=access_token::{token.token}")
-            access_token_utf16 = token.token.encode('utf-16-le')
-            token_struct = struct.pack(f'<I{len(access_token_utf16)}s', len(access_token_utf16), access_token_utf16)
-            SQL_COPT_SS_ACCESS_TOKEN = 1256  # This connection option is defined by microsoft in msodbcsql.h
-            connection = pyodbc.connect(connection_string, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct})
-
-            cursor = connection.cursor()
-
-            cursor.execute("SELECT TOP 10 * FROM dbo.Trip")
-            rows = cursor.fetchall()
-            for row in rows:
-                print(row)
-
-            connection.close()
           except pyodbc.Error as e:
             logging.error("Error occurred while connecting to the database.", exc_info=True)
           EOF
