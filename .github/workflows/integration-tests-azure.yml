@@ -85,4 +85,4 @@ jobs:
           DBT_TEST_USER_1: dbo
           DBT_TEST_USER_2: dbo
           DBT_TEST_USER_3: dbo
-        run: pytest -ra -v tests/functional/adapter/test_empty.py --profile "${{ matrix.profile }}"
+        run: pytest -ra -v tests/functional --profile "${{ matrix.profile }}"
