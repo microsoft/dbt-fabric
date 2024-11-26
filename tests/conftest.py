@@ -108,13 +108,9 @@ def _profile_user_azure():
 
 def _profile_integration_tests():
     profile = {
-        **_all_profiles_base(),
+        **_profile_ci_azure_base(),
         **{
-            "host": os.getenv("FABRIC_TEST_HOST"),
             "authentication": os.getenv("FABRIC_TEST_AUTH", "ActiveDirectoryAccessToken"),
-            "encrypt": True,
-            "trust_cert": True,
-            "database": os.getenv("FABRIC_TEST_DBNAME"),
             "access_token": os.getenv("FABRIC_INTEGRATION_TESTS_TOKEN"),
         },
     }
