@@ -9,7 +9,6 @@ on:  # yamllint disable-line rule:truthy
     branches:
       - main
       - v*
-      - oidc_connect
 
 jobs:
   publish-docker-client:

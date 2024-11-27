@@ -94,13 +94,10 @@ def _profile_user_azure():
         **_all_profiles_base(),
         **{
             "host": os.getenv("FABRIC_TEST_HOST"),
-            "authentication": os.getenv("FABRIC_TEST_AUTH", "auto"),
+            "authentication": os.getenv("FABRIC_TEST_AUTH", "CLI"),
             "encrypt": True,
             "trust_cert": True,
             "database": os.getenv("FABRIC_TEST_DBNAME"),
-            "client_id": os.getenv("FABRIC_TEST_CLIENT_ID"),
-            "client_secret": os.getenv("FABRIC_TEST_CLIENT_SECRET"),
-            "tenant_id": os.getenv("FABRIC_TEST_TENANT_ID"),
         },
     }
     return profile
