@@ -2,7 +2,7 @@
     {%- if limit == -1 or limit is none -%}
         {{ sql }}
     {#- Special processing if the last non-blank line starts with order by -#}
-    {%- elif 'order by' in sql.strip().splitlines()[-1].strip().lower() -%}
+    {%- elif sql.strip().splitlines()[-1].strip().lower().startswith('order by') -%}
         {{ sql }}
         offset 0 rows  fetch first {{ limit }} rows only
     {%- else -%}
