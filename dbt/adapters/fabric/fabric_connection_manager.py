@@ -180,7 +180,7 @@ AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
 }
 
 
-def get_pyodbc_attrs_before(credentials: FabricCredentials) -> Dict:
+def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
     """
     Get the pyodbc attrs before.
 
@@ -216,6 +216,36 @@ def get_pyodbc_attrs_before(credentials: FabricCredentials) -> Dict:
         attrs_before = {sql_copt_ss_access_token: token_bytes}
     else:
         attrs_before = {}
+
+    return attrs_before
+
+
+def get_pyodbc_attrs_before_accesstoken(accessToken: str) -> Dict:
+    """
+    Get the pyodbc attrs before.
+
+    Parameters
+    ----------
+    credentials : Access Token for Integration Tests
+        Credentials.
+
+    Returns
+    -------
+    out : Dict
+        The pyodbc attrs before.
+
+    Source
+    ------
+    Authentication for SQL server with an access token:
+    https://docs.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver15#authenticating-with-an-access-token
+    """
+
+    access_token_utf16 = accessToken.encode("utf-16-le")
+    token_struct = struct.pack(
+        f"<I{len(access_token_utf16)}s", len(access_token_utf16), access_token_utf16
+    )
+    sql_copt_ss_access_token = 1256  # see source in docstring
+    attrs_before = {sql_copt_ss_access_token: token_struct}
 
     return attrs_before
 
@@ -323,7 +353,7 @@ class FabricConnectionManager(SQLConnectionManager):
 
         con_str.append(f"Database={credentials.database}")
 
-        #Enabling trace flag
+        # Enabling trace flag
         if credentials.trace_flag:
             con_str.append("SQL_ATTR_TRACE=SQL_OPT_TRACE_ON")
         else:
@@ -331,7 +361,10 @@ class FabricConnectionManager(SQLConnectionManager):
 
         assert credentials.authentication is not None
 
-        if "ActiveDirectory" in credentials.authentication:
+        if (
+            "ActiveDirectory" in credentials.authentication
+            and credentials.authentication != "ActiveDirectoryAccessToken"
+        ):
             con_str.append(f"Authentication={credentials.authentication}")
 
             if credentials.authentication == "ActiveDirectoryPassword":
@@ -395,7 +428,11 @@ class FabricConnectionManager(SQLConnectionManager):
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
 
-            attrs_before = get_pyodbc_attrs_before(credentials)
+            if credentials.authentication == "ActiveDirectoryAccessToken":
+                attrs_before = get_pyodbc_attrs_before_accesstoken(credentials.access_token)
+            else:
+                attrs_before = get_pyodbc_attrs_before_credentials(credentials)
+
             handle = pyodbc.connect(
                 con_str_concat,
                 attrs_before=attrs_before,

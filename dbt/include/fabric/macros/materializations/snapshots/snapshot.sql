@@ -31,10 +31,11 @@
 
   -- Create a temporary view to manage if user SQl uses CTE
   {% set temp_snapshot_relation_sql = model['compiled_code'].replace("'", "''") %}
-  {% call statement('create temp_snapshot_relation') %}
-    EXEC('DROP VIEW IF EXISTS {{ temp_snapshot_relation.include(database=False) }};');
-    EXEC('create view {{ temp_snapshot_relation.include(database=False) }} as {{ temp_snapshot_relation_sql }};');
-  {% endcall %}
+  {{ adapter.drop_relation(temp_snapshot_relation) }}
+
+  {% call statement('create temp_snapshot_relation') -%}
+    {{ get_create_view_as_sql(temp_snapshot_relation, temp_snapshot_relation_sql) }}
+  {%- endcall %}
 
   {% if not target_relation_exists %}
 

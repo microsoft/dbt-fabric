@@ -35,20 +35,25 @@
 
   {% if existing_relation is not none and existing_relation.is_table %}
 
-      -- making a backup relation, this will come in use when contract is enforced or not
-      {%- set backup_relation = make_backup_relation(existing_relation, 'table') -%}
+    -- making a backup relation, this will come in use when contract is enforced or not
+    {%- set set_backup_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
+    {% if (set_backup_relation != none and set_backup_relation.type == "table") %}
+      {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
+    {% elif (set_backup_relation != none and set_backup_relation.type == "view") %}
+        {%- set backup_relation = make_backup_relation(target_relation, 'view') -%}
+    {% endif %}
 
-      -- Dropping a temp relation if it exists
-      {{ adapter.drop_relation(backup_relation) }}
+    -- Dropping a temp relation if it exists
+    {{ adapter.drop_relation(backup_relation) }}
 
-      -- Rename existing relation to back up relation
-      {{ adapter.rename_relation(existing_relation, backup_relation) }}
+    -- Rename existing relation to back up relation
+    {{ adapter.rename_relation(existing_relation, backup_relation) }}
 
-      -- Renaming temp relation as main relation
-      {{ adapter.rename_relation(temp_relation, target_relation) }}
+    -- Renaming temp relation as main relation
+    {{ adapter.rename_relation(temp_relation, target_relation) }}
 
-      -- Drop backup relation
-      {{ adapter.drop_relation(backup_relation) }}
+    -- Drop backup relation
+    {{ adapter.drop_relation(backup_relation) }}
 
   {%- else %}
 

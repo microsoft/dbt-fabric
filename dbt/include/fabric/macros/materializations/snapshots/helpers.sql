@@ -3,56 +3,12 @@
   {% do drop_relation_if_exists(staging_relation) %}
 {% endmacro %}
 
---Due to Alter not being supported, have to rely on this for temporarily
 {% macro fabric__create_columns(relation, columns) %}
-  {# default__ macro uses "add column"
-     TSQL preferes just "add"
-  #}
-
-  {% set columns %}
-    {% for column in columns %}
-      , CAST(NULL AS {{column.data_type}}) AS {{column.name}}
-    {% endfor %}
-  {% endset %}
-
-  {% set tempTableName %}
-    [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}_{{ range(1300, 19000) | random }}]
-  {% endset %}
-  {{ log("Creating new columns are not supported without dropping a table. Using random table as a temp table. - " ~ tempTableName) }}
-
-  {% set tempTable %}
-      CREATE TABLE {{tempTableName}}
-      AS SELECT * {{columns}} FROM [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}] {{ information_schema_hints() }} {{ apply_label() }}
-  {% endset %}
-
-  {% call statement('create_temp_table') -%}
-      {{ tempTable }}
-  {%- endcall %}
-
-  {% set dropTable %}
-      DROP TABLE [{{relation.database}}].[{{ relation.schema }}].[{{ relation.identifier }}]
-  {% endset %}
-
-  {% call statement('drop_table') -%}
-      {{ dropTable }}
-  {%- endcall %}
-
-  {% set createTable %}
-      CREATE TABLE {{ relation }}
-      AS SELECT * FROM {{tempTableName}} {{ information_schema_hints() }} {{ apply_label() }}
-  {% endset %}
-
-  {% call statement('create_Table') -%}
-      {{ createTable }}
-  {%- endcall %}
-
-  {% set dropTempTable %}
-      DROP TABLE {{tempTableName}}
-  {% endset %}
-
-  {% call statement('drop_temp_table') -%}
-      {{ dropTempTable }}
-  {%- endcall %}
+  {% for column in columns %}
+    {% call statement() %}
+      alter table {{ relation.render() }} add "{{ column.name }}" {{ column.data_type }} NULL;
+    {% endcall %}
+  {% endfor %}
 {% endmacro %}
 
 {% macro fabric__get_true_sql() %}

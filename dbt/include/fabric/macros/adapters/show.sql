@@ -1,24 +1,12 @@
 {% macro fabric__get_limit_sql(sql, limit) %}
-
-    {% if limit == -1 or limit is none %}
-        {% if sql.strip().lower().startswith('with') %}
-            {{ sql }}
-        {% else -%}
-            select *
-            from (
-                {{ sql }}
-            ) as model_limit_subq
-        {%- endif -%}
-    {% else -%}
-        {% if sql.strip().lower().startswith('with') %}
-            {{ sql }} order by (select null)
-            offset 0 rows fetch first {{ limit }} rows only
-        {% else -%}
-            select *
-            from (
-                {{ sql }}
-            ) as model_limit_subq order by (select null)
-            offset 0 rows fetch first {{ limit }} rows only
-        {%- endif -%}
+    {%- if limit == -1 or limit is none -%}
+        {{ sql }}
+    {#- Special processing if the last non-blank line starts with order by -#}
+    {%- elif sql.strip().splitlines()[-1].strip().lower().startswith('order by') -%}
+        {{ sql }}
+        offset 0 rows  fetch first {{ limit }} rows only
+    {%- else -%}
+        {{ sql }}
+        order by (select null) offset 0 rows fetch first {{ limit }} rows only
     {%- endif -%}
 {% endmacro %}
