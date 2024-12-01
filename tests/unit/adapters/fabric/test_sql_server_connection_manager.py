@@ -20,7 +20,7 @@ CHECK_OUTPUT = AzureCliCredential.__module__ + ".subprocess.check_output"
 @pytest.fixture
 def credentials() -> FabricCredentials:
     credentials = FabricCredentials(
-        driver="ODBC Driver 17 for SQL Server",
+        driver="ODBC Driver 18 for SQL Server",
         host="fake.sql.fabric.net",
         database="dbt",
         schema="fabric",
