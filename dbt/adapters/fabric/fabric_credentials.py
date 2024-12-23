@@ -21,7 +21,7 @@ class FabricCredentials(Credentials):
     authentication: Optional[str] = "ActiveDirectoryServicePrincipal"
     encrypt: Optional[bool] = True  # default value in MS ODBC Driver 18 as well
     trust_cert: Optional[bool] = False  # default value in MS ODBC Driver 18 as well
-    retries: int = 1
+    retries: int = 3
     schema_authorization: Optional[str] = None
     login_timeout: Optional[int] = 0
     query_timeout: Optional[int] = 0

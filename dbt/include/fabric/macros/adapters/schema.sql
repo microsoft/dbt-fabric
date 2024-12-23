@@ -31,6 +31,7 @@
   {%- endfor %}
 
   {% call statement('drop_schema') -%}
-      EXEC('DROP SCHEMA IF EXISTS {{ relation.schema }}')
+    {{ get_use_database_sql(relation.database) }}
+    EXEC('DROP SCHEMA IF EXISTS {{ relation.schema }}')
   {% endcall %}
 {% endmacro %}
