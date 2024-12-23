@@ -568,3 +568,4 @@ class FabricConnectionManager(SQLConnectionManager):
         while cursor.nextset():
             pass
         return response, table
+      
