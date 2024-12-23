@@ -21,11 +21,12 @@
 {% endmacro %}
 
 {%- macro fabric__get_use_database_sql(database) -%}
-  USE [{{database}}];
+  USE [{{database | replace('"', '')}}];
 {%- endmacro -%}
 
 {% macro fabric__list_schemas(database) %}
   {% call statement('list_schemas', fetch_result=True, auto_begin=False) -%}
+    {{ get_use_database_sql(database) }}
     select  name as [schema]
     from sys.schemas {{ information_schema_hints() }} {{ apply_label() }}
   {% endcall %}

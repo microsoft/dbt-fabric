@@ -352,6 +352,7 @@ class FabricConnectionManager(SQLConnectionManager):
             con_str.append(f"SERVER={credentials.host}")
 
         con_str.append(f"Database={credentials.database}")
+        con_str.append("Pooling=true")
 
         # Enabling trace flag
         if credentials.trace_flag:
@@ -395,8 +396,8 @@ class FabricConnectionManager(SQLConnectionManager):
         con_str.append(f"APP={application_name}")
 
         try:
-            if int(credentials.retries) > 0:
-                con_str.append(f"ConnectRetryCount={credentials.retries}")
+            con_str.append("ConnectRetryCount=3")
+            con_str.append("ConnectRetryInterval=10")
 
         except Exception as e:
             logger.debug(
@@ -427,7 +428,7 @@ class FabricConnectionManager(SQLConnectionManager):
 
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
-
+            pyodbc.pooling = True
             if credentials.authentication == "ActiveDirectoryAccessToken":
                 attrs_before = get_pyodbc_attrs_before_accesstoken(credentials.access_token)
             else:
@@ -567,3 +568,4 @@ class FabricConnectionManager(SQLConnectionManager):
         while cursor.nextset():
             pass
         return response, table
+      

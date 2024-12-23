@@ -150,6 +150,9 @@ class FabricAdapter(SQLAdapter):
             names = sorted((self.quote(n) for n in column_names))
         columns_csv = ", ".join(names)
 
+        if columns_csv == "":
+            columns_csv = "*"
+
         sql = COLUMNS_EQUAL_SQL.format(
             columns=columns_csv,
             relation_a=str(relation_a),
