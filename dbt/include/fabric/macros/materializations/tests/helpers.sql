@@ -1,7 +1,9 @@
 {% macro get_fabric_test_sql(database, schema, main_sql, fail_calc, warn_if, error_if, limit) -%}
-
+  {{ log ("local_md5(model.name): "~ local_md5(model.name))}}
+  {{ log ("local_md5(invocation_id): "~ local_md5(invocation_id))}}
   {% set testview %}
-    [{{ schema }}.testview_{{ range(1300, 19000) | random }}]
+
+    [{{ schema }}.testview_{{ local_md5(model.name ~ invocation_id) }}]
   {% endset %}
 
   {% set sql = main_sql.replace("'", "''")%}
