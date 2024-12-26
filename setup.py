@@ -8,7 +8,7 @@ from setuptools.command.install import install
 
 package_name = "dbt-fabric"
 authors_list = ["Pradeep Srikakolapu"]
-dbt_version = "1.8"
+dbt_version = "1.9"
 description = """A Microsoft Fabric Synapse Data Warehouse adapter plugin for dbt"""
 
 this_directory = os.path.abspath(os.path.dirname(__file__))
