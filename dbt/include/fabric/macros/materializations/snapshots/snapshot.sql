@@ -30,7 +30,7 @@
           type='view') -%}
 
   -- Create a temporary view to manage if user SQl uses CTE
-  {% set temp_snapshot_relation_sql = model['compiled_code'].replace("'", "''") %}
+  {% set temp_snapshot_relation_sql = model['compiled_code'] %}
   {{ adapter.drop_relation(temp_snapshot_relation) }}
 
   {% call statement('create temp_snapshot_relation') -%}

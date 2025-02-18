@@ -7,6 +7,7 @@ from dbt_common.dataclass_schema import StrEnum
 class FabricRelationType(StrEnum):
     Table = "table"
     View = "view"
+    Ephemeral = "ephemeral"
     CTE = "cte"
 
 

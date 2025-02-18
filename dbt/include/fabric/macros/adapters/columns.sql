@@ -13,7 +13,7 @@
 {% macro fabric__get_columns_in_relation(relation) -%}
     {% set query_label = apply_label() %}
     {% call statement('get_columns_in_relation', fetch_result=True) %}
-
+        {{ get_use_database_sql(relation.database) }}
         with mapping as (
             select
                 row_number() over (partition by object_name(c.object_id) order by c.column_id) as ordinal_position,
@@ -22,7 +22,7 @@
                 c.max_length as character_maximum_length,
                 c.precision as numeric_precision,
                 c.scale as numeric_scale
-            from [{{ 'tempdb' if '#' in relation.identifier else relation.database }}].sys.columns c {{ information_schema_hints() }}
+            from sys.columns c {{ information_schema_hints() }}
             inner join sys.types t {{ information_schema_hints() }}
             on c.user_type_id = t.user_type_id
             where c.object_id = object_id('{{ 'tempdb..' ~ relation.include(database=false, schema=false) if '#' in relation.identifier else relation }}')
