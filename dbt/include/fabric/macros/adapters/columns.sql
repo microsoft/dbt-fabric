@@ -1,12 +1,10 @@
 {% macro fabric__get_empty_subquery_sql(select_sql, select_sql_header=none) %}
-    {% if select_sql.strip().lower().startswith('with') %}
+
+    with __dbt_sbq_tmp as (
         {{ select_sql }}
-    {% else -%}
-        select * from (
-        {{ select_sql }}
-    ) dbt_sbq_tmp
-    where 1 = 0
-    {%- endif -%}
+    )
+    select * from __dbt_sbq_tmp
+    where 0 = 1
 
 {% endmacro %}
 
@@ -46,11 +44,16 @@
 {% macro fabric__get_columns_in_query(select_sql) %}
     {% set query_label = apply_label() %}
     {% call statement('get_columns_in_query', fetch_result=True, auto_begin=False) -%}
-        select TOP 0 * from (
+
+        with __dbt_sbq as
+        (
             {{ select_sql }}
-        ) as __dbt_sbq
+        )
+        select top 0 *
+        from __dbt_sbq
         where 0 = 1
         {{ query_label }}
+
     {% endcall %}
 
     {{ return(load_result('get_columns_in_query').table.columns | map(attribute='name') | list) }}
