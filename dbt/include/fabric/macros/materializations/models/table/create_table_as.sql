@@ -1,15 +1,32 @@
+{% macro check_for_nested_cte(sql) %}
+    {% if execute %}  {# Ensure this runs only at execution time #}
+        {% set cleaned_sql = sql | lower | replace("\n", " ") %}  {# Convert to lowercase and remove newlines #}
+        {% set cte_count = cleaned_sql.count("with ") %}  {# Count occurrences of "WITH " #}
+        {% if cte_count > 1 %}
+            {{ return(True) }}
+        {% else %}
+            {{ return(False) }}  {# No nested CTEs found #}
+        {% endif %}
+    {% else %}
+        {{ return(False) }}  {# Return False during parsing #}
+    {% endif %}
+{% endmacro %}
+
+
 {% macro fabric__create_table_as(temporary, relation, sql) -%}
 
     {% set query_label = apply_label() %}
     {% set contract_config = config.get('contract') %}
+    {% set is_nested_cte = check_for_nested_cte(sql) %}
 
-    {% if sql.strip().lower().startswith('with') and contract_config.enforced %}
+    {% if is_nested_cte and contract_config.enforced %}
 
         {{ exceptions.raise_compiler_error(
-            "As contract is enforced and the model is using CTE, INSERT INTO is not supported with CTE. Either do not enforce contract or change the model"
+            "Since the contract is enforced and the model contains a nested CTE, Fabric DW uses CREATE TABLE + INSERT to load data.
+            INSERT INTO is not supported with nested CTEs. To resolve this, either disable contract enforcement or modify the model."
         ) }}
 
-    {%- elif not sql.strip().lower().startswith('with') and contract_config.enforced %}
+    {%- elif not is_nested_cte and contract_config.enforced %}
 
         CREATE TABLE {{relation}}
         {{ build_columns_constraints(relation) }}
