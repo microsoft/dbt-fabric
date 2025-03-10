@@ -2,7 +2,7 @@
 
     {% set query_label = apply_label() %}
     {%- call statement('catalog', fetch_result=True) -%}
-
+        {{ get_use_database_sql(information_schemas.database) }}
         with
         principals as (
             select
