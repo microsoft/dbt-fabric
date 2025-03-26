@@ -26,13 +26,6 @@ You can use the provided `test.env.sample` as a base.
 cp test.env.sample test.env
 ```
 
-Note that we need 3 users to be able to run tests related to the grants.
-The 3 users are defined by the following environment variables containing their usernames.
-
-* `DBT_TEST_USER_1`
-* `DBT_TEST_USER_2`
-* `DBT_TEST_USER_3`
-
 You can use the following commands to run the unit and the functional tests respectively:
 
 ```shell
