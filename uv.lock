@@ -412,6 +412,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "dbt-core" },
+    { name = "dbt-tests-adapter" },
     { name = "flaky" },
     { name = "pytest" },
     { name = "pytest-dotenv" },
@@ -430,6 +431,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "dbt-core", specifier = "==1.9.3" },
+    { name = "dbt-tests-adapter", specifier = "==1.11.0" },
     { name = "flaky", specifier = "==3.8.1" },
     { name = "pytest", specifier = "==8.3.5" },
     { name = "pytest-dotenv", specifier = "==0.5.2" },
@@ -455,6 +457,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/53/67/86c4c068d1c6371928064bb9fe44eb8fbc4e15bb101e924d2e596c6fa511/dbt_semantic_interfaces-0.7.4.tar.gz", hash = "sha256:dcedda6702ecabb633aa4e8ab3b1eb7f9c4301dcc0026076a4a0ef64f9e59cf0", size = 90809 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a3/4d/9e0eec04821154c51c05dab77bc3eed95337c42f471d6ffe7b4a699e8cb1/dbt_semantic_interfaces-0.7.4-py3-none-any.whl", hash = "sha256:63965478ef27056f20a8c9a0f59b1355ebbc15133c1a6f0d368d93996a31dd5d", size = 141981 },
+]
+
+[[package]]
+name = "dbt-tests-adapter"
+version = "1.11.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dbt-adapters" },
+    { name = "dbt-core" },
+    { name = "freezegun" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/46/be/2e8b3bd4bb58bb816d45bcd0486431373bce35411d2445e302b50caa4698/dbt_tests_adapter-1.11.0.tar.gz", hash = "sha256:23a977815208457c6bc4c419877a863f743a30a42fbbf8f05c0d8aae98c670d2", size = 160048 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/36/c09107a7158dddaf85f14f05bbd8b3652ffd635289397d24b99d16f42744/dbt_tests_adapter-1.11.0-py3-none-any.whl", hash = "sha256:1132a6821b2120e691b48ff2667a5c7081c6f9a0439f358660e533d82ca87cbc", size = 232013 },
 ]
 
 [[package]]
@@ -494,6 +511,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5b/c5/ef69119a01427204ff2db5fc8f98001087bcce719bbb94749dcd7b191365/flaky-3.8.1.tar.gz", hash = "sha256:47204a81ec905f3d5acfbd61daeabcada8f9d4031616d9bcb0618461729699f5", size = 25248 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/b8/b830fc43663246c3f3dd1ae7dca4847b96ed992537e85311e27fa41ac40e/flaky-3.8.1-py2.py3-none-any.whl", hash = "sha256:194ccf4f0d3a22b2de7130f4b62e45e977ac1b5ccad74d4d48f3005dcc38815e", size = 19139 },
+]
+
+[[package]]
+name = "freezegun"
+version = "1.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2c/ef/722b8d71ddf4d48f25f6d78aa2533d505bf3eec000a7cacb8ccc8de61f2f/freezegun-1.5.1.tar.gz", hash = "sha256:b29dedfcda6d5e8e083ce71b2b542753ad48cfec44037b3fc79702e2980a89e9", size = 33697 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/0b/0d7fee5919bccc1fdc1c2a7528b98f65c6f69b223a3fd8f809918c142c36/freezegun-1.5.1-py3-none-any.whl", hash = "sha256:bf111d7138a8abe55ab48a71755673dbaa4ab87f4cff5634a4442dfec34c15f1", size = 17569 },
 ]
 
 [[package]]
