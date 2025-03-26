@@ -1,8 +1,11 @@
 ---
 name: Integration tests on Fabric DW
-on:   # yamllint disable-line rule:truthy
+on:
   workflow_dispatch:
   pull_request:
+    branches:
+      - main
+  push:
     branches:
       - main
 
@@ -13,9 +16,8 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        profile: ["integration_tests"]
-        python_version: ["3.11"]
-        msodbc_version: ["18"]
+        python_version: ["3.12", "3.13"]
+        msodbc_version: ["17", "18"]
 
     runs-on: ubuntu-latest
     permissions:
@@ -26,39 +28,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          uv --version
+        uses: astral-sh/setup-uv@v5
 
-      - name: Test Connection To Fabric Data Warehouse
-        id: fetch_token
-        run: |
-          uv pip install azure-identity pyodbc azure-core
-
-          python - <<EOF
-          from azure.core.credentials import AccessToken
-          from azure.identity import DefaultAzureCredential
-          import pyodbc
-          import logging
-          import struct
-          try:
-            credential = DefaultAzureCredential()
-            token = credential.get_token("https://database.windows.net/.default")
-            print(f"::set-output name=access_token::{token.token}")
-          except pyodbc.Error as e:
-            logging.error("Error occurred while connecting to the database.", exc_info=True)
-          EOF
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
 
       - name: Install dependencies
-        run: uv pip install -r requirements-dev.txt
+        run: uv sync
 
       - name: Run functional tests
         env:
-          DBT_AZURESQL_SERVER: ${{ secrets.DBT_AZURESQL_SERVER }}
-          DBT_AZURESQL_DB: ${{ secrets.DBT_AZURESQL_DB }}
-          FABRIC_INTEGRATION_TESTS_TOKEN: ${{ steps.fetch_token.outputs.access_token }}
-          FABRIC_TEST_DRIVER: 'ODBC Driver ${{ matrix.msodbc_version }} for SQL Server'
+          FABRIC_TEST_ENDPOINT: ${{ secrets.DBT_AZURESQL_SERVER }}
+          FABRIC_TEST_DWH_NAME: ${{ secrets.DBT_AZURESQL_DB }}
           DBT_TEST_USER_1: dbo
           DBT_TEST_USER_2: dbo
           DBT_TEST_USER_3: dbo
-        run: pytest -ra -v tests/functional --profile "${{ matrix.profile }}"
+        run: pytest -ra -v tests/functional
