@@ -8,11 +8,13 @@ To create a virtual environment with `uv`, run `uv venv` in the root of the proj
 
 Make sure to [activate the virtual environment](https://docs.astral.sh/uv/pip/environments/#using-a-virtual-environment) before running any commands.
 
-Continue to install the development dependencies:
+Continue to install the packages:
 
 ```bash
-uv install -r dev_requirements.txt
+uv sync
 ```
+
+This installs the adapter in an edit mode so that you can make changes to the code and they are reflected in the virtual environment right away. It then also includes the development dependencies needed for testing, linting, and formatting.
 
 ## Testing
 
@@ -81,5 +83,3 @@ The following environment variables are available:
 
 Make sure the version number is bumped in `__version__.py`. Then, create a git tag named `v<version>` and push it to GitHub.
 A GitHub Actions workflow will be triggered to build the package and push it to PyPI. 
-
-If you're releasing support for a new version of `dbt-core`, also bump the `dbt_version` in `setup.py`.
