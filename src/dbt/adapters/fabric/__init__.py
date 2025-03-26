@@ -1,5 +1,4 @@
 from dbt.adapters.base import AdapterPlugin
-
 from dbt.adapters.fabric.fabric_adapter import FabricAdapter
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
@@ -14,10 +13,10 @@ Plugin = AdapterPlugin(
 )
 
 __all__ = [
-    "Plugin",
-    "FabricConnectionManager",
-    "FabricColumn",
     "FabricAdapter",
-    "FabricCredentials",
+    "FabricColumn",
     "FabricConfigs",
+    "FabricConnectionManager",
+    "FabricCredentials",
+    "Plugin",
 ]

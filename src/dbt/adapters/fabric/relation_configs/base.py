@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 import agate
+
 from dbt.adapters.base.relation import Policy
 from dbt.adapters.contracts.relation import RelationConfig
-from dbt.adapters.relation_configs import RelationConfigBase, RelationResults
-
 from dbt.adapters.fabric.relation_configs.policies import FabricIncludePolicy, FabricQuotePolicy
+from dbt.adapters.relation_configs import RelationConfigBase, RelationResults
 
 
 @dataclass(frozen=True, eq=True, unsafe_hash=True)

@@ -1,5 +1,6 @@
 # TODO: repoint to dbt-artifacts when it is available
 import pytest
+
 from dbt.artifacts.schemas.catalog import CatalogArtifact
 from dbt.tests.util import run_dbt
 

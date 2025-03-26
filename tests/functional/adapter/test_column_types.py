@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.column_types.test_column_types import BaseColumnTypes
 
 # flake8: noqa: E501
@@ -106,7 +107,7 @@ models:
             numeric_col: ['numeric', 'number']
             text_col: ['string', 'not number']
             varchar_col: ['string', 'not number']
-"""  # noqa
+"""
 
 
 @pytest.mark.skip("This will be tested in v1.9.0")

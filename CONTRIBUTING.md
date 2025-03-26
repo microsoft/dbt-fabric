@@ -4,17 +4,18 @@ We recommend creating a virtual environment to develop the adapter. At the time 
 
 Throughout the rest of this guide, we'll assume you're using `uv`. `uv` is a drop-in replacement for `pip` with greater performance and additional features. You can of course use any other tool you prefer.
 
-To create a virtual environment with `uv`, run `uv venv` in the root of the project. This will create a virtual environment in the `.venv` directory. You can optionally pass the Python version you'd like to use: `uv venv --python 3.13`.
+Uv is super simple to use and only requires you to run a single command to do the following:
 
-Make sure to [activate the virtual environment](https://docs.astral.sh/uv/pip/environments/#using-a-virtual-environment) before running any commands.
-
-Continue to install the packages:
+1. Create a virtual environment
+1. Install all dependencies
+1. Install the adapter in an editable mode
+1. Install the development dependencies
 
 ```bash
 uv sync
 ```
 
-This installs the adapter in an edit mode so that you can make changes to the code and they are reflected in the virtual environment right away. It then also includes the development dependencies needed for testing, linting, and formatting.
+To run anything inside the virtual environment, use `uv run ...`. Otherwise, you can [activate the virtual environment](https://docs.astral.sh/uv/pip/environments/#using-a-virtual-environment) before running any commands.
 
 ## Testing
 

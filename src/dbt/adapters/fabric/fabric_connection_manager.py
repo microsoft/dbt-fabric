@@ -10,17 +10,17 @@ import dbt_common.exceptions
 import pyodbc
 from azure.core.credentials import AccessToken
 from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
-from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
-from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
-from dbt.adapters.sql import SQLConnectionManager
 from dbt_common.clients.agate_helper import empty_table
 from dbt_common.events.contextvars import get_node_info
 from dbt_common.events.functions import fire_event
 from dbt_common.utils.casting import cast_to_str
 
+from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
+from dbt.adapters.events.logging import AdapterLogger
+from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.sql import SQLConnectionManager
 
 AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
 SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
@@ -266,7 +266,7 @@ def bool_to_connection_string_arg(key: str, value: bool) -> str:
     out : str
         The connection string argument.
     """
-    return f'{key}={"Yes" if value else "No"}'
+    return f"{key}={'Yes' if value else 'No'}"
 
 
 def byte_array_to_datetime(value: bytes) -> dt.datetime:
@@ -568,4 +568,3 @@ class FabricConnectionManager(SQLConnectionManager):
         while cursor.nextset():
             pass
         return response, table
-      
