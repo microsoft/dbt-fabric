@@ -60,8 +60,7 @@ sources = ["src"]
 
 [tool.pytest.ini_options]
 filterwarnings = [
-    "ignore:.*'soft_unicode' has been renamed to 'soft_str'*:DeprecationWarning",
-    "ignore:unclosed file .*:ResourceWarning",
+    "ignore:.*datetime.datetime.utcnow.*:DeprecationWarning", # https://github.com/dbt-labs/dbt-core/issues/9791
 ]
 env_files = ["test.env"]
 testpaths = ["tests/unit", "tests/functional"]
