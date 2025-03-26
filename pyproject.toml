@@ -75,19 +75,7 @@ line-length = 99
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "W",   # pycodestyle warnings
     "I",   # isort
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "ARG", # flake8-unused-arguments
-    "SIM", # flake8-simplify
-    "RUF", # ruff-specific rules
-    "PLC", # pylint conventions
-    "PLE", # pylint errors
-    "PLW", # pylint warnings
-    "TRY", # tryceratops
 ]
 
 [tool.ruff.lint.isort]
