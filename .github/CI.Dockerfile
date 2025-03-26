@@ -1,5 +1,5 @@
 ARG PYTHON_VERSION="3.13"
-FROM python:${PYTHON_VERSION} as base
+FROM python:${PYTHON_VERSION}-bookworm as base
 
 # Setup dependencies for pyodbc
 RUN apt-get update && \
