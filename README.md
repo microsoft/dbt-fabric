@@ -36,10 +36,6 @@ Latest version: ![PyPI](https://img.shields.io/pypi/v/dbt-fabric?label=latest&lo
 pip install -U dbt-fabric
 ```
 
-## Changelog
-
-See [the changelog](CHANGELOG.md)
-
 ## Contributing
 
 [![Unit tests](https://github.com/microsoft/dbt-fabric/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/microsoft/dbt-fabric/actions/workflows/unit-tests.yml)

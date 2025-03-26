@@ -1,0 +1,78 @@
+[project]
+name = "dbt-fabric"
+dynamic = ["version"]
+description = "A Microsoft Fabric Synapse Data Warehouse adapter plugin for dbt"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Pradeep Srikakolapu"}
+]
+requires-python = ">=3.8,<3.14"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
+]
+
+dependencies = [
+    "pyodbc>=4.0.35",
+    "azure-identity>=1.12.0",
+    "dbt-common>=1.0.4,<2.0",
+    "dbt-adapters>=1.1.1,<2.0",
+]
+
+[project.urls]
+"Setup & configuration" = "https://docs.getdbt.com/reference/warehouse-profiles/fabric-profile"
+"Documentation & usage" = "https://docs.getdbt.com/reference/resource-configs/fabric-configs"
+"Changelog" = "https://github.com/microsoft/dbt-fabric/releases"
+"Issue Tracker" = "https://github.com/microsoft/dbt-fabric/issues"
+Homepage = "https://github.com/microsoft/dbt-fabric"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:.*'soft_unicode' has been renamed to 'soft_str'*:DeprecationWarning",
+    "ignore:unclosed file .*:ResourceWarning",
+]
+env_files = ["test.env"]
+testpaths = ["tests/unit", "tests/functional"]
+markers = [
+    "skip_profile",
+    "only_with_profile",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 99
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+    "PLC", # pylint conventions
+    "PLE", # pylint errors
+    "PLW", # pylint warnings
+    "TRY", # tryceratops
+]
+
+[tool.ruff.isort]
+known-first-party = ["dbt", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["ARG", "PLR0913"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

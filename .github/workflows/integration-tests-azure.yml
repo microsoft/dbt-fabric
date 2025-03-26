@@ -22,22 +22,18 @@ jobs:
       contents: read   # Required to access repository files
       packages: read   # Grant explicit read access to packages
       id-token: write  # Needed if using OIDC authentication
-    container:
-      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
     steps:
-      # Azure login using federated credentials
-      - name: Azure login with OIDC
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.DBT_AZURE_SP_NAME }}
-          tenant-id: ${{ secrets.DBT_AZURE_TENANT }}
-          allow-no-subscriptions: true
-          federated-token: true
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv --version
 
       - name: Test Connection To Fabric Data Warehouse
         id: fetch_token
         run: |
-          pip install azure-identity pyodbc azure-core
+          uv pip install azure-identity pyodbc azure-core
 
           python - <<EOF
           from azure.core.credentials import AccessToken
@@ -53,10 +49,8 @@ jobs:
             logging.error("Error occurred while connecting to the database.", exc_info=True)
           EOF
 
-      - uses: actions/checkout@v4
-
       - name: Install dependencies
-        run: pip install -r dev_requirements.txt
+        run: uv pip install -r requirements-dev.txt
 
       - name: Run functional tests
         env:

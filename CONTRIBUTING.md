@@ -1,24 +1,18 @@
 # Development of the adapter
 
-Python 3.10 is used for developing the adapter. To get started, bootstrap your environment as follows:
+We recommend creating a virtual environment to develop the adapter. At the time of writing, [`uv`](https://docs.astral.sh/uv/) is a very popular tool to work with Python packages and environments. Installation should be pretty straightforward ([docs](https://docs.astral.sh/uv/getting-started/installation/)).
 
-Create a virtual environment, [pyenv](https://github.com/pyenv/pyenv) is used in the example:
+Throughout the rest of this guide, we'll assume you're using `uv`. `uv` is a drop-in replacement for `pip` with greater performance and additional features. You can of course use any other tool you prefer.
 
-```shell
-pyenv install 3.10.7
-pyenv virtualenv 3.10.7 dbt-fabric
-pyenv activate dbt-fabric
+To create a virtual environment with `uv`, run `uv venv` in the root of the project. This will create a virtual environment in the `.venv` directory. You can optionally pass the Python version you'd like to use: `uv venv --python 3.13`.
+
+Make sure to [activate the virtual environment](https://docs.astral.sh/uv/pip/environments/#using-a-virtual-environment) before running any commands.
+
+Continue to install the development dependencies:
+
+```bash
+uv install -r dev_requirements.txt
 ```
-
-Install the development dependencies and pre-commit and get information about possible make commands:
-
-```shell
-make dev
-make help
-```
-
-[Pre-commit](https://pre-commit.com/) helps us to maintain a consistent style and code quality across the entire project.
-After running `make dev`, pre-commit will automatically validate your commits and fix any formatting issues whenever possible.
 
 ## Testing
 
