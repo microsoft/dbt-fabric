@@ -1,7 +1,7 @@
 ---
 name: Release new version
 
-on:  # yamllint disable-line rule:truthy
+on:
   push:
     tags:
       - 'v*'
@@ -13,23 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version-file: ".python-version"
 
       - name: Install dependencies
-        run: pip install -r dev_requirements.txt
-
-      - name: Verify version match
-        run: python setup.py verify
-
-      - name: Initialize .pypirc
-        run: |
-          echo -e "[pypi]" >> ~/.pypirc
-          echo -e "username = __token__" >> ~/.pypirc
-          echo -e "password = ${{ secrets.PYPI_DBT_FABRIC }}" >> ~/.pypirc
+        run: uv sync
 
       - name: Build and publish package
         run: |
-          python setup.py sdist bdist_wheel
-          twine upload dist/*
+          uv build
+          uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_DBT_FABRIC }}
