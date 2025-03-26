@@ -1,6 +1,6 @@
 ---
 name: Unit tests
-on:  # yamllint disable-line rule:truthy
+on:
   workflow_dispatch:
   push:
     branches:
@@ -16,7 +16,7 @@ jobs:
     name: Unit tests
     strategy:
       matrix:
-        python_version: ["3.10", "3.11"]
+        python_version: ["3.10", "3.11", "3.12", "3.13"]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,16 +27,18 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.github_token }}
     steps:
-
       - uses: actions/checkout@v4
 
       - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          uv --version
+        uses: astral-sh/setup-uv@v5
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
 
       - name: Install dependencies
-        run: uv pip install -r requirements-dev.txt
+        run: uv sync
 
       - name: Run unit tests
-        run: pytest -n auto -ra -v tests/unit
+        run: uv run pytest -n auto -ra -v tests/unit
