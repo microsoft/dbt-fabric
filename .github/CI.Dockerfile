@@ -1,5 +1,5 @@
 ARG PYTHON_VERSION="3.13"
-FROM python:${PYTHON_VERSION}-bookworm as base
+FROM python:${PYTHON_VERSION}-bookworm AS base
 
 # Setup dependencies for pyodbc
 RUN apt-get update && \
@@ -28,7 +28,7 @@ RUN apt-get update && \
     apt-get clean &&  \
     rm -rf /var/lib/apt/lists/*
 
-FROM base as msodbc17
+FROM base AS msodbc17
 
 # install ODBC driver 17
 ENV ACCEPT_EULA=Y
@@ -43,7 +43,7 @@ RUN apt-get update && \
 # add sqlcmd to the path
 ENV PATH="$PATH:/opt/mssql-tools/bin"
 
-FROM base as msodbc18
+FROM base AS msodbc18
 
 # install ODBC driver 18
 ENV ACCEPT_EULA=Y
