@@ -42,5 +42,5 @@ jobs:
         env:
           FABRIC_TEST_ENDPOINT: ${{ secrets.DBT_AZURESQL_SERVER }}
           FABRIC_TEST_DWH_NAME: ${{ secrets.DBT_AZURESQL_DB }}
-          FABRIC_TEST_DRIVER: "ODBC Driver ${MSODBC_VERSION} for SQL Server"
+          FABRIC_TEST_DRIVER: "ODBC Driver ${{ matrix.msodbc_version }} for SQL Server"
         run: uv run pytest -ra -v tests/functional
