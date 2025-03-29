@@ -42,4 +42,4 @@ jobs:
         env:
           FABRIC_TEST_ENDPOINT: ${{ secrets.DBT_AZURESQL_SERVER }}
           FABRIC_TEST_DWH_NAME: ${{ secrets.DBT_AZURESQL_DB }}
-        run: pytest -ra -v tests/functional
+        run: uv run pytest -ra -v tests/functional
