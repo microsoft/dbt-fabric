@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.utils.data_types.test_type_bigint import BaseTypeBigInt
 from dbt.tests.adapter.utils.data_types.test_type_boolean import BaseTypeBoolean
 from dbt.tests.adapter.utils.data_types.test_type_float import BaseTypeFloat
@@ -33,9 +34,9 @@ class TestTypeStringFabric(BaseTypeString):
     def assert_columns_equal(self, project, expected_cols, actual_cols):
         #  ignore the size of the varchar since we do
         #  an optimization to not use varchar(max) all the time
-        assert (
-            expected_cols[:-1] == actual_cols[:-1]
-        ), f"Type difference detected: {expected_cols} vs. {actual_cols}"
+        assert expected_cols[:-1] == actual_cols[:-1], (
+            f"Type difference detected: {expected_cols} vs. {actual_cols}"
+        )
 
 
 class TestTypeTimestampFabric(BaseTypeTimestamp):

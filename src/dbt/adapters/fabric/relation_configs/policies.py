@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
-from dbt.adapters.base.relation import Policy
 from dbt_common.dataclass_schema import StrEnum
+
+from dbt.adapters.base.relation import Policy
 
 
 class FabricRelationType(StrEnum):

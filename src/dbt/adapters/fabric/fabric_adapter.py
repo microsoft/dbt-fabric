@@ -2,15 +2,6 @@ from typing import List, Optional
 
 import agate
 import dbt_common.exceptions
-from dbt.adapters.base import Column as BaseColumn
-from dbt.adapters.base.impl import ConstraintSupport
-from dbt.adapters.base.meta import available
-from dbt.adapters.base.relation import BaseRelation
-from dbt.adapters.cache import _make_ref_key_dict
-from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
-from dbt.adapters.events.types import SchemaCreation
-from dbt.adapters.sql import SQLAdapter
-from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
 from dbt_common.contracts.constraints import (
     ColumnLevelConstraint,
     ConstraintType,
@@ -18,10 +9,19 @@ from dbt_common.contracts.constraints import (
 )
 from dbt_common.events.functions import fire_event
 
+from dbt.adapters.base import Column as BaseColumn
+from dbt.adapters.base.impl import ConstraintSupport
+from dbt.adapters.base.meta import available
+from dbt.adapters.base.relation import BaseRelation
+from dbt.adapters.cache import _make_ref_key_dict
+from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
+from dbt.adapters.events.types import SchemaCreation
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
 from dbt.adapters.fabric.fabric_relation import FabricRelation
+from dbt.adapters.sql import SQLAdapter
+from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
 
 
 class FabricAdapter(SQLAdapter):

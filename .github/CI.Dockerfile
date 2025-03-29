@@ -1,34 +1,25 @@
-ARG PYTHON_VERSION="3.10"
-FROM python:${PYTHON_VERSION}-bullseye as base
+ARG PYTHON_VERSION="3.13"
+FROM python:${PYTHON_VERSION}-bookworm AS base
 
 # Setup dependencies for pyodbc
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      apt-transport-https \
-      curl  \
-      gnupg2 \
-      unixodbc-dev \
-      lsb-release && \
+    apt-get install -y --no-install-recommends curl && \
     apt-get autoremove -yqq --purge && \
     apt-get clean &&  \
     rm -rf /var/lib/apt/lists/*
-
-# enable Microsoft package repo
-RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN curl -sL https://packages.microsoft.com/config/debian/$(lsb_release -sr)/prod.list | tee /etc/apt/sources.list.d/msprod.list
-# enable Azure CLI package repo
-RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list
 
 # install Azure CLI
-ENV ACCEPT_EULA=Y
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      azure-cli && \
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
     apt-get autoremove -yqq --purge && \
     apt-get clean &&  \
     rm -rf /var/lib/apt/lists/*
 
-FROM base as msodbc17
+# Download the package to configure the Microsoft repo
+RUN curl -sSL -O https://packages.microsoft.com/config/debian/$(grep VERSION_ID /etc/os-release | cut -d '"' -f 2 | cut -d '.' -f 1)/packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    rm packages-microsoft-prod.deb
+
+FROM base AS msodbc17
 
 # install ODBC driver 17
 ENV ACCEPT_EULA=Y
@@ -43,7 +34,7 @@ RUN apt-get update && \
 # add sqlcmd to the path
 ENV PATH="$PATH:/opt/mssql-tools/bin"
 
-FROM base as msodbc18
+FROM base AS msodbc18
 
 # install ODBC driver 18
 ENV ACCEPT_EULA=Y

@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.store_test_failures_tests import basic, fixtures
 from dbt.tests.util import check_relations_equal, run_dbt
 

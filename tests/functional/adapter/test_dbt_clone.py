@@ -4,6 +4,8 @@ from collections import Counter
 from copy import deepcopy
 
 import pytest
+from dbt_common.exceptions import DbtRuntimeError
+
 from dbt.tests.adapter.dbt_clone.fixtures import (
     custom_can_clone_tables_false_macros_sql,
     ephemeral_model_sql,
@@ -18,7 +20,6 @@ from dbt.tests.adapter.dbt_clone.fixtures import (
     view_model_sql,
 )
 from dbt.tests.util import run_dbt
-from dbt_common.exceptions import DbtRuntimeError
 
 
 class BaseClone:

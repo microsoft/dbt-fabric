@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.dbt_show.fixtures import (
     models__ephemeral_model,
     models__sample_model,
@@ -39,7 +40,7 @@ class BaseShowLimit:
         limit = results.args.get("limit")
         if limit > 0:
             assert (
-                f"offset 0 rows fetch first { limit } rows only"
+                f"offset 0 rows fetch first {limit} rows only"
                 in results.results[0].node.compiled_code
             )
 
