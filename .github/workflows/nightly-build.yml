@@ -1,0 +1,43 @@
+---
+name: Nightly Build
+
+on:
+  schedule:
+    # Run at midnight UTC every day
+    - cron: '0 0 * * *'
+  # Allow manual triggering
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  nightly-build:
+    name: Create nightly development build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set nightly version
+        run: |
+          # Set base version
+          BASE_VERSION="1.9.5"
+          # Generate date suffix in format YYYYMMDD
+          DATE_SUFFIX=$(date +"%Y%m%d")
+          # Create dev version according to PEP 440: X.Y.Z.devYYYYMMDD
+          DEV_VERSION="${BASE_VERSION}.dev${DATE_SUFFIX}"
+          echo "Setting nightly version to $DEV_VERSION"
+          # Update the version in __version__.py
+          echo "version = \"$DEV_VERSION\"" > src/dbt/adapters/fabric/__version__.py
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build and publish package
+        run: |
+          uv build
+          uv publish
