@@ -20,11 +20,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: ".python-version"
-
       - name: Update version from tag
         run: |
           # Extract version from tag (remove 'v' prefix)
