@@ -14,6 +14,7 @@ select *
 from {{ source('seed_sources', 'raw_source') }} m3
 """
 
+
 class TestFabricEmpty(BaseTestEmpty):
     @pytest.fixture(scope="class")
     def models(self):
@@ -23,6 +24,7 @@ class TestFabricEmpty(BaseTestEmpty):
             "model.sql": model_sql,
             "sources.yml": _models.schema_sources_yml,
         }
+
 
 class TestFabricEmptyInlineSourceRef(BaseTestEmptyInlineSourceRef):
     pass
