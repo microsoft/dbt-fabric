@@ -33,10 +33,10 @@ select SCHEMA_OWNER from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME = '{schem
         if test_user != "dbo":
             # Fabric only seems to recognize users as soon as you have granted them something
             # You cannot grant something to dbo
-            project.run_sql(f"grant select on schema :: dbo to [{test_user}]", fetch=None);
-        
+            project.run_sql(f"grant select on schema :: dbo to [{test_user}]", fetch=None)
+
         res = run_dbt(["run"])
         assert len(res) == 1
-        
+
         self._verify_schema_owner(unique_schema, test_user, project)
         self._verify_schema_owner("with_custom_auth", test_user, project)
