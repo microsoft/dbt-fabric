@@ -8,8 +8,10 @@ from dbt.tests.adapter.dbt_debug.test_dbt_debug import (
 class TestDebugFabric(BaseDebugPostgres):
     pass
 
+
 class TestDebugProfileVariableFabric(BaseDebugProfileVariable):
     pass
+
 
 class TestDebugInvalidProjectFabric(BaseDebugInvalidProjectPostgres):
     pass
