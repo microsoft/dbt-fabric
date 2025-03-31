@@ -1,4 +1,5 @@
 import os
+from time import sleep
 
 import pytest
 
@@ -23,10 +24,15 @@ select 1 as id
     @staticmethod
     def _verify_schema_owner(schema_name, owner, project):
         get_schema_owner = f"""
-select SCHEMA_OWNER from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME = '{schema_name}'
+select p.name
+from sys.schemas s
+join sys.database_principals p
+on s.principal_id = p.principal_id
+where s.name = '{schema_name}'
         """
-        result = project.run_sql(get_schema_owner, fetch="one")[0]
-        assert result == owner, f"Schema owner for {schema_name} is not {owner}"
+        result = project.run_sql(get_schema_owner, fetch="one")
+        first_record = result[0]
+        assert first_record == owner, f"Schema owner for {schema_name} is not {owner}"
 
     def test_schema_creation(self, project, unique_schema):
         test_user = os.getenv("DBT_TEST_USER_1", "dbo")
@@ -39,4 +45,4 @@ select SCHEMA_OWNER from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME = '{schem
         assert len(res) == 1
 
         self._verify_schema_owner(unique_schema, test_user, project)
-        self._verify_schema_owner("with_custom_auth", test_user, project)
+        self._verify_schema_owner(unique_schema + "_with_custom_auth", test_user, project)
