@@ -38,7 +38,6 @@ dev = [
     "dbt-tests-adapter==1.11.0",
     # Linting & formatting
     "ruff==0.11.2",
-    "pytest-cov>=6.0.0",
 ]
 
 [project.urls]
