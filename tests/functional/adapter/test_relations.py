@@ -1,6 +1,7 @@
 import pytest
 
 from dbt.contracts.results import CatalogArtifact
+from dbt.tests.adapter.relations.test_dropping_schema_named import BaseDropSchemaNamed
 from dbt.tests.util import run_dbt
 
 MY_SEED = """
@@ -59,3 +60,14 @@ class TestCatalogRelationTypes:
         assert node_name in docs.nodes
         node = docs.nodes[node_name]
         assert node.metadata.type == relation_type
+
+
+from dbt.tests.adapter.relations.test_changing_relation_type import BaseChangeRelationTypeValidator
+
+
+class TestChangeRelationTypesFabric(BaseChangeRelationTypeValidator):
+    pass
+
+
+class TestDropSchemaNamedFabric(BaseDropSchemaNamed):
+    pass
