@@ -1,9 +1,12 @@
 ---
-name: Full integration tests on Fabric DW
+name: Regular integration tests on Fabric DW
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 1 * * 0'
+  pull_request:
+    branches:
+      - forked-version
+  push:
+    branches:
+      - forked-version
 
 permissions:
   contents: read
@@ -15,18 +18,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  full-integration-tests-fabric-dw:
-    name: Full integration tests on Fabric DW
-    strategy:
-      matrix:
-        python_version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        msodbc_version: ["17", "18"]
-      max-parallel: 1
-
+  integration-tests-fabric-dw:
+    name: Regular integration tests on Fabric DW
     runs-on: ubuntu-latest
     environment: azure
-    container: 
-      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
+    container:
+      image: ghcr.io/${{ github.repository }}:CI-3.13-msodbc18
     steps:
       - name: Azure CLI Login
         uses: azure/login@v2
@@ -39,8 +36,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          python-version: ${{ matrix.python_version }}
 
       - name: Install dependencies
         run: uv sync
@@ -50,6 +45,6 @@ jobs:
           FABRIC_TEST_ENDPOINT: ${{ secrets.FABRIC_TEST_ENDPOINT }}
           FABRIC_TEST_DWH_NAME: ${{ secrets.FABRIC_TEST_DWH_NAME }}
           FABRIC_TEST_DWH_CI_NAME: ${{ secrets.FABRIC_TEST_DWH_CI_NAME }}
-          FABRIC_TEST_DRIVER: "ODBC Driver ${{ matrix.msodbc_version }} for SQL Server"
+          FABRIC_TEST_DRIVER: "ODBC Driver 18 for SQL Server"
           DBT_TEST_USER_1: ${{ secrets.DBT_TEST_USER_1 }}
         run: uv run pytest -ra -v tests/functional
