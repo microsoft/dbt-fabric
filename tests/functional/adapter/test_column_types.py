@@ -1,8 +1,7 @@
 import pytest
 
+from dbt.tests.adapter.column_types.fixtures import schema_yml
 from dbt.tests.adapter.column_types.test_column_types import BaseColumnTypes
-
-# flake8: noqa: E501
 
 macro_test_is_type_sql_2 = """
 {% macro simple_type_check_column(column, check) %}
@@ -66,8 +65,7 @@ macro_test_is_type_sql_2 = """
                 {% do bad_columns.append(column.name) %}
             {% endif %}
         {% else %}
-            {% do exceptions.raise_compiler_error(
-                'column key ' ~ column_key ~ ' not found in ' ~ (column_map | list | string)) %}
+            {% do exceptions.raise_compiler_error('column key ' ~ column_key ~ ' not found in ' ~ (column_map | list | string)) %}
         {% endif %}
     {% endfor %}
     {% do log('bad columns: ' ~ bad_columns, info=True) %}
@@ -92,26 +90,8 @@ select
     CAST(8 AS varchar(20)) as varchar_col
 """
 
-schema_yml = """
-version: 2
-models:
-  - name: model
-    data_tests:
-      - is_type:
-          column_map:
-            smallint_col: ['integer', 'number']
-            int_col: ['integer', 'number']
-            bigint_col: ['integer', 'number']
-            real_col: ['float', 'number']
-            double_col: ['float', 'number']
-            numeric_col: ['numeric', 'number']
-            text_col: ['string', 'not number']
-            varchar_col: ['string', 'not number']
-"""
 
-
-@pytest.mark.skip("This will be tested in v1.9.0")
-class TestColumnTypes(BaseColumnTypes):
+class TestFabricColumnTypes(BaseColumnTypes):
     @pytest.fixture(scope="class")
     def macros(self):
         return {"test_is_type.sql": macro_test_is_type_sql_2}
