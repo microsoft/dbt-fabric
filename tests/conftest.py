@@ -7,7 +7,7 @@ pytest_plugins = ["dbt.tests.fixtures.project"]
 
 
 @pytest.fixture(scope="class")
-def dbt_profile_target(request: FixtureRequest, dbt_profile_target_update):
+def dbt_profile_target(dbt_profile_target_update):
     target = {
         "type": "fabric",
         "driver": os.getenv("FABRIC_TEST_DRIVER", "ODBC Driver 18 for SQL Server"),
