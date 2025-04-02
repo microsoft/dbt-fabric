@@ -21,3 +21,9 @@ class FabricColumn(Column):
 
     def is_integer(self):
         return super().is_integer() or self.dtype.lower() == "int"
+    
+    @property
+    def data_type(self) -> str:
+        if self.dtype == "datetime2":
+            return f"datetime2({self.numeric_scale})"
+        return super().data_type
