@@ -21,7 +21,7 @@ class FabricColumn(Column):
 
     def is_integer(self):
         return super().is_integer() or self.dtype.lower() == "int"
-    
+
     @property
     def data_type(self) -> str:
         if self.dtype == "datetime2":

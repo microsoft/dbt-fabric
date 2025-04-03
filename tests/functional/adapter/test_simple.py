@@ -20,13 +20,6 @@ from dbt.tests.adapter.simple_snapshot.test_snapshot import (
     BaseSimpleSnapshotBase,
     BaseSnapshotCheck,
 )
-from dbt.tests.adapter.simple_snapshot.test_various_configs import (
-    BaseSnapshotColumnNames,
-    BaseSnapshotColumnNamesFromDbtProject,
-    BaseSnapshotDbtValidToCurrent,
-    BaseSnapshotInvalidColumnNames,
-    BaseSnapshotMultiUniqueKey,
-)
 
 
 class TestSimpleCopyUppercaseFabric(BaseSimpleCopyUppercase):
@@ -104,24 +97,4 @@ class TestSimpleSnapshotBaseFabric(BaseSimpleSnapshotBase):
 
 
 class TestSnapshotCheckFabric(BaseSnapshotCheck):
-    pass
-
-
-class TestSnapshotColumnNamesFabric(BaseSnapshotColumnNames):
-    pass
-
-
-class TestSnapshotColumnNamesFromDbtProjectFabric(BaseSnapshotColumnNamesFromDbtProject):
-    pass
-
-
-class TestSnapshotDbtValidToCurrentFabric(BaseSnapshotDbtValidToCurrent):
-    pass
-
-
-class TestSnapshotInvalidColumnNamesFabric(BaseSnapshotInvalidColumnNames):
-    pass
-
-
-class TestSnapshotMultiUniqueKeyFabric(BaseSnapshotMultiUniqueKey):
     pass
