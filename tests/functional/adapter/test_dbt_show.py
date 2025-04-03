@@ -1,28 +1,13 @@
 import pytest
 
 from dbt.tests.adapter.dbt_show.fixtures import (
-    models__ephemeral_model,
-    models__sample_model,
     models__second_ephemeral_model,
-    seeds__sample_seed,
 )
-from dbt.tests.adapter.dbt_show.test_dbt_show import BaseShowSqlHeader
+from dbt.tests.adapter.dbt_show.test_dbt_show import BaseShowLimit, BaseShowSqlHeader
 from dbt.tests.util import run_dbt
 
 
-# -- Below we define base classes for tests you import based on if your adapter supports dbt show or not --
-class BaseShowLimit:
-    @pytest.fixture(scope="class")
-    def models(self):
-        return {
-            "sample_model.sql": models__sample_model,
-            "ephemeral_model.sql": models__ephemeral_model,
-        }
-
-    @pytest.fixture(scope="class")
-    def seeds(self):
-        return {"sample_seed.csv": seeds__sample_seed}
-
+class TestFabricShowLimit(BaseShowLimit):
     @pytest.mark.parametrize(
         "args,expected",
         [
@@ -43,10 +28,6 @@ class BaseShowLimit:
                 f"offset 0 rows fetch first {limit} rows only"
                 in results.results[0].node.compiled_code
             )
-
-
-class TestFabricShowLimit(BaseShowLimit):
-    pass
 
 
 class TestFabricShowSqlHeader(BaseShowSqlHeader):
