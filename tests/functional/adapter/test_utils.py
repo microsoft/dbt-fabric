@@ -1,13 +1,5 @@
 from dbt.tests.adapter.utils.base_array_utils import BaseArrayUtils
 from dbt.tests.adapter.utils.base_utils import BaseUtils
-from dbt.tests.adapter.utils.data_types.base_data_type_macro import BaseDataTypeMacro
-from dbt.tests.adapter.utils.data_types.test_type_bigint import BaseTypeBigInt
-from dbt.tests.adapter.utils.data_types.test_type_boolean import BaseTypeBoolean
-from dbt.tests.adapter.utils.data_types.test_type_float import BaseTypeFloat
-from dbt.tests.adapter.utils.data_types.test_type_int import BaseTypeInt
-from dbt.tests.adapter.utils.data_types.test_type_numeric import BaseTypeNumeric
-from dbt.tests.adapter.utils.data_types.test_type_string import BaseTypeString
-from dbt.tests.adapter.utils.data_types.test_type_timestamp import BaseTypeTimestamp
 from dbt.tests.adapter.utils.test_any_value import BaseAnyValue
 from dbt.tests.adapter.utils.test_array_append import BaseArrayAppend
 from dbt.tests.adapter.utils.test_array_concat import BaseArrayConcat
@@ -26,7 +18,6 @@ from dbt.tests.adapter.utils.test_date_spine import BaseDateSpine
 from dbt.tests.adapter.utils.test_date_trunc import BaseDateTrunc
 from dbt.tests.adapter.utils.test_dateadd import BaseDateAdd
 from dbt.tests.adapter.utils.test_datediff import BaseDateDiff
-from dbt.tests.adapter.utils.test_equals import BaseEquals
 from dbt.tests.adapter.utils.test_escape_single_quotes import (
     BaseEscapeSingleQuotesBackslash,
     BaseEscapeSingleQuotesQuote,
@@ -40,7 +31,6 @@ from dbt.tests.adapter.utils.test_intersect import BaseIntersect
 from dbt.tests.adapter.utils.test_last_day import BaseLastDay
 from dbt.tests.adapter.utils.test_length import BaseLength
 from dbt.tests.adapter.utils.test_listagg import BaseListagg
-from dbt.tests.adapter.utils.test_null_compare import BaseMixedNullCompare, BaseNullCompare
 from dbt.tests.adapter.utils.test_position import BasePosition
 from dbt.tests.adapter.utils.test_replace import BaseReplace
 from dbt.tests.adapter.utils.test_right import BaseRight
@@ -48,7 +38,6 @@ from dbt.tests.adapter.utils.test_safe_cast import BaseSafeCast
 from dbt.tests.adapter.utils.test_source_freshness_custom_info import BaseCalculateFreshnessMethod
 from dbt.tests.adapter.utils.test_split_part import BaseSplitPart
 from dbt.tests.adapter.utils.test_string_literal import BaseStringLiteral
-from dbt.tests.adapter.utils.test_timestamps import BaseCurrentTimestamps
 from dbt.tests.adapter.utils.test_validate_sql import BaseValidateSqlMethod
 
 
@@ -57,38 +46,6 @@ class TestArrayUtilsFabric(BaseArrayUtils):
 
 
 class TestUtilsFabric(BaseUtils):
-    pass
-
-
-class TestDataTypeMacroFabric(BaseDataTypeMacro):
-    pass
-
-
-class TestTypeBigIntFabric(BaseTypeBigInt):
-    pass
-
-
-class TestTypeBooleanFabric(BaseTypeBoolean):
-    pass
-
-
-class TestTypeFloatFabric(BaseTypeFloat):
-    pass
-
-
-class TestTypeIntFabric(BaseTypeInt):
-    pass
-
-
-class TestTypeNumericFabric(BaseTypeNumeric):
-    pass
-
-
-class TestTypeStringFabric(BaseTypeString):
-    pass
-
-
-class TestTypeTimestampFabric(BaseTypeTimestamp):
     pass
 
 
@@ -156,10 +113,6 @@ class TestDateDiffFabric(BaseDateDiff):
     pass
 
 
-class TestEqualsFabric(BaseEquals):
-    pass
-
-
 class TestEscapeSingleQuotesBackslashFabric(BaseEscapeSingleQuotesBackslash):
     pass
 
@@ -204,14 +157,6 @@ class TestListaggFabric(BaseListagg):
     pass
 
 
-class TestMixedNullCompareFabric(BaseMixedNullCompare):
-    pass
-
-
-class TestNullCompareFabric(BaseNullCompare):
-    pass
-
-
 class TestPositionFabric(BasePosition):
     pass
 
@@ -237,10 +182,6 @@ class TestSplitPartFabric(BaseSplitPart):
 
 
 class TestStringLiteralFabric(BaseStringLiteral):
-    pass
-
-
-class TestCurrentTimestampsFabric(BaseCurrentTimestamps):
     pass
 
 
