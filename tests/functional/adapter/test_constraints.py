@@ -34,6 +34,8 @@ from dbt.tests.adapter.constraints.test_constraints import (
     BaseTableConstraintsColumnsEqual,
     BaseTableContractSqlHeader,
     BaseViewConstraintsColumnsEqual,
+    _find_and_replace,
+    _normalize_whitespace,
 )
 from dbt.tests.util import (
     get_manifest,
@@ -298,19 +300,6 @@ models:
           - type: not_null
 """
 
-
-def _normalize_whitespace(input: str) -> str:
-    subbed = re.sub(r"\s+", " ", input)
-    return re.sub(r"\s?([\(\),])\s?", r"\1", subbed).lower().strip()
-
-
-def _find_and_replace(sql, find, replace):
-    sql_tokens = sql.split()
-    for idx in [n for n, x in enumerate(sql_tokens) if find in x]:
-        sql_tokens[idx] = replace
-    return " ".join(sql_tokens)
-
-
 class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
     @pytest.fixture
     def string_type(self):
@@ -331,16 +320,6 @@ class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
             ["cast('2013-11-03 00:00:00.000000' as datetime2(6))", "datetime2(6)", "datetime2(6)"],
             ["cast(1 as decimal(5,2))", "decimal", "decimal"],
         ]
-
-    def test__constraints_wrong_column_order(self, project):
-        # This no longer causes an error, since we enforce yaml column order
-        run_dbt(["run", "-s", "my_model_wrong_order"], expect_pass=True)
-        manifest = get_manifest(project.project_root)
-        model_id = "model.test.my_model_wrong_order"
-        my_model_config = manifest.nodes[model_id].config
-        contract_actual_config = my_model_config.contract
-
-        assert contract_actual_config.enforced is True
 
     def test__constraints_wrong_column_names(self, project, string_type, int_type):
         _, log_output = run_dbt_and_capture(
