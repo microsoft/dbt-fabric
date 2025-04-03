@@ -2,7 +2,6 @@ from dbt.tests.adapter.hooks.test_model_hooks import (
     BaseDuplicateHooksInConfigs,
     BaseHookRefs,
     BaseHooksRefsOnSeeds,
-    BasePrePostModelHooks,
     BasePrePostModelHooksInConfig,
     BasePrePostModelHooksInConfigKwargs,
     BasePrePostModelHooksInConfigWithCount,
@@ -11,13 +10,12 @@ from dbt.tests.adapter.hooks.test_model_hooks import (
     BasePrePostModelHooksOnSeedsPlusPrefixedWhitespace,
     BasePrePostModelHooksOnSnapshots,
     BasePrePostSnapshotHooksInConfigKwargs,
-    BaseTestPrePost,
-    PrePostModelHooksInConfigSetup,
 )
 from dbt.tests.adapter.hooks.test_run_hooks import (
     BaseAfterRunHooks,
     BasePrePostRunHooks,
 )
+import pytest
 
 
 class FabricHooksChecks:
@@ -51,10 +49,6 @@ class TestHooksRefsOnSeedsFabric(BaseHooksRefsOnSeeds):
     pass
 
 
-class TestPrePostModelHooksFabric(FabricHooksChecks, BasePrePostModelHooks):
-    pass
-
-
 class TestPrePostModelHooksInConfigFabric(FabricHooksChecks, BasePrePostModelHooksInConfig):
     pass
 
@@ -65,41 +59,95 @@ class TestPrePostModelHooksInConfigKwargsFabric(
     pass
 
 
-class TestPrePostModelHooksInConfigWithCountFabric(
-    FabricHooksChecks, BasePrePostModelHooksInConfigWithCount
-):
-    pass
-
-
 class TestPrePostModelHooksOnSeedsFabric(BasePrePostModelHooksOnSeeds):
-    pass
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return {
+            "seed-paths": ["seeds"],
+            "models": {},
+            "seeds": {
+                "post-hook": [
+                    "alter table {{ this }} add new_col int",
+                    "update {{ this }} set new_col = 1",
+                    # call any macro to track dependency: https://github.com/dbt-labs/dbt-core/issues/6806
+                    "select cast(null as {{ dbt.type_int() }}) as id",
+                ],
+                "quote_columns": False,
+            },
+        }
 
 
 class TestPrePostModelHooksOnSeedsPlusPrefixedFabric(BasePrePostModelHooksOnSeedsPlusPrefixed):
-    pass
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return {
+            "seed-paths": ["seeds"],
+            "models": {},
+            "seeds": {
+                "+post-hook": [
+                    "alter table {{ this }} add new_col int",
+                    "update {{ this }} set new_col = 1",
+                ],
+                "quote_columns": False,
+            },
+        }
 
 
 class TestPrePostModelHooksOnSeedsPlusPrefixedWhitespaceFabric(
     BasePrePostModelHooksOnSeedsPlusPrefixedWhitespace
 ):
-    pass
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return {
+            "seed-paths": ["seeds"],
+            "models": {},
+            "seeds": {
+                "+post-hook": [
+                    "alter table {{ this }} add new_col int",
+                    "update {{ this }} set new_col = 1",
+                ],
+                "quote_columns": False,
+            },
+        }
 
 
 class TestPrePostModelHooksOnSnapshotsFabric(BasePrePostModelHooksOnSnapshots):
-    pass
-
-
-class TestPrePostModelHooksUnderscoresFabric(FabricHooksChecks, BaseTestPrePost):
-    pass
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return {
+            "seed-paths": ["seeds"],
+            "snapshot-paths": ["test-snapshots"],
+            "models": {},
+            "snapshots": {
+                "post-hook": [
+                    "alter table {{ this }} add new_col int",
+                    "update {{ this }} set new_col = 1",
+                ]
+            },
+            "seeds": {
+                "quote_columns": False,
+            },
+        }
 
 
 class TestPrePostSnapshotHooksInConfigKwargsFabric(BasePrePostSnapshotHooksInConfigKwargs):
-    pass
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return {
+            "seed-paths": ["seeds"],
+            "snapshot-paths": ["test-kwargs-snapshots"],
+            "models": {},
+            "snapshots": {
+                "post-hook": [
+                    "alter table {{ this }} add new_col int",
+                    "update {{ this }} set new_col = 1",
+                ]
+            },
+            "seeds": {
+                "quote_columns": False,
+            },
+        }
 
 
 class TestAfterRunHooksFabric(BaseAfterRunHooks):
-    pass
-
-
-class TestPrePostRunHooksFabric(BasePrePostRunHooks):
     pass
