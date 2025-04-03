@@ -22,9 +22,7 @@ from dbt.tests.adapter.constraints.test_constraints import (
     _normalize_whitespace,
 )
 from dbt.tests.util import (
-    get_manifest,
     read_file,
-    relation_from_name,
     run_dbt,
     write_file,
 )
