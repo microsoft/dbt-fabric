@@ -441,10 +441,6 @@ class TestTableConstraintsRollbackFabric(BaseConstraintsRollback):
         }
 
     @pytest.fixture(scope="class")
-    def null_model_sql(self):
-        return my_model_with_nulls_sql
-
-    @pytest.fixture(scope="class")
     def expected_error_messages(self):
         return [
             "Cannot insert the value NULL into column",
@@ -497,10 +493,6 @@ class BaseIncrementalConstraintsRollbackFabric(TestTableConstraintsRollbackFabri
             "my_model.sql": my_incremental_model_sql,
             "constraints_schema.yml": model_schema_yml,
         }
-
-    @pytest.fixture(scope="class")
-    def null_model_sql(self):
-        return my_model_incremental_with_nulls_sql
 
 
 class TestIncrementalConstraintsRollbackFabric(BaseIncrementalConstraintsRollbackFabric):
