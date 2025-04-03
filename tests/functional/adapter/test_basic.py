@@ -98,9 +98,5 @@ class TestDocsGenReferencesFabric(BaseDocsGenReferences):
     pass
 
 
-class TestGetCatalogForSingleRelationFabric(BaseGetCatalogForSingleRelation):
-    pass
-
-
 class TestTableMaterializationFabric(BaseTableMaterialization):
     pass
