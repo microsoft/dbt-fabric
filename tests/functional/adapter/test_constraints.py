@@ -300,6 +300,7 @@ models:
           - type: not_null
 """
 
+
 class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
     @pytest.fixture
     def string_type(self):
@@ -320,20 +321,6 @@ class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
             ["cast('2013-11-03 00:00:00.000000' as datetime2(6))", "datetime2(6)", "datetime2(6)"],
             ["cast(1 as decimal(5,2))", "decimal", "decimal"],
         ]
-
-    def test__constraints_wrong_column_names(self, project, string_type, int_type):
-        _, log_output = run_dbt_and_capture(
-            ["run", "-s", "my_model_wrong_name"], expect_pass=False
-        )
-        manifest = get_manifest(project.project_root)
-        model_id = "model.test.my_model_wrong_name"
-        my_model_config = manifest.nodes[model_id].config
-        contract_actual_config = my_model_config.contract
-
-        assert contract_actual_config.enforced is True
-
-        expected = ["id", "error", "missing in definition", "missing in contract"]
-        assert all([(exp in log_output or exp.upper() in log_output) for exp in expected])
 
     def test__constraints_wrong_column_data_types(
         self, project, string_type, int_type, schema_string_type, schema_int_type, data_types
@@ -461,8 +448,6 @@ class BaseConstraintsRuntimeDdlEnforcementFabric(BaseConstraintsRuntimeDdlEnforc
 create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;'); insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>
 """
 
-    # EXEC('DROP view IF EXISTS <model_identifier>
-
     def test__constraints_ddl(self, project, expected_sql):
         unformatted_constraint_schema_yml = read_file("models", "constraints_schema.yml")
         write_file(
@@ -568,10 +553,6 @@ class BaseConstraintsRollbackFabric(BaseConstraintsRollback):
     @pytest.fixture(scope="class")
     def null_model_sql(self):
         return my_model_with_nulls_sql
-
-    @pytest.fixture(scope="class")
-    def expected_color(self):
-        return "blue"
 
     @pytest.fixture(scope="class")
     def expected_error_messages(self):
