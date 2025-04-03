@@ -1,17 +1,14 @@
-
 import pytest
 
 from dbt.tests.adapter.constraints.fixtures import (
     foreign_key_model_sql,
     my_incremental_model_sql,
-    my_model_incremental_with_nulls_sql,
     my_model_incremental_wrong_name_sql,
     my_model_incremental_wrong_order_depends_on_fk_sql,
     my_model_incremental_wrong_order_sql,
     my_model_sql,
     my_model_view_wrong_name_sql,
     my_model_view_wrong_order_sql,
-    my_model_with_nulls_sql,
     my_model_wrong_name_sql,
     my_model_wrong_order_depends_on_fk_sql,
     my_model_wrong_order_sql,
@@ -445,11 +442,8 @@ class TestTableConstraintsRollbackFabric(BaseConstraintsRollback):
         return [
             "Cannot insert the value NULL into column",
             "column does not allow nulls",
-            "There is already an object",
+            "INSERT fails",
         ]
-
-    def assert_expected_error_messages(self, error_message, expected_error_messages):
-        assert any(msg in error_message for msg in expected_error_messages)
 
     def test__constraints_enforcement_rollback(
         self, project, expected_color, expected_error_messages, null_model_sql
