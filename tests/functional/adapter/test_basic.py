@@ -1,14 +1,20 @@
 import pytest
 
+from dbt.tests.adapter.basic import expected_catalog
 from dbt.tests.adapter.basic.test_adapter_methods import BaseAdapterMethod
 from dbt.tests.adapter.basic.test_base import BaseSimpleMaterializations
-from dbt.tests.adapter.basic.test_docs_generate import BaseDocsGenerate, BaseDocsGenReferences
+from dbt.tests.adapter.basic.test_docs_generate import (
+    BaseDocsGenerate,
+    BaseDocsGenReferences,
+    ref_models__docs_md,
+    ref_models__ephemeral_copy_sql,
+    ref_models__ephemeral_summary_sql,
+    ref_models__schema_yml,
+    ref_sources__schema_yml,
+)
 from dbt.tests.adapter.basic.test_empty import BaseEmpty
 from dbt.tests.adapter.basic.test_ephemeral import BaseEphemeral
 from dbt.tests.adapter.basic.test_generic_tests import BaseGenericTests
-from dbt.tests.adapter.basic.test_get_catalog_for_single_relation import (
-    BaseGetCatalogForSingleRelation,
-)
 from dbt.tests.adapter.basic.test_incremental import (
     BaseIncremental,
     BaseIncrementalNotSchemaChange,
@@ -91,11 +97,55 @@ class TestValidateConnectionFabric(BaseValidateConnection):
 
 
 class TestDocsGenerateFabric(BaseDocsGenerate):
-    pass
+    @pytest.fixture(scope="class")
+    def expected_catalog(self, project, profile_user):
+        return expected_catalog.base_expected_catalog(
+            project,
+            role=profile_user,
+            id_type="int",
+            text_type="varchar",
+            time_type="datetime2",
+            view_type="VIEW",
+            table_type="BASE TABLE",
+            model_stats=expected_catalog.no_stats(),
+        )
 
 
 class TestDocsGenReferencesFabric(BaseDocsGenReferences):
-    pass
+    @pytest.fixture(scope="class")
+    def expected_catalog(self, project, profile_user):
+        return expected_catalog.expected_references_catalog(
+            project,
+            role=profile_user,
+            id_type="int",
+            text_type="varchar",
+            time_type="datetime2",
+            bigint_type="int",
+            view_type="VIEW",
+            table_type="BASE TABLE",
+            model_stats=expected_catalog.no_stats(),
+        )
+
+    @pytest.fixture(scope="class")
+    def models(self):
+        ref_models__view_summary_sql = """
+{{
+  config(
+    materialized = "view"
+  )
+}}
+
+select first_name, ct from {{ref('ephemeral_summary')}}
+"""
+
+        return {
+            "schema.yml": ref_models__schema_yml,
+            "sources.yml": ref_sources__schema_yml,
+            "view_summary.sql": ref_models__view_summary_sql,
+            "ephemeral_summary.sql": ref_models__ephemeral_summary_sql,
+            "ephemeral_copy.sql": ref_models__ephemeral_copy_sql,
+            "docs.md": ref_models__docs_md,
+        }
 
 
 class TestTableMaterializationFabric(BaseTableMaterialization):

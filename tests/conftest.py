@@ -24,3 +24,8 @@ def dbt_profile_target(dbt_profile_target_update):
 @pytest.fixture(scope="class")
 def dbt_profile_target_update():
     return {}
+
+
+@pytest.fixture(scope="class")
+def profile_user(dbt_profile_target):
+    return "dbo"
