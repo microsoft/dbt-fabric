@@ -1,3 +1,5 @@
+import pytest
+
 from dbt.tests.adapter.hooks.test_model_hooks import (
     BaseDuplicateHooksInConfigs,
     BaseHookRefs,
@@ -15,7 +17,6 @@ from dbt.tests.adapter.hooks.test_run_hooks import (
     BaseAfterRunHooks,
     BasePrePostRunHooks,
 )
-import pytest
 
 
 class FabricHooksChecks:
