@@ -312,10 +312,6 @@ def _find_and_replace(sql, find, replace):
 
 
 class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
-    """
-    dbt should catch these mismatches during its "preflight" checks.
-    """
-
     @pytest.fixture
     def string_type(self):
         return "varchar"
@@ -323,14 +319,6 @@ class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
     @pytest.fixture
     def int_type(self):
         return "int"
-
-    @pytest.fixture
-    def schema_string_type(self, string_type):
-        return string_type
-
-    @pytest.fixture
-    def schema_int_type(self, int_type):
-        return int_type
 
     @pytest.fixture
     def data_types(self, schema_int_type, int_type, string_type):
@@ -480,12 +468,6 @@ class TestIncrementalConstraintsColumnsEqualFabric(BaseIncrementalConstraintsCol
 
 
 class BaseConstraintsRuntimeDdlEnforcementFabric(BaseConstraintsRuntimeDdlEnforcement):
-    """
-    These constraints pass muster for dbt's preflight checks. Make sure they're
-    passed into the DDL statement. If they don't match up with the underlying data,
-    the data platform should raise an error at runtime.
-    """
-
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -551,12 +533,6 @@ class TestIncrementalConstraintsRuntimeDdlEnforcementFabric(
 
 
 class BaseModelConstraintsRuntimeEnforcementFabric(BaseModelConstraintsRuntimeEnforcement):
-    """
-    These model-level constraints pass muster for dbt's preflight checks. Make sure they're
-    passed into the DDL statement. If they don't match up with the underlying data,
-    the data platform should raise an error at runtime.
-    """
-
     @pytest.fixture(scope="class")
     def models(self):
         return {
