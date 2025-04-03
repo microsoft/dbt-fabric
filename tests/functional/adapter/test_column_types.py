@@ -1,7 +1,7 @@
 import pytest
 
 from dbt.tests.adapter.column_types.fixtures import schema_yml
-from dbt.tests.adapter.column_types.test_column_types import BaseColumnTypes
+from dbt.tests.adapter.column_types.test_column_types import BasePostgresColumnTypes
 
 macro_test_is_type_sql_2 = """
 {% macro simple_type_check_column(column, check) %}
@@ -91,7 +91,7 @@ select
 """
 
 
-class TestFabricColumnTypes(BaseColumnTypes):
+class TestFabricColumnTypes(BasePostgresColumnTypes):
     @pytest.fixture(scope="class")
     def macros(self):
         return {"test_is_type.sql": macro_test_is_type_sql_2}
@@ -99,6 +99,3 @@ class TestFabricColumnTypes(BaseColumnTypes):
     @pytest.fixture(scope="class")
     def models(self):
         return {"model.sql": model_sql, "schema.yml": schema_yml}
-
-    def test_run_and_test(self, project):
-        self.run_and_test()
