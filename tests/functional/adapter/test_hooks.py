@@ -6,7 +6,6 @@ from dbt.tests.adapter.hooks.test_model_hooks import (
     BaseHooksRefsOnSeeds,
     BasePrePostModelHooksInConfig,
     BasePrePostModelHooksInConfigKwargs,
-    BasePrePostModelHooksInConfigWithCount,
     BasePrePostModelHooksOnSeeds,
     BasePrePostModelHooksOnSeedsPlusPrefixed,
     BasePrePostModelHooksOnSeedsPlusPrefixedWhitespace,
@@ -15,7 +14,6 @@ from dbt.tests.adapter.hooks.test_model_hooks import (
 )
 from dbt.tests.adapter.hooks.test_run_hooks import (
     BaseAfterRunHooks,
-    BasePrePostRunHooks,
 )
 
 
