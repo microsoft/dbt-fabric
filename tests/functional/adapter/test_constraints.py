@@ -445,40 +445,6 @@ class TestTableConstraintsRollbackFabric(BaseConstraintsRollback):
             "INSERT fails",
         ]
 
-    def test__constraints_enforcement_rollback(
-        self, project, expected_color, expected_error_messages, null_model_sql
-    ):
-        results = run_dbt(["run", "-s", "my_model"])
-        assert len(results) == 1
-
-        # Make a contract-breaking change to the model
-        write_file(null_model_sql, "models", "my_model.sql")
-
-        failing_results = run_dbt(["run", "-s", "my_model"], expect_pass=False)
-        assert len(failing_results) == 1
-
-        # Verify the previous table still exists
-        relation = relation_from_name(project.adapter, "my_model")
-        # table materialization does not rename existing relation to back)up relation
-        # Rather, a new relation is created with __dbt_temp suffix.
-        # If model creation is successful, then the existing model is renamed as backup and then dropped
-        model_backup = str(relation).replace("my_model", "my_model")
-        old_model_exists_sql = f"select * from {model_backup}"
-        old_model_exists = project.run_sql(old_model_exists_sql, fetch="all")
-        assert len(old_model_exists) == 1
-        assert old_model_exists[0][1] == expected_color
-
-        # Confirm this model was contracted
-        # TODO: is this step really necessary?
-        manifest = get_manifest(project.project_root)
-        model_id = "model.test.my_model"
-        my_model_config = manifest.nodes[model_id].config
-        contract_actual_config = my_model_config.contract
-        assert contract_actual_config.enforced is True
-
-        # Its result includes the expected error messages
-        self.assert_expected_error_messages(failing_results[0].message, expected_error_messages)
-
 
 class TestIncrementalConstraintsRollbackFabric(TestTableConstraintsRollbackFabric):
     @pytest.fixture(scope="class")
