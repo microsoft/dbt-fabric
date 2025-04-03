@@ -42,7 +42,6 @@ from dbt.tests.util import (
     read_file,
     relation_from_name,
     run_dbt,
-    run_dbt_and_capture,
     write_file,
 )
 
@@ -323,17 +322,7 @@ class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
         ]
 
 
-class BaseTableConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFabric):
-    @pytest.fixture(scope="class")
-    def models(self):
-        return {
-            "my_model_wrong_order.sql": my_model_wrong_order_sql,
-            "my_model_wrong_name.sql": my_model_wrong_name_sql,
-            "constraints_schema.yml": model_schema_yml,
-        }
-
-
-class BaseViewConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFabric):
+class TestViewConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFabric):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -343,7 +332,7 @@ class BaseViewConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFabric):
         }
 
 
-class BaseIncrementalConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFabric):
+class TestIncrementalConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFabric):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -353,19 +342,17 @@ class BaseIncrementalConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFa
         }
 
 
-class TestTableConstraintsColumnsEqualFabric(BaseTableConstraintsColumnsEqualFabric):
-    pass
+class TestTableConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqualFabric):
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "my_model_wrong_order.sql": my_model_wrong_order_sql,
+            "my_model_wrong_name.sql": my_model_wrong_name_sql,
+            "constraints_schema.yml": model_schema_yml,
+        }
 
 
-class TestViewConstraintsColumnsEqualFabric(BaseViewConstraintsColumnsEqualFabric):
-    pass
-
-
-class TestIncrementalConstraintsColumnsEqualFabric(BaseIncrementalConstraintsColumnsEqualFabric):
-    pass
-
-
-class BaseConstraintsRuntimeDdlEnforcementFabric(BaseConstraintsRuntimeDdlEnforcement):
+class TestTableConstraintsRuntimeDdlEnforcementFabric(BaseConstraintsRuntimeDdlEnforcement):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -406,12 +393,8 @@ create table <model_identifier>(id int not null,color varchar(100),date_day varc
         )
 
 
-class TestTableConstraintsRuntimeDdlEnforcementFabric(BaseConstraintsRuntimeDdlEnforcementFabric):
-    pass
-
-
-class BaseIncrementalConstraintsRuntimeDdlEnforcementFabric(
-    BaseConstraintsRuntimeDdlEnforcementFabric
+class TestIncrementalConstraintsRuntimeDdlEnforcementFabric(
+    TestTableConstraintsRuntimeDdlEnforcementFabric
 ):
     @pytest.fixture(scope="class")
     def models(self):
@@ -422,13 +405,7 @@ class BaseIncrementalConstraintsRuntimeDdlEnforcementFabric(
         }
 
 
-class TestIncrementalConstraintsRuntimeDdlEnforcementFabric(
-    BaseIncrementalConstraintsRuntimeDdlEnforcementFabric
-):
-    pass
-
-
-class BaseModelConstraintsRuntimeEnforcementFabric(BaseModelConstraintsRuntimeEnforcement):
+class TestModelConstraintsRuntimeEnforcementFabric(BaseModelConstraintsRuntimeEnforcement):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -442,8 +419,6 @@ class BaseModelConstraintsRuntimeEnforcementFabric(BaseModelConstraintsRuntimeEn
         return """
 create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;'); insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>
 """
-
-    # EXEC('DROP view IF EXISTS <model_identifier>
 
     def test__model_constraints_ddl(self, project, expected_sql):
         unformatted_constraint_schema_yml = read_file("models", "constraints_schema.yml")
@@ -470,11 +445,7 @@ create table <model_identifier>(id int not null,color varchar(100),date_day varc
         )
 
 
-class TestModelConstraintsRuntimeEnforcementFabric(BaseModelConstraintsRuntimeEnforcementFabric):
-    pass
-
-
-class BaseConstraintsRollbackFabric(BaseConstraintsRollback):
+class TestTableConstraintsRollbackFabric(BaseConstraintsRollback):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -532,7 +503,7 @@ class BaseConstraintsRollbackFabric(BaseConstraintsRollback):
         self.assert_expected_error_messages(failing_results[0].message, expected_error_messages)
 
 
-class BaseIncrementalConstraintsRollbackFabric(BaseConstraintsRollbackFabric):
+class BaseIncrementalConstraintsRollbackFabric(TestTableConstraintsRollbackFabric):
     @pytest.fixture(scope="class")
     def models(self):
         return {
@@ -543,10 +514,6 @@ class BaseIncrementalConstraintsRollbackFabric(BaseConstraintsRollbackFabric):
     @pytest.fixture(scope="class")
     def null_model_sql(self):
         return my_model_incremental_with_nulls_sql
-
-
-class TestTableConstraintsRollbackFabric(BaseConstraintsRollbackFabric):
-    pass
 
 
 class TestIncrementalConstraintsRollbackFabric(BaseIncrementalConstraintsRollbackFabric):
