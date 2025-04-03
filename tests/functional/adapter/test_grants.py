@@ -22,4 +22,8 @@ class TestIncrementalGrantsFabric(BaseIncrementalGrants):
 
 
 class TestInvalidGrantsFabric(BaseInvalidGrants):
-    pass
+    def privilege_does_not_exist_error(self):
+        return "Incorrect syntax near"
+
+    def grantee_does_not_exist_error(self):
+        return "could not be found or this principal type is not supported"

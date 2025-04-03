@@ -1,11 +1,11 @@
 {% macro fabric__get_show_grant_sql(relation) %}
-    select
-        GRANTEE as grantee,
-        PRIVILEGE_TYPE as privilege_type
-    from INFORMATION_SCHEMA.TABLE_PRIVILEGES {{ information_schema_hints() }}
-    where TABLE_CATALOG = '{{ relation.database }}'
-      and TABLE_SCHEMA = '{{ relation.schema }}'
-      and TABLE_NAME = '{{ relation.identifier }}'
+    SELECT DISTINCT
+        pr.name as grantee,
+        pe.permission_name as privilege_type
+    FROM sys.database_principals AS pr
+    INNER JOIN sys.database_permissions AS pe
+    ON pe.grantee_principal_id = pr.principal_id
+    WHERE major_id = OBJECT_ID('[{{ relation.database }}].[{{ relation.schema }}].[{{ relation.identifier }}]');
 {% endmacro %}
 
 
