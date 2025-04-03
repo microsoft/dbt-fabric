@@ -19,6 +19,22 @@ from dbt.tests.adapter.constraints.fixtures import (
     my_model_wrong_order_depends_on_fk_sql,
     my_model_wrong_order_sql,
 )
+from dbt.tests.adapter.constraints.test_constraints import (
+    BaseConstraintQuotedColumn,
+    BaseConstraintsColumnsEqual,
+    BaseConstraintsRollback,
+    BaseConstraintsRuntimeDdlEnforcement,
+    BaseContractSqlHeader,
+    BaseIncrementalConstraintsColumnsEqual,
+    BaseIncrementalConstraintsRollback,
+    BaseIncrementalConstraintsRuntimeDdlEnforcement,
+    BaseIncrementalContractSqlHeader,
+    BaseIncrementalForeignKeyConstraint,
+    BaseModelConstraintsRuntimeEnforcement,
+    BaseTableConstraintsColumnsEqual,
+    BaseTableContractSqlHeader,
+    BaseViewConstraintsColumnsEqual,
+)
 from dbt.tests.util import (
     get_manifest,
     read_file,
@@ -295,7 +311,7 @@ def _find_and_replace(sql, find, replace):
     return " ".join(sql_tokens)
 
 
-class BaseConstraintsColumnsEqualFabric:
+class BaseConstraintsColumnsEqualFabric(BaseConstraintsColumnsEqual):
     """
     dbt should catch these mismatches during its "preflight" checks.
     """
@@ -463,7 +479,7 @@ class TestIncrementalConstraintsColumnsEqualFabric(BaseIncrementalConstraintsCol
     pass
 
 
-class BaseConstraintsRuntimeDdlEnforcementFabric:
+class BaseConstraintsRuntimeDdlEnforcementFabric(BaseConstraintsRuntimeDdlEnforcement):
     """
     These constraints pass muster for dbt's preflight checks. Make sure they're
     passed into the DDL statement. If they don't match up with the underlying data,
@@ -534,7 +550,7 @@ class TestIncrementalConstraintsRuntimeDdlEnforcementFabric(
     pass
 
 
-class BaseModelConstraintsRuntimeEnforcementFabric:
+class BaseModelConstraintsRuntimeEnforcementFabric(BaseModelConstraintsRuntimeEnforcement):
     """
     These model-level constraints pass muster for dbt's preflight checks. Make sure they're
     passed into the DDL statement. If they don't match up with the underlying data,
@@ -586,7 +602,7 @@ class TestModelConstraintsRuntimeEnforcementFabric(BaseModelConstraintsRuntimeEn
     pass
 
 
-class BaseConstraintsRollbackFabric:
+class BaseConstraintsRollbackFabric(BaseConstraintsRollback):
     @pytest.fixture(scope="class")
     def models(self):
         return {
