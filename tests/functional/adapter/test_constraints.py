@@ -1,12 +1,9 @@
-import re
 
 import pytest
 
 from dbt.tests.adapter.constraints.fixtures import (
     foreign_key_model_sql,
-    model_data_type_schema_yml,
     my_incremental_model_sql,
-    my_model_data_type_sql,
     my_model_incremental_with_nulls_sql,
     my_model_incremental_wrong_name_sql,
     my_model_incremental_wrong_order_depends_on_fk_sql,
@@ -20,20 +17,10 @@ from dbt.tests.adapter.constraints.fixtures import (
     my_model_wrong_order_sql,
 )
 from dbt.tests.adapter.constraints.test_constraints import (
-    BaseConstraintQuotedColumn,
     BaseConstraintsColumnsEqual,
     BaseConstraintsRollback,
     BaseConstraintsRuntimeDdlEnforcement,
-    BaseContractSqlHeader,
-    BaseIncrementalConstraintsColumnsEqual,
-    BaseIncrementalConstraintsRollback,
-    BaseIncrementalConstraintsRuntimeDdlEnforcement,
-    BaseIncrementalContractSqlHeader,
-    BaseIncrementalForeignKeyConstraint,
     BaseModelConstraintsRuntimeEnforcement,
-    BaseTableConstraintsColumnsEqual,
-    BaseTableContractSqlHeader,
-    BaseViewConstraintsColumnsEqual,
     _find_and_replace,
     _normalize_whitespace,
 )
