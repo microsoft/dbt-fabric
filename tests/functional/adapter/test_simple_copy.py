@@ -1,6 +1,7 @@
+import pytest
+
 from dbt.tests.adapter.simple_copy.test_copy_uppercase import BaseSimpleCopyUppercase
 from dbt.tests.adapter.simple_copy.test_simple_copy import EmptyModelsArentRunBase, SimpleCopyBase
-import pytest
 
 
 class TestEmptyModelsArentRunFabric(EmptyModelsArentRunBase):
