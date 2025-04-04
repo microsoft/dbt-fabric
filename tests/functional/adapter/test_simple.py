@@ -49,7 +49,10 @@ class FixedSeedSetup:
 
 
 class TestBasicSeedTestsFabric(FixedSeedSetup, BaseBasicSeedTests):
-    pass
+    def test_simple_seed_full_refresh_flag(self, project):
+        pytest.skip(
+            "This test assumes that if you drop a table, that it will cascade to all views"
+        )
 
 
 class TestEmptyModelsArentRunFabric(EmptyModelsArentRunBase):
