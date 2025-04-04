@@ -93,10 +93,10 @@ class TestBaseIncrementalUniqueKeyFabric(BaseIncrementalUniqueKey):
     pass
 
 
-@pytest.mark.skip(
-    "The specified ALTER TABLE statement is not supported in this edition of SQL Server."
-)
 class TestIncrementalOnSchemaChangeFabric(BaseIncrementalOnSchemaChange):
+    def test_run_incremental_sync_all_columns(self, project):
+        pytest.skip("ALTER TABLE cannot drop columns for now (on the roadmap)")
+
     @pytest.fixture(scope="class")
     def models(self):
         return {
