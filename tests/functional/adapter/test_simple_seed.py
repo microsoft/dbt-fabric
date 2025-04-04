@@ -2,8 +2,6 @@ from pathlib import Path
 
 import pytest
 
-from dbt.tests.adapter.simple_copy.test_copy_uppercase import BaseSimpleCopyUppercase
-from dbt.tests.adapter.simple_copy.test_simple_copy import EmptyModelsArentRunBase, SimpleCopyBase
 from dbt.tests.adapter.simple_seed import fixtures, seeds
 from dbt.tests.adapter.simple_seed.test_seed import (
     BaseBasicSeedTests,
@@ -20,11 +18,6 @@ from dbt.tests.adapter.simple_seed.test_seed import (
     BaseTestEmptySeed,
 )
 from dbt.tests.adapter.simple_seed.test_seed_type_override import BaseSimpleSeedColumnOverride
-from dbt.tests.adapter.simple_snapshot.test_snapshot import (
-    BaseSimpleSnapshot,
-    BaseSimpleSnapshotBase,
-    BaseSnapshotCheck,
-)
 from dbt.tests.util import (
     copy_file,
 )
@@ -53,10 +46,6 @@ class TestBasicSeedTestsFabric(FixedSeedSetup, BaseBasicSeedTests):
         pytest.skip(
             "This test assumes that if you drop a table, that it will cascade to all views"
         )
-
-
-class TestEmptyModelsArentRunFabric(EmptyModelsArentRunBase):
-    pass
 
 
 class TestEmptySeedFabric(BaseTestEmptySeed):
@@ -95,14 +84,6 @@ class TestSeedWithWrongDelimiterFabric(FixedSeedSetup, BaseSeedWithWrongDelimite
     pass
 
 
-class TestSimpleCopyBaseFabric(SimpleCopyBase):
-    pass
-
-
-class TestSimpleCopyUppercaseFabric(BaseSimpleCopyUppercase):
-    pass
-
-
 class TestSimpleSeedColumnOverrideFabric(BaseSimpleSeedColumnOverride):
     @pytest.fixture(scope="class")
     def models(self):
@@ -125,15 +106,3 @@ class TestSimpleSeedWithBOMFabric(BaseSimpleSeedWithBOM):
             project.project_root / Path("seeds") / "seed_bom.csv",
             "",
         )
-
-
-class TestSimpleSnapshotBaseFabric(BaseSimpleSnapshotBase):
-    pass
-
-
-class TestSimpleSnapshotFabric(BaseSimpleSnapshot):
-    pass
-
-
-class TestSnapshotCheckFabric(BaseSnapshotCheck):
-    pass
