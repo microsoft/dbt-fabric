@@ -125,9 +125,8 @@ class TestPredicatesDeleteInsertFabric(BaseIncrementalPredicates):
         return {"models": {"+predicates": ["id != 2"], "+incremental_strategy": "delete+insert"}}
 
 
-# No requirement for a unique_id for snowflake microbatch!
 _microbatch_model_no_unique_id_sql = """
-{{ config(materialized='incremental', incremental_strategy='microbatch', event_time='event_time', batch_size='day', begin='2020-01-01 00:00:00.000000') }}
+{{ config(materialized='incremental', incremental_strategy='microbatch', unique_key='id', event_time='event_time', batch_size='day', begin='2020-01-01 00:00:00.000000') }}
 select * from {{ ref('input_model') }} a
 """
 
@@ -148,10 +147,6 @@ class TestFabricMicrobatch(BaseMicrobatch):
 
     @pytest.fixture(scope="class")
     def input_model_sql(self) -> str:
-        """
-        This is the SQL that defines the input model to the microbatch model, including any {{ config(..) }}.
-        event_time is a required configuration of this input
-        """
         return _input_model_sql
 
     @pytest.fixture(scope="class")
