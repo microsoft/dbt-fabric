@@ -1,5 +1,6 @@
+import csv
 from pathlib import Path
-
+import inspect
 import pytest
 
 from dbt.tests.adapter.simple_seed import fixtures, seeds
@@ -56,6 +57,7 @@ class TestSeedConfigFullRefreshOffFabric(FixedSeedSetup, BaseSeedConfigFullRefre
     pass
 
 
+@pytest.mark.skip("This test assumes that if you drop a table, that it will cascade to all views")
 class TestSeedConfigFullRefreshOnFabric(FixedSeedSetup, BaseSeedConfigFullRefreshOn):
     pass
 
@@ -101,7 +103,7 @@ class TestSimpleSeedWithBOMFabric(BaseSimpleSeedWithBOM):
     def setUp(self, project):
         project.run_sql(fixed_seeds___expected_sql)
         copy_file(
-            project.test_dir,
+            Path(inspect.getfile(BaseSimpleSeedWithBOM)).parent,
             "seed_bom.csv",
             project.project_root / Path("seeds") / "seed_bom.csv",
             "",
