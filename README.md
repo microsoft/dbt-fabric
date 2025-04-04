@@ -39,7 +39,7 @@ pip install -U --pre dbt-fabric-samdebruyn
 ## Contributing
 
 [![Unit tests](https://github.com/sdebruyn/dbt-fabric/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/unit-tests.yml)
-[![Integration tests on Fabric DW](https://github.com/sdebruyn/dbt-fabric/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/integration-tests.yml)
+[![Integration tests on Fabric DW](https://github.com/sdebruyn/dbt-fabric/actions/workflows/weekly-integration-tests.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/integration-tests.yml)
 [![Publish Docker images for CI/CD](https://github.com/sdebruyn/dbt-fabric/actions/workflows/publish-docker.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/publish-docker.yml)
 [![Linting and formatting](https://github.com/sdebruyn/dbt-fabric/actions/workflows/lint-format.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/lint-format.yml)
 

@@ -55,3 +55,36 @@ jobs:
           DBT_TEST_USER_2: ${{ secrets.DBT_TEST_USER_2 }}
           DBT_TEST_USER_3: ${{ secrets.DBT_TEST_USER_3 }}
         run: uv run pytest -ra -v tests/functional
+  
+  case-insensitive-integration-tests-fabric-dw:
+    name: Integration tests on case-insensitive Fabric DW
+    runs-on: ubuntu-latest
+    environment: azure
+    container: 
+      image: ghcr.io/${{ github.repository }}:CI-3.13-msodbc18
+    steps:
+      - name: Azure CLI Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run functional tests
+        env:
+          FABRIC_TEST_ENDPOINT: ${{ secrets.FABRIC_TEST_ENDPOINT }}
+          FABRIC_TEST_DWH_NAME: ${{ secrets.FABRIC_TEST_DWH_CI_NAME }}
+          FABRIC_TEST_DWH_CI_NAME: ${{ secrets.FABRIC_TEST_DWH_CI_NAME }}
+          FABRIC_TEST_DRIVER: "ODBC Driver 18 for SQL Server"
+          DBT_TEST_USER_1: ${{ secrets.DBT_TEST_USER_1 }}
+          DBT_TEST_USER_2: ${{ secrets.DBT_TEST_USER_2 }}
+          DBT_TEST_USER_3: ${{ secrets.DBT_TEST_USER_3 }}
+        run: uv run pytest -ra -v tests/functional
