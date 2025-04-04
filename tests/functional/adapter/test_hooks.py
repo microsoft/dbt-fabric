@@ -15,6 +15,29 @@ from dbt.tests.adapter.hooks.test_model_hooks import (
 from dbt.tests.adapter.hooks.test_run_hooks import (
     BaseAfterRunHooks,
 )
+from dbt.tests.fixtures.project import TestProjInfo
+
+
+class RunModelFile:
+    @pytest.fixture(scope="class", autouse=True)
+    def setUp(self, project: TestProjInfo):
+        project.run_sql("drop table if exists {schema}.on_model_hook;")
+        project.run_sql("""
+create table {schema}.on_model_hook (
+    test_state       varchar(100), -- start|end
+    target_dbname    varchar(100),
+    target_host      varchar(100),
+    target_name      varchar(100),
+    target_schema    varchar(100),
+    target_type      varchar(100),
+    target_user      varchar(100),
+    target_pass      varchar(100),
+    target_threads   int,
+    run_started_at   varchar(100),
+    invocation_id    varchar(100),
+    thread_id        varchar(100)
+);
+""")
 
 
 class FabricHooksChecks:
@@ -40,7 +63,7 @@ class TestDuplicateHooksInConfigsFabric(BaseDuplicateHooksInConfigs):
     pass
 
 
-class TestHookRefsFabric(FabricHooksChecks, BaseHookRefs):
+class TestHookRefsFabric(RunModelFile, FabricHooksChecks, BaseHookRefs):
     pass
 
 
@@ -48,12 +71,14 @@ class TestHooksRefsOnSeedsFabric(BaseHooksRefsOnSeeds):
     pass
 
 
-class TestPrePostModelHooksInConfigFabric(FabricHooksChecks, BasePrePostModelHooksInConfig):
+class TestPrePostModelHooksInConfigFabric(
+    RunModelFile, FabricHooksChecks, BasePrePostModelHooksInConfig
+):
     pass
 
 
 class TestPrePostModelHooksInConfigKwargsFabric(
-    FabricHooksChecks, BasePrePostModelHooksInConfigKwargs
+    RunModelFile, FabricHooksChecks, BasePrePostModelHooksInConfigKwargs
 ):
     pass
 
