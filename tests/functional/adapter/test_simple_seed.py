@@ -161,7 +161,18 @@ class TestSimpleSeedColumnOverrideFabric(BaseSimpleSeedColumnOverride):
 
 
 class TestSimpleSeedEnabledViaConfigFabric(BaseSimpleSeedEnabledViaConfig):
-    pass
+    @pytest.fixture(scope="class")
+    def seeds(self):
+        return {
+            "seed_enabled.csv": seeds.seeds__enabled_in_config_csv,
+            "seed_disabled.csv": seeds.seeds__disabled_in_config_csv,
+            "seed_tricky.csv": fixed_seeds__tricky_csv,
+        }
+
+    @pytest.fixture(scope="function")
+    def clear_test_schema(self, project):
+        yield
+        project.adapter.drop_schema(project.test_schema)
 
 
 class TestSimpleSeedWithBOMFabric(BaseSimpleSeedWithBOM):
