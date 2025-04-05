@@ -160,7 +160,7 @@ class TestSimpleSeedColumnOverrideFabric(BaseSimpleSeedColumnOverride):
         return {"schema_test.sql": fixed_macros__schema_test}
 
 
-class TestSimpleSeedEnabledViaConfigFabric(BaseSimpleSeedEnabledViaConfig):
+class BaseSimpleSeedEnabledViaConfigFabric(BaseSimpleSeedEnabledViaConfig):
     @pytest.fixture(scope="class")
     def seeds(self):
         return {
@@ -170,9 +170,38 @@ class TestSimpleSeedEnabledViaConfigFabric(BaseSimpleSeedEnabledViaConfig):
         }
 
     @pytest.fixture(scope="function")
-    def clear_test_schema(self, project):
-        yield
-        project.adapter.drop_schema(project.test_schema)
+    def clear_test_schema(self):
+        pass
+
+
+class TestSimpleSeedEnabledViaConfigFabricDisabled(BaseSimpleSeedEnabledViaConfigFabric):
+    @pytest.mark.skip("Tests have to be split up into multiple classes")
+    def test_simple_seed_selection(self, clear_test_schema, project):
+        super().test_simple_seed_selection(clear_test_schema, project)
+
+    @pytest.mark.skip("Tests have to be split up into multiple classes")
+    def test_simple_seed_exclude(self, clear_test_schema, project):
+        super().test_simple_seed_exclude(clear_test_schema, project)
+
+
+class TestSimpleSeedEnabledViaConfigFabricSelection(BaseSimpleSeedEnabledViaConfigFabric):
+    @pytest.mark.skip("Tests have to be split up into multiple classes")
+    def test_simple_seed_with_disabled(self, clear_test_schema, project):
+        super().test_simple_seed_with_disabled(clear_test_schema, project)
+
+    @pytest.mark.skip("Tests have to be split up into multiple classes")
+    def test_simple_seed_exclude(self, clear_test_schema, project):
+        super().test_simple_seed_exclude(clear_test_schema, project)
+
+
+class TestSimpleSeedEnabledViaConfigFabricExclude(BaseSimpleSeedEnabledViaConfigFabric):
+    @pytest.mark.skip("Tests have to be split up into multiple classes")
+    def test_simple_seed_with_disabled(self, clear_test_schema, project):
+        super().test_simple_seed_with_disabled(clear_test_schema, project)
+
+    @pytest.mark.skip("Tests have to be split up into multiple classes")
+    def test_simple_seed_selection(self, clear_test_schema, project):
+        super().test_simple_seed_selection(clear_test_schema, project)
 
 
 class TestSimpleSeedWithBOMFabric(BaseSimpleSeedWithBOM):
