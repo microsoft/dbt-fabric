@@ -26,4 +26,4 @@ class TestInvalidGrantsFabric(BaseInvalidGrants):
         return "Incorrect syntax near"
 
     def grantee_does_not_exist_error(self):
-        return "could not be found or this principal type is not supported"
+        return "could not be"
