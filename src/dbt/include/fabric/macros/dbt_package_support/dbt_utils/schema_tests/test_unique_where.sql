@@ -7,6 +7,6 @@
       {% set where = '_deleted = 0' %}
   {% endif %}
 
-  {{ return(dbt_utils.default__test_unique_where(model, column_name=column_name)) }}
+  {{ return(default__test_unique_where(model, column_name=column_name)) }}
 
 {% endmacro %}

@@ -1,5 +1,5 @@
 {#
-    Generates a surrogate key hash like dbt_utils.surrogate_key(), but
+    Generates a surrogate key hash like surrogate_key(), but
     provides additional, T-SQL specific parameters and config.
 
     Example usage:

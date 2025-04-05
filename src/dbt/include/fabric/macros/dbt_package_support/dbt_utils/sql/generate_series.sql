@@ -1,6 +1,6 @@
 {% macro fabric__generate_series(upper_bound) %}
 
-    {% set n = dbt_utils.get_powers_of_two(upper_bound) %}
+    {% set n = get_powers_of_two(upper_bound) %}
 
     with p as (
         select 0 as generated_number union all select 1

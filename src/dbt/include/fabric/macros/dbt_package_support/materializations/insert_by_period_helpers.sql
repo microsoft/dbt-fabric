@@ -23,7 +23,7 @@
             FROM stage
         {% endset %}
 
-        {% set min_max_dict = dbt_utils.get_query_results_as_dict(query_sql) %}
+        {% set min_max_dict = get_query_results_as_dict(query_sql) %}
 
         {% set start_date = min_max_dict['MIN'][0] | string %}
         {% set stop_date = min_max_dict['MAX'][0] | string %}
@@ -73,7 +73,7 @@
             select
                 coalesce(max({{ timestamp_field }}), '{{ start_date }}') as start_timestamp,
                 coalesce({{ dbt.dateadd('millisecond', 86399999, "nullif('" ~ stop_date | lower ~ "','none')") }},
-                         {{ dbt_utils.current_timestamp() }} ) as stop_timestamp
+                         {{ current_timestamp() }} ) as stop_timestamp
             from {{ target_schema }}.{{ target_table }}
         )
         select
@@ -85,7 +85,7 @@
         from data
     {%- endset %}
 
-    {% set period_boundaries_dict = dbt_utils.get_query_results_as_dict(period_boundary_sql) %}
+    {% set period_boundaries_dict = get_query_results_as_dict(period_boundary_sql) %}
 
     {% set period_boundaries = {'start_timestamp': period_boundaries_dict['start_timestamp'][0] | string,
                                 'stop_timestamp': period_boundaries_dict['stop_timestamp'][0] | string,
@@ -100,7 +100,7 @@
         SELECT DATEADD({{ period }}, {{ offset }}, CAST('{{start_timestamp}}' AS DATE)) AS period_of_load
     {%- endset %}
 
-    {% set period_of_load_dict = dbt_utils.get_query_results_as_dict(period_of_load_sql) %}
+    {% set period_of_load_dict = get_query_results_as_dict(period_of_load_sql) %}
 
     {% set period_of_load = period_of_load_dict['period_of_load'][0] | string %}
 

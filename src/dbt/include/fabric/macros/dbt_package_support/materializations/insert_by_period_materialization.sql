@@ -77,7 +77,7 @@
             {%- set iteration_number = i + 1 -%}
             {%- set period_of_load = get_period_of_load(period, i, period_boundaries.start_timestamp) -%}
 
-            {{ dbt_utils.log_info("Running for {} {} of {} ({}) [{}]".format(period, iteration_number, period_boundaries.num_periods, period_of_load, model.unique_id)) }}
+            {{ log_info("Running for {} {} of {} ({}) [{}]".format(period, iteration_number, period_boundaries.num_periods, period_of_load, model.unique_id)) }}
 
             {%- set tmp_identifier = target_relation.identifier ~ '__dbt_incremental_period' ~ i ~ '_tmp' -%}
             {%- set tmp_relation = api.Relation.create(
@@ -128,7 +128,7 @@
             {%- set sum_rows_inserted = loop_vars['sum_rows_inserted'] + rows_inserted -%}
             {%- do loop_vars.update({'sum_rows_inserted': sum_rows_inserted}) %}
 
-            {{ dbt_utils.log_info("Ran for {} {} of {} ({}); {} records inserted [{}]".format(period, iteration_number,
+            {{ log_info("Ran for {} {} of {} ({}); {} records inserted [{}]".format(period, iteration_number,
                                                                                               period_boundaries.num_periods,
                                                                                               period_of_load, rows_inserted,
                                                                                               model.unique_id)) }}

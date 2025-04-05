@@ -8,6 +8,6 @@
       {% set where = '_deleted = 0' %}
   {% endif %}
 
-  {{ return(dbt_utils.default__test_not_null_where(model, column_name, **kwargs)) }}
+  {{ return(default__test_not_null_where(model, column_name, **kwargs)) }}
 
 {% endmacro %}

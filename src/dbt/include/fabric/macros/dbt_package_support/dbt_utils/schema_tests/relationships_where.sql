@@ -7,6 +7,6 @@
       {% set where = 'id != 4' %}
   {% endif %}
 
-  {{ return(dbt_utils.default__test_relationships_where(model, column_name, to, field, from_condition, to_condition)) }}
+  {{ return(default__test_relationships_where(model, column_name, to, field, from_condition, to_condition)) }}
 
 {% endmacro %}
