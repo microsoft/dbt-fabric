@@ -5,7 +5,7 @@
     Example usage:
         ```sql
         select
-            {{ tsql_utils.surrogate_key(["id"]) }} as test_key
+            {{ surrogate_key(["id"]) }} as test_key
         from src_test
         ```
 

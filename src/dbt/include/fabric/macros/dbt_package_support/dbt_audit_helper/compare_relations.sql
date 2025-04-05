@@ -20,6 +20,6 @@ select
 from {{ b_relation }}
 {% endset %}
 
-{{ tsql_utils.fabric__compare_queries(a_query, b_query, primary_key, summarize) }}
+{{ fabric__compare_queries(a_query, b_query, primary_key, summarize) }}
 
 {% endmacro %}

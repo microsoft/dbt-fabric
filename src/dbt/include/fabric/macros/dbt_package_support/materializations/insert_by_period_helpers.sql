@@ -111,7 +111,7 @@
 
     {%- set filtered_sql = {'sql': base_sql} -%}
 
-    {%- do filtered_sql.update({'sql': tsql_utils.replace_placeholder_with_period_filter(filtered_sql.sql,
+    {%- do filtered_sql.update({'sql': replace_placeholder_with_period_filter(filtered_sql.sql,
                                                                                        timestamp_field,
                                                                                        start_timestamp,
                                                                                        stop_timestamp,

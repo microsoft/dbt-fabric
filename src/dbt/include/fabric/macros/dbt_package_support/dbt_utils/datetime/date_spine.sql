@@ -90,7 +90,7 @@
 
     {% set date_spine_query %}
 
-        {{tsql_utils.fabric__date_spine_sql(datepart, start_date, end_date)}} order by 1
+        {{fabric__date_spine_sql(datepart, start_date, end_date)}} order by 1
 
     {% endset %}
 

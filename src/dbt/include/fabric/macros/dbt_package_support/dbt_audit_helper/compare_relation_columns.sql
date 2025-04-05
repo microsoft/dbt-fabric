@@ -1,11 +1,11 @@
 {% macro fabric__compare_relation_columns(a_relation, b_relation) %}
 
 with a_cols as (
-    {{ tsql_utils.fabric__get_columns_in_relation_sql(a_relation) }}
+    {{ fabric__get_columns_in_relation_sql(a_relation) }}
 ),
 
 b_cols as (
-    {{ tsql_utils.fabric__get_columns_in_relation_sql(b_relation) }}
+    {{ fabric__get_columns_in_relation_sql(b_relation) }}
 )
 
 select
