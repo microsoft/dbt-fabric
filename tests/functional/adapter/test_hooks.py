@@ -47,7 +47,6 @@ class FabricHooksChecks:
             assert ctx["test_state"] == state
             assert ctx["target_name"] == "default"
             assert ctx["target_schema"] == project.test_schema
-            assert ctx["target_threads"] == 1
             assert ctx["target_type"] == "fabric"
 
             assert ctx["run_started_at"] is not None and len(ctx["run_started_at"]) > 0, (

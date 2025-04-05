@@ -16,6 +16,7 @@ def dbt_profile_target(dbt_profile_target_update):
         "authentication": "auto",
         "database": os.getenv("FABRIC_TEST_DWH_NAME"),
         "retries": 2,
+        "threads": int(os.getenv("FABRIC_TEST_THREADS", 1)),
     }
 
     target.update(dbt_profile_target_update)
