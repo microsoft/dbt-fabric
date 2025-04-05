@@ -1,17 +1,18 @@
 import pytest
 
 from dbt.tests.adapter.basic.files import config_materialized_table, config_materialized_view
+from dbt.tests.fixtures.project import TestProjInfo
 from dbt.tests.util import run_dbt
 
 source_regular = """
 version: 2
 sources:
 - name: regular
-  schema: sys
+  schema: {}
   tables:
-  - name: tables
+  - name: sample
     columns:
-    - name: name
+    - name: id
       tests:
       - not_null
 """
@@ -20,33 +21,30 @@ source_space_in_name = """
 version: 2
 sources:
 - name: 'space in name'
-  schema: sys
+  schema: {}
   tables:
-  - name: tables
+  - name: sample
     columns:
-    - name: name
+    - name: id
       tests:
       - not_null
 """
 
 select_from_source_regular = """
-select object_id,schema_id from {{ source("regular", "tables") }}
+select id from {{ source("regular", "sample") }}
 """
 
 select_from_source_space_in_name = """
-select object_id,schema_id from {{ source("space in name", "tables") }}
+select id from {{ source("space in name", "sample") }}
 """
 
 
-@pytest.mark.skip(
-    reason="The query references an object that is not supported in distributed processing mode."
-)
 class TestSourcesFabric:
     @pytest.fixture(scope="class")
-    def models(self):
+    def models(self, unique_schema: str):
         return {
-            "source_regular.yml": source_regular,
-            "source_space_in_name.yml": source_space_in_name,
+            "source_regular.yml": source_regular.format(unique_schema),
+            "source_space_in_name.yml": source_space_in_name.format(unique_schema),
             "v_select_from_source_regular.sql": config_materialized_view
             + select_from_source_regular,
             "v_select_from_source_space_in_name.sql": config_materialized_view
@@ -58,6 +56,7 @@ class TestSourcesFabric:
         }
 
     def test_dbt_run(self, project):
+        project.run_sql(f"create table {project.test_schema}.sample (id int)")
         run_dbt(["compile"])
 
         ls = run_dbt(["list"])
