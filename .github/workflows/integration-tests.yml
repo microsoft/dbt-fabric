@@ -21,8 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  full-integration-tests-fabric-dw:
-    name: Full integration tests on Fabric DW
+  integration-tests-fabric-dw:
+    name: Integration tests on Fabric DW
     strategy:
       matrix:
         include:
