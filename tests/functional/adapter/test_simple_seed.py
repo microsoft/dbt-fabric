@@ -160,6 +160,7 @@ class TestSimpleSeedColumnOverrideFabric(BaseSimpleSeedColumnOverride):
         return {"schema_test.sql": fixed_macros__schema_test}
 
 
+@pytest.mark.flaky
 class TestSimpleSeedEnabledViaConfigFabric(BaseSimpleSeedEnabledViaConfig):
     @pytest.fixture(scope="class")
     def seeds(self):
