@@ -28,4 +28,4 @@ jobs:
         run: uv sync
 
       - name: Run unit tests
-        run: uv run pytest -n auto -ra -v tests/unit
+        run: uv run pytest -ra -v tests/unit
