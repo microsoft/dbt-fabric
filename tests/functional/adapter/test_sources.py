@@ -38,7 +38,6 @@ select object_id,schema_id from {{ source("space in name", "tables") }}
 """
 
 
-# System tables are not supported for data type reasons.
 @pytest.mark.skip(
     reason="The query references an object that is not supported in distributed processing mode."
 )
