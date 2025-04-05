@@ -1,0 +1,103 @@
+---
+name: Integration tests on Fabric DW
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * 0'
+  pull_request:
+    branches:
+      - forked-version
+  push:
+    branches:
+      - forked-version
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-integration-tests-fabric-dw:
+    name: Full integration tests on Fabric DW
+    strategy:
+      matrix:
+        include:
+          - msodbc_version: "17"
+            python_version: "3.13"
+            dwh_name: "dwh02"
+            dwh_ci_name: "dwhcaseinsensitive02"
+            threads: 1
+          - msodbc_version: "18"
+            python_version: "3.9"
+            dwh_name: "dwh03"
+            dwh_ci_name: "dwhcaseinsensitive03"
+            threads: 1
+          - msodbc_version: "18"
+            python_version: "3.10"
+            dwh_name: "dwh04"
+            dwh_ci_name: "dwhcaseinsensitive04"
+            threads: 1
+          - msodbc_version: "18"
+            python_version: "3.11"
+            dwh_name: "dwh05"
+            dwh_ci_name: "dwhcaseinsensitive05"
+            threads: 1
+          - msodbc_version: "18"
+            python_version: "3.12"
+            dwh_name: "dwh06"
+            dwh_ci_name: "dwhcaseinsensitive06"
+            threads: 1
+          - msodbc_version: "18"
+            python_version: "3.13"
+            dwh_name: "dwh07"
+            dwh_ci_name: "dwhcaseinsensitive07"
+            threads: 1
+          - msodbc_version: "18"
+            python_version: "3.13"
+            dwh_name: "dwhcaseinsensitive08"
+            dwh_ci_name: "dwhcaseinsensitive08"
+            threads: 1
+          - msodbc_version: "18"
+            python_version: "3.13"
+            dwh_name: "dwh08"
+            dwh_ci_name: "dwhcaseinsensitive09"
+            threads: 20
+
+    runs-on: ubuntu-latest
+    environment: azure
+    container: 
+      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
+    steps:
+      - name: Azure CLI Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run functional tests
+        env:
+          FABRIC_TEST_ENDPOINT: ${{ secrets.FABRIC_TEST_ENDPOINT }}
+          FABRIC_TEST_DWH_NAME: ${{ matrix.dwh_name }}
+          FABRIC_TEST_DWH_CI_NAME: ${{ matrix.dwh_ci_name }}
+          FABRIC_TEST_DRIVER: "ODBC Driver ${{ matrix.msodbc_version }} for SQL Server"
+          DBT_TEST_USER_1: ${{ secrets.DBT_TEST_USER_1 }}
+          DBT_TEST_USER_2: ${{ secrets.DBT_TEST_USER_2 }}
+          DBT_TEST_USER_3: ${{ secrets.DBT_TEST_USER_3 }}
+          FABRIC_TEST_THREADS: ${{ matrix.threads }}
+        run: uv run pytest -ra -v tests/functional
+  
