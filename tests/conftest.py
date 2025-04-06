@@ -43,7 +43,7 @@ def logs_dir(request, prefix):
 
 
 @pytest.fixture(scope="class")
-def dbt_core_bug_workaround(self, project):
+def dbt_core_bug_workaround(project):
     # Workaround for https://github.com/dbt-labs/dbt-core/issues/5410
     with open(Path(project.project_root).parent / "dbt_project.yml", "w") as f:
         f.write(yaml.safe_dump({"name": "workaround"}))
