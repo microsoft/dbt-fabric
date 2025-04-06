@@ -106,7 +106,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs
+          name: logs-${{ matrix.msodbc_version }}-${{ matrix.python_version }}-${{ matrix.threads }}-${{ matrix.dwh_ci_name }}
           path: logs/
 
   
