@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+import yaml
 
 pytest_plugins = ["dbt.tests.fixtures.project"]
 
@@ -39,6 +40,13 @@ def logs_dir(request, prefix):
     os.environ["DBT_LOG_PATH"] = str(dbt_log_dir)
     yield str(Path(dbt_log_dir))
     del os.environ["DBT_LOG_PATH"]
+
+
+@pytest.fixture(scope="class")
+def dbt_core_bug_workaround(self, project):
+    # Workaround for https://github.com/dbt-labs/dbt-core/issues/5410
+    with open(Path(project.project_root).parent / "dbt_project.yml", "w") as f:
+        f.write(yaml.safe_dump({"name": "workaround"}))
 
 
 @pytest.fixture(scope="class")
