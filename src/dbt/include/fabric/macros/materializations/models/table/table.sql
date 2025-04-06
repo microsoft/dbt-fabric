@@ -1,4 +1,6 @@
-{% materialization table, adapter='fabric' %}
+{% materialization table, adapter='fabric', supported_languages=['sql', 'python'] %}
+
+  {%- set language = model['language'] -%}
 
   -- Load target relation
   {%- set target_relation = this.incorporate(type='table') %}
@@ -29,8 +31,8 @@
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
   -- build model
-  {% call statement('main') -%}
-    {{ create_table_as(False, temp_relation, sql) }}
+  {% call statement('main', language=language) -%}
+    {{ create_table_as(False, temp_relation, compiled_code, language) }}
   {% endcall %}
 
   {% if existing_relation is not none and existing_relation.is_table %}

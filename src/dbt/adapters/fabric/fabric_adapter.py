@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 import agate
 import dbt_common.exceptions
@@ -13,6 +13,7 @@ from dbt_common.utils import (
 )
 
 from dbt.adapters.base import Column as BaseColumn
+from dbt.adapters.base import PythonJobHelper
 from dbt.adapters.base.impl import ConstraintSupport
 from dbt.adapters.base.meta import available
 from dbt.adapters.base.relation import BaseRelation
@@ -22,6 +23,7 @@ from dbt.adapters.events.types import SchemaCreation
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
+from dbt.adapters.fabric.fabric_livy_helper import FabricLivyHelper
 from dbt.adapters.fabric.fabric_relation import FabricRelation
 from dbt.adapters.sql import SQLAdapter
 from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
@@ -245,6 +247,16 @@ class FabricAdapter(SQLAdapter):
                 "schema": schema,
             }
         )
+
+    @property
+    def default_python_submission_method(self) -> str:
+        return "livy"
+
+    @property
+    def python_submission_helpers(self) -> Dict[str, Type[PythonJobHelper]]:
+        return {
+            "livy": FabricLivyHelper,
+        }
 
 
 COLUMNS_EQUAL_SQL = """

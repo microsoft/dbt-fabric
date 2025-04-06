@@ -13,43 +13,48 @@
 {% endmacro %}
 
 
-{% macro fabric__create_table_as(temporary, relation, sql) -%}
+{% macro fabric__create_table_as(temporary, relation, compiled_code, language='sql') -%}
+    {%- if language == 'sql' -%}
+        {% set query_label = apply_label() %}
+        {% set contract_config = config.get('contract') %}
+        {% set is_nested_cte = check_for_nested_cte(compiled_code) %}
 
-    {% set query_label = apply_label() %}
-    {% set contract_config = config.get('contract') %}
-    {% set is_nested_cte = check_for_nested_cte(sql) %}
+        {% if is_nested_cte and contract_config.enforced %}
 
-    {% if is_nested_cte and contract_config.enforced %}
+            {{ exceptions.raise_compiler_error(
+                "Since the contract is enforced and the model contains a nested CTE, Fabric DW uses CREATE TABLE + INSERT to load data.
+                INSERT INTO is not supported with nested CTEs. To resolve this, either disable contract enforcement or modify the model."
+            ) }}
 
-        {{ exceptions.raise_compiler_error(
-            "Since the contract is enforced and the model contains a nested CTE, Fabric DW uses CREATE TABLE + INSERT to load data.
-            INSERT INTO is not supported with nested CTEs. To resolve this, either disable contract enforcement or modify the model."
-        ) }}
+        {%- elif not is_nested_cte and contract_config.enforced %}
 
-    {%- elif not is_nested_cte and contract_config.enforced %}
+            CREATE TABLE {{relation}}
+            {{ build_columns_constraints(relation) }}
+            {{ get_assert_columns_equivalent(compiled_code)  }}
 
-        CREATE TABLE {{relation}}
-        {{ build_columns_constraints(relation) }}
-        {{ get_assert_columns_equivalent(sql)  }}
+            {% set listColumns %}
+                {% for column in model['columns'] %}
+                    {{ "["~column~"]" }}{{ ", " if not loop.last }}
+                {% endfor %}
+            {%endset%}
 
-        {% set listColumns %}
-            {% for column in model['columns'] %}
-                {{ "["~column~"]" }}{{ ", " if not loop.last }}
-            {% endfor %}
-        {%endset%}
+            {% set tmp_vw_relation = relation.incorporate(path={"identifier": relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+            {% do adapter.drop_relation(tmp_vw_relation) %}
+            {{ get_create_view_as_sql(tmp_vw_relation, compiled_code) }}
 
-        {% set tmp_vw_relation = relation.incorporate(path={"identifier": relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-        {% do adapter.drop_relation(tmp_vw_relation) %}
-        {{ get_create_view_as_sql(tmp_vw_relation, sql) }}
+            INSERT INTO {{relation}} ({{listColumns}})
+            SELECT {{listColumns}} FROM {{tmp_vw_relation}} {{ query_label }}
 
-        INSERT INTO {{relation}} ({{listColumns}})
-        SELECT {{listColumns}} FROM {{tmp_vw_relation}} {{ query_label }}
+        {%- else %}
 
-    {%- else %}
+            {%- set query_label_option = query_label.replace("'", "''") -%}
+            {%- set sql_with_quotes = compiled_code.replace("'", "''") -%}
+            EXEC('CREATE TABLE {{relation}} AS {{sql_with_quotes}} {{ query_label_option }}');
 
-        {%- set query_label_option = query_label.replace("'", "''") -%}
-        {%- set sql_with_quotes = sql.replace("'", "''") -%}
-        EXEC('CREATE TABLE {{relation}} AS {{sql_with_quotes}} {{ query_label_option }}');
-
-    {% endif %}
+        {% endif %}
+    {%- elif language == "python" -%}
+        {{ py_write_table(compiled_code=compiled_code, target_relation=relation, table_type=relation.get_ddl_prefix_for_create(config.model.config, temporary)) }}
+    {%- else -%}
+        {% do exceptions.raise_compiler_error("fabric__create_table_as macro didn't get supported language, it got %s" % language) %}
+    {%- endif -%}
 {% endmacro %}
