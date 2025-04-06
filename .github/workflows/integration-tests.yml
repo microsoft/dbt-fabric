@@ -24,6 +24,7 @@ jobs:
   integration-tests-fabric-dw:
     name: Integration tests on Fabric DW
     strategy:
+      fail-fast: false
       matrix:
         include:
           - msodbc_version: "17"
@@ -100,4 +101,12 @@ jobs:
           DBT_TEST_USER_3: ${{ secrets.DBT_TEST_USER_3 }}
           FABRIC_TEST_THREADS: ${{ matrix.threads }}
         run: uv run pytest -ra -v tests/functional
+      
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: logs/
+
   
