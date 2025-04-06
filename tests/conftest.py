@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import pytest
 
@@ -54,6 +55,15 @@ class TestProjInfoFabric(TestProjInfo):
                 """
         result = self.run_sql(sql, fetch="all")
         return {model_name: materialization for (model_name, materialization) in result}
+
+
+@pytest.fixture(scope="class")
+def logs_dir(request, prefix):
+    dbt_log_dir = os.path.join(request.config.rootdir, "logs", prefix)
+    print(f"\n=== Test logs_dir: {dbt_log_dir}\n")
+    os.environ["DBT_LOG_PATH"] = str(dbt_log_dir)
+    yield str(Path(dbt_log_dir))
+    del os.environ["DBT_LOG_PATH"]
 
 
 @pytest.fixture(scope="class")
