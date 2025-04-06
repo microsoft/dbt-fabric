@@ -132,11 +132,11 @@ select * from {{ ref('input_model') }} a
 
 _input_model_sql = """
 {{ config(materialized='table', event_time='event_time') }}
-select 1 as id, '2020-01-01 00:00:00.000000' as event_time
+select 1 as id, cast('2020-01-01 00:00:00.000000' as datetime2(6)) as event_time
 union all
-select 2 as id, '2020-01-02 00:00:00.000000' as event_time
+select 2 as id, cast('2020-01-02 00:00:00.000000' as datetime2(6)) as event_time
 union all
-select 3 as id, '2020-01-03 00:00:00.000000' as event_time
+select 3 as id, cast('2020-01-03 00:00:00.000000' as datetime2(6)) as event_time
 """
 
 
