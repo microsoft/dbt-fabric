@@ -11,9 +11,11 @@ from dbt.tests.adapter.python_model.test_spark import BasePySparkTests
 class TestPythonModelTestsFabric(BasePythonModelTests):
     pass
 
+
 @pytest.mark.skip("Python models are not supported in Fabric")
 class TestPythonIncrementalTestsFabric(BasePythonIncrementalTests):
     pass
+
 
 @pytest.mark.skip("Python models are not supported in Fabric")
 class TestPySparkTestsFabric(BasePySparkTests):
