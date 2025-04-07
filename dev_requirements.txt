@@ -1,9 +1,8 @@
 # install latest changes in dbt-core
 # TODO: how to automate switching from develop to version branches?
 git+https://github.com/dbt-labs/dbt-core.git#egg=dbt-core&subdirectory=core
-git+https://github.com/dbt-labs/dbt-adapters.git
+git+https://github.com/dbt-labs/dbt-adapters.git#egg=dbt-adapters&subdirectory=dbt-adapters
 git+https://github.com/dbt-labs/dbt-adapters.git#subdirectory=dbt-tests-adapter
-
 pytest==8.0.1
 twine==5.1.1
 wheel==0.44.0

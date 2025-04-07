@@ -11,6 +11,7 @@ from dbt.adapters.fabric.relation_configs import FabricQuotePolicy, FabricRelati
 class FabricRelation(BaseRelation):
     type: Optional[FabricRelationType] = None  # type: ignore
     quote_policy: FabricQuotePolicy = field(default_factory=lambda: FabricQuotePolicy())
+    require_alias: bool = False
 
     @classproperty
     def get_relation_type(cls) -> Type[FabricRelationType]:
