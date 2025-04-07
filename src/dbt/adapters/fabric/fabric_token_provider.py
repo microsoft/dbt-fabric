@@ -1,7 +1,7 @@
 import struct
 import time
 from itertools import chain, repeat
-from typing import Dict
+from typing import Dict, Optional
 
 from azure.core.credentials import AccessToken
 from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
@@ -13,7 +13,7 @@ class FabricTokenProvider:
     AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
     SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
     FABRIC_CREDENTIAL_SCOPE = "https://analysis.windows.net/powerbi/api"
-    _token: AccessToken | None = None
+    _token: Optional[AccessToken] = None
     SQL_COPT_SS_ACCESS_TOKEN = 1256  # see source in docstring
 
     def __init__(self, credentials: FabricCredentials):
