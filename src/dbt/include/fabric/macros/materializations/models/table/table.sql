@@ -4,7 +4,7 @@
 
   -- Load target relation
   {%- set target_relation = this.incorporate(type='table') %}
-  {%- set existing_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
+  {%- set existing_relation = load_cached_relation(this) -%}
 
   {#-- Drop the relation if it was a view to "convert" it in a table. This may lead to
     -- downtime, but it should be a relatively infrequent occurrence  #}
@@ -38,7 +38,7 @@
   {% if existing_relation is not none and existing_relation.is_table %}
 
     -- making a backup relation, this will come in use when contract is enforced or not
-    {%- set set_backup_relation = adapter.get_relation(database=this.database, schema=this.schema, identifier=this.identifier) -%}
+    {%- set set_backup_relation = load_cached_relation(this) -%}
     {% if (set_backup_relation != none and set_backup_relation.type == "table") %}
       {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
     {% elif (set_backup_relation != none and set_backup_relation.type == "view") %}
