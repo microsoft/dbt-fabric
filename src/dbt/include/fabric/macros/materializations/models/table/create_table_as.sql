@@ -47,9 +47,7 @@
 
         {%- else %}
 
-            {%- set query_label_option = query_label.replace("'", "''") -%}
-            {%- set sql_with_quotes = compiled_code.replace("'", "''") -%}
-            EXEC('CREATE TABLE {{relation}} AS {{sql_with_quotes}} {{ query_label_option }}');
+            CREATE TABLE {{relation}} AS {{compiled_code}} {{ query_label }}
 
         {% endif %}
     {%- elif language == "python" -%}
