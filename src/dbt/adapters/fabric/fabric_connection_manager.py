@@ -2,14 +2,11 @@ import datetime as dt
 import struct
 import time
 from contextlib import contextmanager
-from itertools import chain, repeat
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import agate
 import dbt_common.exceptions
 import pyodbc
-from azure.core.credentials import AccessToken
-from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
 from dbt_common.clients.agate_helper import empty_table
 from dbt_common.events.contextvars import get_node_info
 from dbt_common.events.functions import fire_event
@@ -20,12 +17,8 @@ from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 from dbt.adapters.sql import SQLConnectionManager
-
-AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
-SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
-_TOKEN: Optional[AccessToken] = None
-AZURE_AUTH_FUNCTION_TYPE = Callable[[FabricCredentials], AccessToken]
 
 logger = AdapterLogger("fabric")
 
@@ -44,174 +37,6 @@ datatypes = {
     "datetime.time": "time",
     "decimal.Decimal": "decimal",
 }
-
-
-def convert_bytes_to_mswindows_byte_string(value: bytes) -> bytes:
-    """
-    Convert bytes to a Microsoft windows byte string.
-
-    Parameters
-    ----------
-    value : bytes
-        The bytes.
-
-    Returns
-    -------
-    out : bytes
-        The Microsoft byte string.
-    """
-    encoded_bytes = bytes(chain.from_iterable(zip(value, repeat(0))))
-    return struct.pack("<i", len(encoded_bytes)) + encoded_bytes
-
-
-def convert_access_token_to_mswindows_byte_string(token: AccessToken) -> bytes:
-    """
-    Convert an access token to a Microsoft windows byte string.
-
-    Parameters
-    ----------
-    token : AccessToken
-        The token.
-
-    Returns
-    -------
-    out : bytes
-        The Microsoft byte string.
-    """
-    value = bytes(token.token, "UTF-8")
-    return convert_bytes_to_mswindows_byte_string(value)
-
-
-def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToken:
-    """
-    Get an Azure access token by using mspsarkutils
-    Parameters
-    -----------
-    credentials: FabricCredentials
-        Credentials.
-    Returns
-    -------
-    out : AccessToken
-        The access token.
-    """
-    from notebookutils import mssparkutils
-
-    aad_token = mssparkutils.credentials.getToken(SYNAPSE_SPARK_CREDENTIAL_SCOPE)
-    expires_on = int(time.time() + 4500.0)
-    token = AccessToken(
-        token=aad_token,
-        expires_on=expires_on,
-    )
-    return token
-
-
-def get_cli_access_token(credentials: FabricCredentials) -> AccessToken:
-    """
-    Get an Azure access token using the CLI credentials
-
-    First login with:
-
-    ```bash
-    az login
-    ```
-
-    Parameters
-    ----------
-    credentials: FabricConnectionManager
-        The credentials.
-
-    Returns
-    -------
-    out : AccessToken
-        Access token.
-    """
-    _ = credentials
-    token = AzureCliCredential().get_token(AZURE_CREDENTIAL_SCOPE)
-    return token
-
-
-def get_auto_access_token(credentials: FabricCredentials) -> AccessToken:
-    """
-    Get an Azure access token automatically through azure-identity
-
-    Parameters
-    -----------
-    credentials: FabricCredentials
-        Credentials.
-
-    Returns
-    -------
-    out : AccessToken
-        The access token.
-    """
-    token = DefaultAzureCredential().get_token(AZURE_CREDENTIAL_SCOPE)
-    return token
-
-
-def get_environment_access_token(credentials: FabricCredentials) -> AccessToken:
-    """
-    Get an Azure access token by reading environment variables
-
-    Parameters
-    -----------
-    credentials: FabricCredentials
-        Credentials.
-
-    Returns
-    -------
-    out : AccessToken
-        The access token.
-    """
-    token = EnvironmentCredential().get_token(AZURE_CREDENTIAL_SCOPE)
-    return token
-
-
-AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
-    "cli": get_cli_access_token,
-    "auto": get_auto_access_token,
-    "environment": get_environment_access_token,
-    "synapsespark": get_synapse_spark_access_token,
-}
-
-
-def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
-    """
-    Get the pyodbc attrs before.
-
-    Parameters
-    ----------
-    credentials : FabricCredentials
-        Credentials.
-
-    Returns
-    -------
-    out : Dict
-        The pyodbc attrs before.
-
-    Source
-    ------
-    Authentication for SQL server with an access token:
-    https://docs.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver15#authenticating-with-an-access-token
-    """
-    global _TOKEN
-    attrs_before: Dict
-    MAX_REMAINING_TIME = 300
-
-    authentication = str(credentials.authentication).lower()
-    if authentication in AZURE_AUTH_FUNCTIONS:
-        time_remaining = (_TOKEN.expires_on - time.time()) if _TOKEN else MAX_REMAINING_TIME
-
-        if _TOKEN is None or (time_remaining < MAX_REMAINING_TIME):
-            azure_auth_function = AZURE_AUTH_FUNCTIONS[authentication]
-            _TOKEN = azure_auth_function(credentials)
-
-        token_bytes = convert_access_token_to_mswindows_byte_string(_TOKEN)
-        sql_copt_ss_access_token = 1256  # see source in docstring
-        attrs_before = {sql_copt_ss_access_token: token_bytes}
-    else:
-        attrs_before = {}
-
-    return attrs_before
 
 
 def get_pyodbc_attrs_before_accesstoken(accessToken: str) -> Dict:
@@ -299,6 +124,7 @@ def byte_array_to_datetime(value: bytes) -> dt.datetime:
 
 class FabricConnectionManager(SQLConnectionManager):
     TYPE = "fabric"
+    _fabric_token_provider = None
 
     @contextmanager
     def exception_handler(self, sql):
@@ -329,6 +155,12 @@ class FabricConnectionManager(SQLConnectionManager):
             raise dbt_common.exceptions.DbtRuntimeError(e)
 
     @classmethod
+    def get_fabric_token_provider(cls, credentials: FabricCredentials) -> FabricTokenProvider:
+        if cls._fabric_token_provider is None:
+            cls._fabric_token_provider = FabricTokenProvider(credentials)
+        return cls._fabric_token_provider
+
+    @classmethod
     def open(cls, connection: Connection) -> Connection:
         if connection.state == ConnectionState.OPEN:
             logger.debug("Connection is already open, skipping open.")
@@ -356,10 +188,7 @@ class FabricConnectionManager(SQLConnectionManager):
 
         assert credentials.authentication is not None
 
-        if (
-            "ActiveDirectory" in credentials.authentication
-            and credentials.authentication != "ActiveDirectoryAccessToken"
-        ):
+        if "ActiveDirectory" in credentials.authentication:
             con_str.append(f"Authentication={credentials.authentication}")
 
             if credentials.authentication == "ActiveDirectoryPassword":
@@ -390,7 +219,7 @@ class FabricConnectionManager(SQLConnectionManager):
         con_str.append(f"APP={application_name}")
 
         try:
-            con_str.append("ConnectRetryCount=3")
+            con_str.append(f"ConnectRetryCount={credentials.retries}")
             con_str.append("ConnectRetryInterval=10")
 
         except Exception as e:
@@ -414,19 +243,13 @@ class FabricConnectionManager(SQLConnectionManager):
         retryable_exceptions = [  # https://github.com/mkleehammer/pyodbc/wiki/Exceptions
             pyodbc.InternalError,  # not used according to docs, but defined in PEP-249
             pyodbc.OperationalError,
+            pyodbc.InterfaceError,
         ]
-
-        if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
-            # Temporary login/token errors fall into this category when using AAD
-            retryable_exceptions.append(pyodbc.InterfaceError)
 
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
             pyodbc.pooling = True
-            if credentials.authentication == "ActiveDirectoryAccessToken":
-                attrs_before = get_pyodbc_attrs_before_accesstoken(credentials.access_token)
-            else:
-                attrs_before = get_pyodbc_attrs_before_credentials(credentials)
+            attrs_before = cls.get_fabric_token_provider(credentials).get_pyodbc_attributes()
 
             handle = pyodbc.connect(
                 con_str_concat,

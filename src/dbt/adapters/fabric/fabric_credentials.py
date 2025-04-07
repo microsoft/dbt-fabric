@@ -18,13 +18,15 @@ class FabricCredentials(Credentials):
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     access_token: Optional[str] = None
-    authentication: Optional[str] = "ActiveDirectoryServicePrincipal"
+    token_scope: Optional[str] = None
+    authentication: Optional[str] = "auto"
     encrypt: Optional[bool] = True  # default value in MS ODBC Driver 18 as well
     trust_cert: Optional[bool] = False  # default value in MS ODBC Driver 18 as well
     retries: int = 3
     schema_authorization: Optional[str] = None
     login_timeout: Optional[int] = 0
     query_timeout: Optional[int] = 0
+    livy_session_connection_string: Optional[str] = None
 
     _ALIASES = {
         "user": "UID",
@@ -61,12 +63,14 @@ class FabricCredentials(Credentials):
             "UID",
             "client_id",
             "authentication",
+            "token_scope",
             "encrypt",
             "trust_cert",
             "retries",
             "login_timeout",
             "query_timeout",
             "trace_flag",
+            "livy_session_connection_string",
         )
 
     @property
