@@ -1,11 +1,3 @@
-{% macro fabric__make_temp_relation(base_relation, suffix='__dbt_temp') %}
-    {%- set temp_identifier = base_relation.identifier ~ suffix -%}
-    {%- set temp_relation = base_relation.incorporate(
-                                path={"identifier": temp_identifier}) -%}
-
-    {{ return(temp_relation) }}
-{% endmacro %}
-
 {% macro fabric__get_drop_sql(relation) -%}
   {% if relation.type == 'view' -%}
       {% call statement('find_references', fetch_result=true) %}
