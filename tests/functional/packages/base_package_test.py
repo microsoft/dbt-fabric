@@ -47,6 +47,7 @@ class BaseDbtPackageTests:
     ):
         return {
             "name": "test_dbt_package",
+            "vars": {"dbt_date:time_zone": "UTC"},
             "dispatch": [
                 {
                     "macro_namespace": package_name,
