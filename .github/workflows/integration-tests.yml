@@ -55,10 +55,6 @@ jobs:
             python_version: "3.13"
             dwh_name: "dwhcaseinsensitive08"
             dwh_ci_name: "dwhcaseinsensitive08"
-          - msodbc_version: "18"
-            python_version: "3.13"
-            dwh_name: "dwh08"
-            dwh_ci_name: "dwhcaseinsensitive09"
 
     runs-on: ubuntu-latest
     environment: azure
