@@ -51,7 +51,7 @@
 
         {% endif %}
     {%- elif language == "python" -%}
-        {{ py_write_table(compiled_code=compiled_code, target_relation=relation, table_type=relation.get_ddl_prefix_for_create(config.model.config, temporary)) }}
+        {{ py_write_table(compiled_code=compiled_code, target_relation=relation) }}
     {%- else -%}
         {% do exceptions.raise_compiler_error("fabric__create_table_as macro didn't get supported language, it got %s" % language) %}
     {%- endif -%}
