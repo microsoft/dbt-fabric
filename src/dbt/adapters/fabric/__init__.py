@@ -4,6 +4,9 @@ from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.fabric.fabric_livy_helper import FabricLivyHelper
+from dbt.adapters.fabric.fabric_relation import FabricRelation
+from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 from dbt.include import fabric
 
 Plugin = AdapterPlugin(
@@ -18,5 +21,8 @@ __all__ = [
     "FabricConfigs",
     "FabricConnectionManager",
     "FabricCredentials",
+    "FabricLivyHelper",
+    "FabricRelation",
+    "FabricTokenProvider",
     "Plugin",
 ]

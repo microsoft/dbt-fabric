@@ -13,7 +13,7 @@ class FabricTokenProvider:
     AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
     SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
     FABRIC_CREDENTIAL_SCOPE = "https://analysis.windows.net/powerbi/api"
-    _token: Optional[AccessToken] = None
+    _tokens: dict[str, AccessToken] = {}
     SQL_COPT_SS_ACCESS_TOKEN = 1256  # see source in docstring
 
     def __init__(self, credentials: FabricCredentials):
@@ -35,10 +35,11 @@ class FabricTokenProvider:
             return self.FABRIC_CREDENTIAL_SCOPE
         return self.FABRIC_CREDENTIAL_SCOPE
 
-    def get_mssparkutils_access_token(self) -> AccessToken:
+    @staticmethod
+    def get_mssparkutils_access_token(scope: str) -> AccessToken:
         from notebookutils import mssparkutils
 
-        aad_token = mssparkutils.credentials.getToken(self.get_token_scope())
+        aad_token = mssparkutils.credentials.getToken(scope)
         expires_on = int(time.time() + 4500.0)
         token = AccessToken(
             token=aad_token,
@@ -46,43 +47,49 @@ class FabricTokenProvider:
         )
         return token
 
-    def get_cli_access_token(self) -> AccessToken:
-        token = AzureCliCredential().get_token(self.get_token_scope())
+    @staticmethod
+    def get_cli_access_token(scope: str) -> AccessToken:
+        token = AzureCliCredential().get_token(scope)
         return token
 
-    def get_auto_access_token(self) -> AccessToken:
-        token = DefaultAzureCredential().get_token(self.get_token_scope())
+    @staticmethod
+    def get_auto_access_token(scope: str) -> AccessToken:
+        token = DefaultAzureCredential().get_token(scope)
         return token
 
-    def get_environment_access_token(self) -> AccessToken:
-        token = EnvironmentCredential().get_token(self.get_token_scope())
+    @staticmethod
+    def get_environment_access_token(scope: str) -> AccessToken:
+        token = EnvironmentCredential().get_token(scope)
         return token
 
-    def get_token(self) -> str:
+    def get_token(self, scope: Optional[str] = None) -> str:
         if self.credentials.access_token:
             return self.credentials.access_token
 
         MAX_REMAINING_TIME = 300
 
         azure_auth_functions = {
-            "cli": self.get_cli_access_token,
-            "auto": self.get_auto_access_token,
-            "environment": self.get_environment_access_token,
-            "synapsespark": self.get_mssparkutils_access_token,
-            "fabricspark": self.get_mssparkutils_access_token,
+            "cli": FabricTokenProvider.get_cli_access_token,
+            "auto": FabricTokenProvider.get_auto_access_token,
+            "environment": FabricTokenProvider.get_environment_access_token,
+            "synapsespark": FabricTokenProvider.get_mssparkutils_access_token,
+            "fabricspark": FabricTokenProvider.get_mssparkutils_access_token,
         }
+
+        scope = scope or self.get_token_scope()
+        current_token = self._tokens.get(scope)
 
         authentication = str(self.credentials.authentication).lower()
         if authentication in azure_auth_functions:
             time_remaining = (
-                (self._token.expires_on - time.time()) if self._token else MAX_REMAINING_TIME
+                (current_token.expires_on - time.time()) if current_token else MAX_REMAINING_TIME
             )
 
-            if self._token is None or (time_remaining < MAX_REMAINING_TIME):
+            if current_token is None or (time_remaining < MAX_REMAINING_TIME):
                 azure_auth_function = azure_auth_functions[authentication]
-                self._token = azure_auth_function()
+                self._tokens[scope] = azure_auth_function(scope)
 
-        return self._token
+        return self._tokens[scope]
 
     @staticmethod
     def convert_bytes_to_mswindows_byte_string(value: bytes) -> bytes:
