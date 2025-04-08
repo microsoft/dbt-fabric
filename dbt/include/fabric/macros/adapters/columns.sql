@@ -4,8 +4,6 @@
     )
     select * from __dbt_sbq_tmp
     where 0 = 1
-    {%- endif -%}
-
 {% endmacro %}
 
 {% macro fabric__get_columns_in_relation(relation) -%}

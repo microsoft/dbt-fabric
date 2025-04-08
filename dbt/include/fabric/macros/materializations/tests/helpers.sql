@@ -1,17 +1,19 @@
-{% macro fabric__get_test_sql(database, schema, main_sql, fail_calc, warn_if, error_if, limit) -%}
-    with test_main_sql as (
-    {{ main_sql }}
-    ),
-    dbt_internal_test as (
-      select {{ "top (" ~ limit ~ ')' if limit != none }} * from test_main_sql
-    )
-    select
-      {{ fail_calc }} as failures,
-      case when {{ fail_calc }} {{ warn_if }}
-        then 'true' else 'false' end as should_warn,
-      case when {{ fail_calc }} {{ error_if }}
-        then 'true' else 'false' end as should_error
-    from dbt_internal_test
+{% macro fabric__get_test_sql(main_sql, fail_calc, warn_if, error_if, limit) -%}
+
+  with test_main_sql as (
+  {{ main_sql }}
+  ),
+  dbt_internal_test as (
+    select {{ "top (" ~ limit ~ ')' if limit != none }} * from test_main_sql
+  )
+  select
+    {{ fail_calc }} as failures,
+    case when {{ fail_calc }} {{ warn_if }}
+      then 'true' else 'false' end as should_warn,
+    case when {{ fail_calc }} {{ error_if }}
+      then 'true' else 'false' end as should_error
+  from dbt_internal_test
+
 {%- endmacro %}
 
 {% macro fabric__get_unit_test_sql(main_sql, expected_fixture_sql, expected_column_names) -%}

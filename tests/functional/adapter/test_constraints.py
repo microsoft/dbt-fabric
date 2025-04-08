@@ -480,7 +480,7 @@ class BaseConstraintsRuntimeDdlEnforcement:
     @pytest.fixture(scope="class")
     def expected_sql(self):
         return """
-create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;'); insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>
+exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;'); create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>
 """
 
     # EXEC('DROP view IF EXISTS <model_identifier>
@@ -549,8 +549,7 @@ class BaseModelConstraintsRuntimeEnforcement:
     @pytest.fixture(scope="class")
     def expected_sql(self):
         return """
-create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;'); insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>
-"""
+exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;'); create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>"""
 
     # EXEC('DROP view IF EXISTS <model_identifier>
 
