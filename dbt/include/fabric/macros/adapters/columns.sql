@@ -1,11 +1,9 @@
 {% macro fabric__get_empty_subquery_sql(select_sql, select_sql_header=none) %}
-
     with __dbt_sbq_tmp as (
         {{ select_sql }}
     )
     select * from __dbt_sbq_tmp
     where 0 = 1
-
 {% endmacro %}
 
 {% macro fabric__get_columns_in_relation(relation) -%}
@@ -44,7 +42,6 @@
 {% macro fabric__get_columns_in_query(select_sql) %}
     {% set query_label = apply_label() %}
     {% call statement('get_columns_in_query', fetch_result=True, auto_begin=False) -%}
-
         with __dbt_sbq as
         (
             {{ select_sql }}
@@ -69,7 +66,7 @@
         FROM
         (
             SELECT
-            CAST(c.COLUMN_NAME AS VARCHAR) AS ColumnName
+            CAST(c.COLUMN_NAME AS VARCHAR(128)) AS ColumnName
             FROM INFORMATION_SCHEMA.TABLES t
             JOIN INFORMATION_SCHEMA.COLUMNS c
                 ON t.TABLE_SCHEMA = c.TABLE_SCHEMA

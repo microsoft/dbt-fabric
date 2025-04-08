@@ -69,7 +69,7 @@ class StoreTestFailuresBase:
         check_relations_equal(
             project.adapter,
             [
-                f"{TEST_AUDIT_SCHEMA_SUFFIX}.unique_problematic_model_id",
+                f"{self.test_audit_schema}.unique_problematic_model_id",
                 "expected_unique_problematic_model_id",
             ],
         )
@@ -95,26 +95,26 @@ class StoreTestFailuresBase:
 
         # compare test results stored in database
         check_relations_equal(
-            project.adapter, [f"{TEST_AUDIT_SCHEMA_SUFFIX}.failing_test", "expected_failing_test"]
+            project.adapter, [f"{self.test_audit_schema}.failing_test", "expected_failing_test"]
         )
         check_relations_equal(
             project.adapter,
             [
-                f"{TEST_AUDIT_SCHEMA_SUFFIX}.not_null_problematic_model_id",
+                f"{self.test_audit_schema}.not_null_problematic_model_id",
                 "expected_not_null_problematic_model_id",
             ],
         )
         check_relations_equal(
             project.adapter,
             [
-                f"{TEST_AUDIT_SCHEMA_SUFFIX}.unique_problematic_model_id",
+                f"{self.test_audit_schema}.unique_problematic_model_id",
                 "expected_unique_problematic_model_id",
             ],
         )
         check_relations_equal(
             project.adapter,
             [
-                f"{TEST_AUDIT_SCHEMA_SUFFIX}.accepted_values_problemat"
+                f"{self.test_audit_schema}.accepted_values_problemat"
                 "ic_mo_c533ab4ca65c1a9dbf14f79ded49b628",
                 "expected_accepted_values",
             ],
