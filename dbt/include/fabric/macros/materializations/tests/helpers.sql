@@ -16,43 +16,6 @@
 
 {%- endmacro %}
 
-
-{% macro fabric__get_unit_test_sql(main_sql, expected_fixture_sql, expected_column_names) -%}
-  -- Build actual result given inputs
-  WITH dbt_internal_unit_test_actual AS (
-
-    WITH main_sql AS (
-      {{ main_sql }}
-    )
-    SELECT
-      {% for expected_column_name in expected_column_names %}
-        {{ expected_column_name }}{% if not loop.last -%},{% endif %}
-      {%- endfor -%},
-      {{ dbt.string_literal("actual") }} AS {{ adapter.quote("actual_or_expected") }}
-    FROM main_sql
-  ),
-
-  -- Build expected result
-  dbt_internal_unit_test_expected AS (
-
-    WITH expected_fixture_sql AS (
-      {{ expected_fixture_sql }}
-    )
-    SELECT
-      {% for expected_column_name in expected_column_names %}
-        {{ expected_column_name }}{% if not loop.last -%}, {% endif %}
-      {%- endfor -%},
-      {{ dbt.string_literal("expected") }} AS {{ adapter.quote("actual_or_expected") }}
-    FROM expected_fixture_sql
-  )
-
-  -- Union actual and expected results
-  SELECT * FROM dbt_internal_unit_test_actual
-  UNION ALL
-  SELECT * FROM dbt_internal_unit_test_expected
-
-=======
-
 {% macro fabric__get_unit_test_sql(main_sql, expected_fixture_sql, expected_column_names) -%}
   -- Build actual result given inputs
   WITH dbt_internal_unit_test_actual AS (
