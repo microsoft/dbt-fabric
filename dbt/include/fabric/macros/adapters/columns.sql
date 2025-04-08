@@ -66,7 +66,7 @@
         FROM
         (
             SELECT
-            CAST(c.COLUMN_NAME AS VARCHAR) AS ColumnName
+            CAST(c.COLUMN_NAME AS VARCHAR(128)) AS ColumnName
             FROM INFORMATION_SCHEMA.TABLES t
             JOIN INFORMATION_SCHEMA.COLUMNS c
                 ON t.TABLE_SCHEMA = c.TABLE_SCHEMA

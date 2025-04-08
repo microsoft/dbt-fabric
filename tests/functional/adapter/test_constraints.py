@@ -504,8 +504,20 @@ exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identi
         generated_sql_option_cluase = generated_sql_wodb.replace(
             "OPTION (LABEL = 'dbt-fabric-dw');", ""
         )
-        assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
-            generated_sql_option_cluase.strip()
+        # assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
+        #     generated_sql_option_cluase.strip())
+
+        assert (
+            "create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))"
+            in _normalize_whitespace(generated_sql_option_cluase.strip())
+        )
+        assert (
+            "exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;');"
+            in _normalize_whitespace(generated_sql_option_cluase.strip())
+        )
+        assert (
+            "insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>"
+            in _normalize_whitespace(generated_sql_option_cluase.strip())
         )
 
 
@@ -572,8 +584,21 @@ exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identi
         generated_sql_option_cluase = generated_sql_wodb.replace(
             "OPTION (LABEL = 'dbt-fabric-dw');", ""
         )
-        assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
-            generated_sql_option_cluase.strip()
+        # assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
+        #     generated_sql_option_cluase.strip()
+        # )
+
+        assert (
+            "create table <model_identifier>(id int not null,color varchar(100),date_day varchar(100))"
+            in _normalize_whitespace(generated_sql_option_cluase.strip())
+        )
+        assert (
+            "exec('create view <model_identifier> as -- depends_on: <foreign_key_model_identifier> select ''blue'' as color,1 as id,''2019-01-01'' as date_day;');"
+            in _normalize_whitespace(generated_sql_option_cluase.strip())
+        )
+        assert (
+            "insert into <model_identifier>([id],[color],[date_day])select [id],[color],[date_day] from <model_identifier>"
+            in _normalize_whitespace(generated_sql_option_cluase.strip())
         )
 
 

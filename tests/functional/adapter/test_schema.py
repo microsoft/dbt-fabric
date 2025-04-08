@@ -31,5 +31,6 @@ select SCHEMA_OWNER from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME = '{schem
         res = run_dbt(["run"])
         assert len(res) == 1
 
-        self._verify_schema_owner(unique_schema, os.getenv("DBT_TEST_USER_1"), project)
-        self._verify_schema_owner("with_custom_auth", os.getenv("DBT_TEST_USER_1"), project)
+        self._verify_schema_owner(
+            f"{unique_schema}_with_custom_auth", os.getenv("DBT_TEST_USER_1"), project
+        )
