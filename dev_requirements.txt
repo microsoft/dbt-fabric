@@ -4,7 +4,7 @@ git+https://github.com/dbt-labs/dbt-core.git#egg=dbt-core&subdirectory=core
 git+https://github.com/dbt-labs/dbt-adapters.git#egg=dbt-adapters&subdirectory=dbt-adapters
 git+https://github.com/dbt-labs/dbt-adapters.git#subdirectory=dbt-tests-adapter
 pytest==8.0.1
-twine==5.1.1
+twine==6.1.0
 wheel==0.44.0
 pre-commit==3.5.0;python_version<"3.9"
 pre-commit==3.8.0;python_version>="3.9"
