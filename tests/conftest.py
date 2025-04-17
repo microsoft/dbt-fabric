@@ -12,11 +12,12 @@ def dbt_profile_target(dbt_profile_target_update):
     target = {
         "type": "fabric",
         "driver": os.getenv("FABRIC_TEST_DRIVER", "ODBC Driver 18 for SQL Server"),
-        "host": os.getenv("FABRIC_TEST_ENDPOINT"),
+        "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
         "authentication": "auto",
         "database": os.getenv("FABRIC_TEST_DWH_NAME"),
         "retries": 2,
         "threads": int(os.getenv("FABRIC_TEST_THREADS", 1)),
+        "lakehouse_id": os.getenv("FABRIC_TEST_LAKEHOUSE_ID"),
     }
 
     target.update(dbt_profile_target_update)

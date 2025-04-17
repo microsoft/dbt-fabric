@@ -10,9 +10,9 @@ from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 
 class FabricTokenProvider:
-    AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
+    AZURE_CREDENTIAL_SCOPE = "https://database.windows.net/.default"
     SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
-    FABRIC_CREDENTIAL_SCOPE = "https://analysis.windows.net/powerbi/api"
+    FABRIC_CREDENTIAL_SCOPE = "https://analysis.windows.net/powerbi/api/.default"
     _tokens: dict[str, AccessToken] = {}
     SQL_COPT_SS_ACCESS_TOKEN = 1256  # see source in docstring
 
@@ -23,6 +23,8 @@ class FabricTokenProvider:
         if self.credentials.token_scope:
             return self.credentials.token_scope
 
+        if not self.credentials.host and self.credentials.workspace_id:
+            return self.FABRIC_CREDENTIAL_SCOPE
         if "azuresynapse.net" in self.credentials.host.lower():
             return self.SYNAPSE_CREDENTIAL_SCOPE
         if "fabric.microsoft.com" in self.credentials.host.lower():
@@ -89,7 +91,10 @@ class FabricTokenProvider:
                 azure_auth_function = azure_auth_functions[authentication]
                 self._tokens[scope] = azure_auth_function(scope)
 
-        return self._tokens[scope]
+        token = self._tokens.get(scope)
+        if token:
+            return token.token
+        return None
 
     @staticmethod
     def convert_bytes_to_mswindows_byte_string(value: bytes) -> bytes:
@@ -97,8 +102,8 @@ class FabricTokenProvider:
         return struct.pack("<i", len(encoded_bytes)) + encoded_bytes
 
     @staticmethod
-    def convert_access_token_to_mswindows_byte_string(token: AccessToken) -> bytes:
-        value = bytes(token.token, "UTF-8")
+    def convert_access_token_to_mswindows_byte_string(token: str) -> bytes:
+        value = bytes(token, "UTF-8")
         return FabricTokenProvider.convert_bytes_to_mswindows_byte_string(value)
 
     def get_pyodbc_attributes(self) -> dict[int, bytes]:

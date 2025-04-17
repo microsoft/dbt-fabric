@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 import agate
 import dbt_common.exceptions
@@ -14,6 +14,9 @@ from dbt_common.utils import (
 
 from dbt.adapters.base import Column as BaseColumn
 from dbt.adapters.base import PythonJobHelper
+from dbt.adapters.base.connections import (
+    AdapterResponse,
+)
 from dbt.adapters.base.impl import ConstraintSupport
 from dbt.adapters.base.meta import available
 from dbt.adapters.base.relation import BaseRelation
@@ -257,6 +260,9 @@ class FabricAdapter(SQLAdapter):
         return {
             "livy": FabricLivyHelper,
         }
+
+    def generate_python_submission_response(self, submission_result: Any) -> AdapterResponse:
+        raise NotImplementedError("Not implemented yet")
 
 
 COLUMNS_EQUAL_SQL = """

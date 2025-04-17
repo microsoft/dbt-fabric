@@ -407,6 +407,7 @@ dependencies = [
     { name = "dbt-adapters" },
     { name = "dbt-common" },
     { name = "pyodbc" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -424,6 +425,7 @@ requires-dist = [
     { name = "dbt-adapters", specifier = ">=1.1.1,<2.0" },
     { name = "dbt-common", specifier = ">=1.0.4,<2.0" },
     { name = "pyodbc", specifier = ">=4.0.35" },
+    { name = "requests", specifier = ">=2.32.3" },
 ]
 
 [package.metadata.requires-dev]

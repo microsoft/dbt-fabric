@@ -7,7 +7,7 @@ from dbt.adapters.contracts.connection import Credentials
 @dataclass
 class FabricCredentials(Credentials):
     driver: str
-    host: str
+    host: Optional[str] = None
     database: str
     schema: str
     UID: Optional[str] = None
@@ -26,7 +26,8 @@ class FabricCredentials(Credentials):
     schema_authorization: Optional[str] = None
     login_timeout: Optional[int] = 0
     query_timeout: Optional[int] = 0
-    livy_session_connection_string: Optional[str] = None
+    workspace_id: Optional[str] = None
+    lakehouse_id: Optional[str] = None
 
     _ALIASES = {
         "user": "UID",
@@ -57,22 +58,23 @@ class FabricCredentials(Credentials):
             self.authentication = "ActiveDirectoryServicePrincipal"
 
         return (
-            "server",
+            "host",
             "database",
             "schema",
             "UID",
             "client_id",
             "authentication",
             "token_scope",
+            "workspace_id",
+            "lakehouse_id",
             "encrypt",
             "trust_cert",
             "retries",
             "login_timeout",
             "query_timeout",
             "trace_flag",
-            "livy_session_connection_string",
         )
 
     @property
     def unique_field(self):
-        return self.host
+        return self.host or self.workspace_id

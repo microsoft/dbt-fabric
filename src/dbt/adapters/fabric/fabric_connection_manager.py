@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 import agate
 import dbt_common.exceptions
 import pyodbc
+import requests
 from dbt_common.clients.agate_helper import empty_table
 from dbt_common.events.contextvars import get_node_info
 from dbt_common.events.functions import fire_event
@@ -125,6 +126,7 @@ def byte_array_to_datetime(value: bytes) -> dt.datetime:
 class FabricConnectionManager(SQLConnectionManager):
     TYPE = "fabric"
     _fabric_token_provider = None
+    _host = None
 
     @contextmanager
     def exception_handler(self, sql):
@@ -161,6 +163,41 @@ class FabricConnectionManager(SQLConnectionManager):
         return cls._fabric_token_provider
 
     @classmethod
+    def get_warehouse_connection_string(cls, credentials: FabricCredentials) -> str:
+        token = cls.get_fabric_token_provider(credentials).get_token(
+            FabricTokenProvider.FABRIC_CREDENTIAL_SCOPE
+        )
+        continuation_token = "-1"
+        while continuation_token:
+            url = f"https://api.fabric.microsoft.com/v1/workspaces/{credentials.workspace_id}/warehouses"
+            params = {}
+            if continuation_token and continuation_token != "-1":
+                params["continuationToken"] = continuation_token
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            }
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            continuation_token = response.json().get("continuationToken")
+            for warehouse in response.json().get("value", []):
+                if warehouse["displayName"] == credentials.database:
+                    return warehouse["properties"]["connectionString"]
+
+    @classmethod
+    def get_host(cls, credentials: FabricCredentials) -> str:
+        if cls._host is None:
+            if credentials.host:
+                cls._host = credentials.host
+            elif credentials.workspace_id and credentials.lakehouse_id:
+                cls._host = cls.get_warehouse_connection_string(credentials)
+            else:
+                raise dbt_common.exceptions.DbtConfigError(
+                    "Either host or workspace_id must be provided."
+                )
+        return cls._host
+
+    @classmethod
     def open(cls, connection: Connection) -> Connection:
         if connection.state == ConnectionState.OPEN:
             logger.debug("Connection is already open, skipping open.")
@@ -170,12 +207,7 @@ class FabricConnectionManager(SQLConnectionManager):
 
         con_str = [f"DRIVER={{{credentials.driver}}}"]
 
-        if "\\" in credentials.host:
-            # If there is a backslash \ in the host name, the host is a
-            # SQL Server named instance. In this case then port number has to be omitted.
-            con_str.append(f"SERVER={credentials.host}")
-        else:
-            con_str.append(f"SERVER={credentials.host}")
+        con_str.append(f"SERVER={cls.get_host(credentials)}")
 
         con_str.append(f"Database={credentials.database}")
         con_str.append("Pooling=true")
