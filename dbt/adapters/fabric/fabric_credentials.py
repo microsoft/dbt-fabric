@@ -18,7 +18,9 @@ class FabricCredentials(Credentials):
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     access_token: Optional[str] = None
-    authentication: Optional[str] = "ActiveDirectoryServicePrincipal"
+    # Added for access token expiration for oAuth and integration tests scenarios.
+    access_token_expires_on: Optional[int] = 0
+    authentication: str = "ActiveDirectoryServicePrincipal"
     encrypt: Optional[bool] = True  # default value in MS ODBC Driver 18 as well
     trust_cert: Optional[bool] = False  # default value in MS ODBC Driver 18 as well
     retries: int = 3
