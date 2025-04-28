@@ -53,8 +53,8 @@ def _profile_ci_azure_base():
     return {
         **_all_profiles_base(),
         **{
-            "host": os.getenv("DBT_AZURESQL_SERVER"),
-            "database": os.getenv("DBT_AZURESQL_DB"),
+            "host": os.getenv("DBT_AZURESQL_SERVER", os.getenv("FABRIC_TEST_HOST")),
+            "database": os.getenv("DBT_AZURESQL_DB", os.getenv("FABRIC_TEST_DBNAME")),
             "encrypt": True,
             "trust_cert": True,
             "trace_flag": False,

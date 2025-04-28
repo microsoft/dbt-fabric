@@ -3,7 +3,7 @@ import struct
 import time
 from contextlib import contextmanager
 from itertools import chain, repeat
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type, Union
 
 import agate
 import dbt_common.exceptions
@@ -12,7 +12,7 @@ from azure.core.credentials import AccessToken
 from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
 from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
 from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
+from dbt.adapters.events.types import AdapterEventDebug, ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.sql import SQLConnectionManager
 from dbt_common.clients.agate_helper import empty_table
 from dbt_common.events.contextvars import get_node_info
@@ -182,7 +182,7 @@ AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
 
 def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
     """
-    Get the pyodbc attrs before.
+    Get the pyodbc attributes for authentication.
 
     Parameters
     ----------
@@ -191,63 +191,34 @@ def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
 
     Returns
     -------
-    out : Dict
-        The pyodbc attrs before.
-
-    Source
-    ------
-    Authentication for SQL server with an access token:
-    https://docs.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver15#authenticating-with-an-access-token
+    Dict
+        The pyodbc attributes for authentication.
     """
     global _TOKEN
-    attrs_before: Dict
+    sql_copt_ss_access_token = 1256  # ODBC constant for access token
     MAX_REMAINING_TIME = 300
 
-    authentication = str(credentials.authentication).lower()
-    if authentication in AZURE_AUTH_FUNCTIONS:
-        time_remaining = (_TOKEN.expires_on - time.time()) if _TOKEN else MAX_REMAINING_TIME
+    if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
+        if not _TOKEN or (_TOKEN.expires_on - time.time() < MAX_REMAINING_TIME):
+            _TOKEN = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](credentials)
+        return {sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(_TOKEN)}
 
-        if _TOKEN is None or (time_remaining < MAX_REMAINING_TIME):
-            azure_auth_function = AZURE_AUTH_FUNCTIONS[authentication]
-            _TOKEN = azure_auth_function(credentials)
+    if credentials.authentication.lower() == "activedirectoryaccesstoken":
+        if credentials.access_token is None or credentials.access_token_expires_on is None:
+            raise ValueError(
+                "Access token and access token expiry are required for ActiveDirectoryAccessToken authentication."
+            )
+        _TOKEN = AccessToken(
+            token=credentials.access_token,
+            expires_on=int(
+                time.time() + 4500.0
+                if credentials.access_token_expires_on == 0
+                else credentials.access_token_expires_on
+            ),
+        )
+        return {sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(_TOKEN)}
 
-        token_bytes = convert_access_token_to_mswindows_byte_string(_TOKEN)
-        sql_copt_ss_access_token = 1256  # see source in docstring
-        attrs_before = {sql_copt_ss_access_token: token_bytes}
-    else:
-        attrs_before = {}
-
-    return attrs_before
-
-
-def get_pyodbc_attrs_before_accesstoken(accessToken: str) -> Dict:
-    """
-    Get the pyodbc attrs before.
-
-    Parameters
-    ----------
-    credentials : Access Token for Integration Tests
-        Credentials.
-
-    Returns
-    -------
-    out : Dict
-        The pyodbc attrs before.
-
-    Source
-    ------
-    Authentication for SQL server with an access token:
-    https://docs.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver15#authenticating-with-an-access-token
-    """
-
-    access_token_utf16 = accessToken.encode("utf-16-le")
-    token_struct = struct.pack(
-        f"<I{len(access_token_utf16)}s", len(access_token_utf16), access_token_utf16
-    )
-    sql_copt_ss_access_token = 1256  # see source in docstring
-    attrs_before = {sql_copt_ss_access_token: token_struct}
-
-    return attrs_before
+    return {}
 
 
 def bool_to_connection_string_arg(key: str, value: bool) -> str:
@@ -362,6 +333,8 @@ class FabricConnectionManager(SQLConnectionManager):
 
         assert credentials.authentication is not None
 
+        # Access token authentication does not additional connection string parameters. The access token
+        # is passed in the pyodbc attributes.
         if (
             "ActiveDirectory" in credentials.authentication
             and credentials.authentication != "ActiveDirectoryAccessToken"
@@ -429,10 +402,9 @@ class FabricConnectionManager(SQLConnectionManager):
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
             pyodbc.pooling = True
-            if credentials.authentication == "ActiveDirectoryAccessToken":
-                attrs_before = get_pyodbc_attrs_before_accesstoken(credentials.access_token)
-            else:
-                attrs_before = get_pyodbc_attrs_before_credentials(credentials)
+
+            # pyodbc attributes includes the access token provided by the user if required.
+            attrs_before = get_pyodbc_attrs_before_credentials(credentials)
 
             handle = pyodbc.connect(
                 con_str_concat,
@@ -469,7 +441,58 @@ class FabricConnectionManager(SQLConnectionManager):
         auto_begin: bool = True,
         bindings: Optional[Any] = None,
         abridge_sql_log: bool = False,
+        retryable_exceptions: Tuple[Type[Exception], ...] = (),
+        retry_limit: int = 2,
     ) -> Tuple[Connection, Any]:
+        """
+        Retry function encapsulated here to avoid commitment to some
+        user-facing interface. Right now, Redshift commits to a 1 second
+        retry timeout so this serves as a default.
+        """
+
+        def _execute_query_with_retry(
+            cursor: Any,
+            sql: str,
+            bindings: Optional[Any],
+            retryable_exceptions: Tuple[Type[Exception], ...],
+            retry_limit: int,
+            attempt: int,
+        ):
+            """
+            A success sees the try exit cleanly and avoid any recursive
+            retries. Failure begins a sleep and retry routine.
+            """
+            try:
+                # pyodbc does not handle a None type binding!
+                if bindings is None:
+                    cursor.execute(sql)
+                else:
+                    bindings = [
+                        binding if not isinstance(binding, dt.datetime) else binding.isoformat()
+                        for binding in bindings
+                    ]
+                    cursor.execute(sql, bindings)
+            except retryable_exceptions as e:
+                # Cease retries and fail when limit is hit.
+                if attempt >= retry_limit:
+                    raise e
+
+                fire_event(
+                    AdapterEventDebug(
+                        message=f"Got a retryable error {type(e)}. {retry_limit-attempt} retries left. Retrying in 1 second.\nError:\n{e}"
+                    )
+                )
+                time.sleep(1)
+
+                return _execute_query_with_retry(
+                    cursor=cursor,
+                    sql=sql,
+                    bindings=bindings,
+                    retryable_exceptions=retryable_exceptions,
+                    retry_limit=retry_limit,
+                    attempt=attempt + 1,
+                )
+
         connection = self.get_thread_connection()
 
         if auto_begin and connection.transaction_open is False:
@@ -498,16 +521,16 @@ class FabricConnectionManager(SQLConnectionManager):
             pre = time.time()
 
             cursor = connection.handle.cursor()
+            credentials = self.get_credentials(connection.credentials)
 
-            # pyodbc does not handle a None type binding!
-            if bindings is None:
-                cursor.execute(sql)
-            else:
-                bindings = [
-                    binding if not isinstance(binding, dt.datetime) else binding.isoformat()
-                    for binding in bindings
-                ]
-                cursor.execute(sql, bindings)
+            _execute_query_with_retry(
+                cursor=cursor,
+                sql=sql,
+                bindings=bindings,
+                retryable_exceptions=retryable_exceptions,
+                retry_limit=credentials.retries if credentials.retries > 3 else retry_limit,
+                attempt=1,
+            )
 
             # convert DATETIMEOFFSET binary structures to datetime ojbects
             # https://github.com/mkleehammer/pyodbc/issues/134#issuecomment-281739794
@@ -568,4 +591,3 @@ class FabricConnectionManager(SQLConnectionManager):
         while cursor.nextset():
             pass
         return response, table
-      

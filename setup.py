@@ -66,7 +66,7 @@ setup(
     packages=find_namespace_packages(include=["dbt", "dbt.*"]),
     include_package_data=True,
     install_requires=[
-        "pyodbc>=4.0.35,<5.2.0",
+        "pyodbc>=5.2.0",
         "azure-identity>=1.12.0",
         "dbt-common>=1.0.4,<2.0",
         "dbt-core>=1.8.0",
