@@ -208,11 +208,10 @@ def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
             raise ValueError(
                 "Access token is required for ActiveDirectoryAccessToken authentication."
             )
-        return {
-            sql_copt_ss_access_token: convert_bytes_to_mswindows_byte_string(
-                credentials.access_token.encode("utf-16-le")
-            )
-        }
+        _TOKEN = AccessToken(
+            token=credentials.access_token, expires_on=credentials.access_token_expires_on
+        )
+        return {sql_copt_ss_access_token: convert_bytes_to_mswindows_byte_string(_TOKEN)}
 
     return {}
 
