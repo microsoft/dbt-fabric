@@ -204,14 +204,19 @@ def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
         return {sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(_TOKEN)}
 
     if credentials.authentication.lower() == "activedirectoryaccesstoken":
-        if credentials.access_token is None:
+        if credentials.access_token is None or credentials.access_token_expires_on is None:
             raise ValueError(
-                "Access token is required for ActiveDirectoryAccessToken authentication."
+                "Access token and access token expiry are required for ActiveDirectoryAccessToken authentication."
             )
         _TOKEN = AccessToken(
-            token=credentials.access_token, expires_on=credentials.access_token_expires_on
+            token=credentials.access_token,
+            expires_on=int(
+                time.time() + 4500.0
+                if credentials.access_token_expires_on == 0
+                else credentials.access_token_expires_on
+            ),
         )
-        return {sql_copt_ss_access_token: convert_bytes_to_mswindows_byte_string(_TOKEN)}
+        return {sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(_TOKEN)}
 
     return {}
 
