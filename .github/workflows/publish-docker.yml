@@ -32,7 +32,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5.1.0
+        uses: docker/build-push-action@v6.17.0
         with:
           context: devops
           build-args: PYTHON_VERSION=${{ matrix.python_version }}
