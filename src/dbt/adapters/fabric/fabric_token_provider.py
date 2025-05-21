@@ -11,8 +11,9 @@ from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 class FabricTokenProvider:
     AZURE_CREDENTIAL_SCOPE = "https://database.windows.net/.default"
-    SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
     FABRIC_CREDENTIAL_SCOPE = "https://analysis.windows.net/powerbi/api/.default"
+    SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
+    FABRIC_SPARK_CREDENTIAL_SCOPE = "pbi"
     _tokens: dict[str, AccessToken] = {}
     SQL_COPT_SS_ACCESS_TOKEN = 1256  # see source in docstring
 
@@ -26,22 +27,22 @@ class FabricTokenProvider:
         if not self.credentials.host and self.credentials.workspace_id:
             return self.FABRIC_CREDENTIAL_SCOPE
         if "azuresynapse.net" in self.credentials.host.lower():
-            return self.SYNAPSE_CREDENTIAL_SCOPE
+            return self.SYNAPSE_SPARK_CREDENTIAL_SCOPE
         if "fabric.microsoft.com" in self.credentials.host.lower():
             return self.FABRIC_CREDENTIAL_SCOPE
         if "database.windows.net" in self.credentials.host.lower():
             return self.AZURE_CREDENTIAL_SCOPE
         if "synapse" in self.authentication.lower():
-            return self.SYNAPSE_CREDENTIAL_SCOPE
+            return self.SYNAPSE_SPARK_CREDENTIAL_SCOPE
         if "fabric" in self.authentication.lower():
-            return self.FABRIC_CREDENTIAL_SCOPE
+            return self.FABRIC_SPARK_CREDENTIAL_SCOPE
         return self.FABRIC_CREDENTIAL_SCOPE
 
     @staticmethod
     def get_mssparkutils_access_token(scope: str) -> AccessToken:
-        from notebookutils import mssparkutils
+        from notebookutils import credentials
 
-        aad_token = mssparkutils.credentials.getToken(scope)
+        aad_token = credentials.getToken(scope)
         expires_on = int(time.time() + 4500.0)
         token = AccessToken(
             token=aad_token,
