@@ -79,7 +79,7 @@ class FabricTokenProvider:
             "fabricspark": FabricTokenProvider.get_mssparkutils_access_token,
         }
 
-        scope = scope or self.credentials.scope or self.get_token_scope()
+        scope = scope or self.credentials.token_scope or self.get_token_scope()
         current_token = self._tokens.get(scope)
 
         authentication = str(self.credentials.authentication).lower()
