@@ -5,7 +5,7 @@ description = "A Microsoft Fabric Synapse Data Warehouse adapter plugin for dbt"
 readme = "README.md"
 license = "MIT"
 authors = [
-    {name = "Pradeep Srikakolapu"}
+    {name = "Sam Debruyn"}
 ]
 requires-python = ">=3.9,<3.14"
 classifiers = [
