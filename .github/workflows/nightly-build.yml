@@ -25,7 +25,7 @@ jobs:
       - name: Set nightly version
         run: |
           # Set base version
-          BASE_VERSION="1.9.4"
+          BASE_VERSION="1.9.6"
           # Generate date suffix in format YYYYMMDD
           DATE_SUFFIX=$(date +"%Y%m%d")
           # Create dev version according to PEP 440: X.Y.Z.devYYYYMMDD
