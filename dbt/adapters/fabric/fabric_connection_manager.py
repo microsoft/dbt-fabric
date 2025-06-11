@@ -132,7 +132,7 @@ def get_cli_access_token(credentials: FabricCredentials) -> AccessToken:
         Access token.
     """
     _ = credentials
-    token = AzureCliCredential().get_token(AZURE_CREDENTIAL_SCOPE)
+    token = AzureCliCredential(credentials.login_timeout).get_token(AZURE_CREDENTIAL_SCOPE)
     return token
 
 
