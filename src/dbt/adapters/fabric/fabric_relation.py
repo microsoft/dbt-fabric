@@ -10,7 +10,7 @@ from dbt.adapters.utils import classproperty
 class FabricRelation(BaseRelation):
     type: Optional[FabricRelationType] = None  # type: ignore
     quote_policy: FabricQuotePolicy = field(default_factory=lambda: FabricQuotePolicy())
-    require_alias: bool = False
+    require_alias: bool = True
 
     @classproperty
     def get_relation_type(cls) -> Type[FabricRelationType]:
