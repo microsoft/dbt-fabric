@@ -231,7 +231,7 @@ class FabricConnectionManager(SQLConnectionManager):
         if cls._host is None:
             if credentials.host:
                 cls._host = credentials.host
-            elif credentials.workspace_id:
+            elif credentials.workspace_id or credentials.workspace_name:
                 cls._host = cls.get_warehouse_connection_string(credentials)
             else:
                 raise dbt_common.exceptions.DbtConfigError(
