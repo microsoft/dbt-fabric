@@ -27,6 +27,7 @@ class FabricCredentials(Credentials):
     login_timeout: Optional[int] = 0
     query_timeout: Optional[int] = 0
     workspace_id: Optional[str] = None
+    workspace_name: Optional[str] = None
     lakehouse_id: Optional[str] = None
 
     _ALIASES = {
@@ -66,6 +67,7 @@ class FabricCredentials(Credentials):
             "authentication",
             "token_scope",
             "workspace_id",
+            "workspace_name",
             "lakehouse_id",
             "encrypt",
             "trust_cert",
@@ -77,4 +79,4 @@ class FabricCredentials(Credentials):
 
     @property
     def unique_field(self):
-        return self.host or self.workspace_id
+        return self.host or self.workspace_id or self.workspace_name
