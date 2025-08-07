@@ -24,7 +24,9 @@ class FabricTokenProvider:
         if self.credentials.token_scope:
             return self.credentials.token_scope
 
-        if not self.credentials.host and self.credentials.workspace_id:
+        if not self.credentials.host and (
+            self.credentials.workspace_id or self.credentials.workspace_name
+        ):
             return self.FABRIC_CREDENTIAL_SCOPE
         if "synapse" in self.credentials.authentication.lower():
             return self.SYNAPSE_SPARK_CREDENTIAL_SCOPE
