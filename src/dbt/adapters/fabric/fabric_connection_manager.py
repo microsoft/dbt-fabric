@@ -162,7 +162,7 @@ class FabricConnectionManager(SQLConnectionManager):
         if cls._fabric_token_provider is None:
             cls._fabric_token_provider = FabricTokenProvider(credentials)
         return cls._fabric_token_provider
-    
+
     @classmethod
     def get_workspace_id(cls, credentials: FabricCredentials) -> str:
         if credentials.workspace_id:
@@ -214,7 +214,7 @@ class FabricConnectionManager(SQLConnectionManager):
         warehouses = response.json().get("value", [])
         if len(warehouses) > 0:
             return warehouses[0]["properties"]["connectionString"]
-        
+
         # then we try to find it in any lakehouse (also have the same connection string)
         url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/lakehouses"
         response = requests.get(url, headers=headers)
