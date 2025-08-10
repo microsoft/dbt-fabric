@@ -16,11 +16,19 @@
             {% endfor %}
         {%endset%}
 
-        INSERT INTO {{relation}} ({{listColumns}})
-        SELECT {{listColumns}} FROM {{tmp_vw_relation}} {{ query_label }}
+        {% if not adapter.behavior.empty.no_warn %}
+            INSERT INTO {{relation}} ({{listColumns}})
+            SELECT {{listColumns}} FROM {{tmp_vw_relation}} {{ query_label }}
+        {% endif %}
+
 
     {%- else %}
         {%- set query_label_option = query_label.replace("'", "''") -%}
-        EXEC('CREATE TABLE {{relation}} AS SELECT * FROM {{tmp_vw_relation}} {{ query_label_option }}');
+        {% if adapter.behavior.empty.no_warn %}
+            EXEC('CREATE TABLE {{relation}} AS SELECT * FROM {{tmp_vw_relation}} WHERE 0=1 {{ query_label_option }}');
+        {% else %}
+            EXEC('CREATE TABLE {{relation}} AS SELECT * FROM {{tmp_vw_relation}} {{ query_label_option }}');
+        {% endif %}
+
     {% endif %}
 {% endmacro %}
