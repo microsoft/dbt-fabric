@@ -37,6 +37,9 @@
     -- Dropping temp view relation
     {{ adapter.drop_relation(tmp_vw_relation) }}
 
+    -- Add constraints including FK relation.
+    {{ build_model_constraints(target_relation) }}
+
   {% else %}
 
     {%- set temp_relation = make_temp_relation(target_relation)-%}

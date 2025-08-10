@@ -132,7 +132,9 @@ def get_cli_access_token(credentials: FabricCredentials) -> AccessToken:
         Access token.
     """
     _ = credentials
-    token = AzureCliCredential().get_token(AZURE_CREDENTIAL_SCOPE)
+    token = AzureCliCredential().get_token(
+        AZURE_CREDENTIAL_SCOPE, timeout=getattr(credentials, "login_timeout", None)
+    )
     return token
 
 
@@ -150,7 +152,9 @@ def get_auto_access_token(credentials: FabricCredentials) -> AccessToken:
     out : AccessToken
         The access token.
     """
-    token = DefaultAzureCredential().get_token(AZURE_CREDENTIAL_SCOPE)
+    token = DefaultAzureCredential().get_token(
+        AZURE_CREDENTIAL_SCOPE, timeout=getattr(credentials, "login_timeout", None)
+    )
     return token
 
 
@@ -168,7 +172,9 @@ def get_environment_access_token(credentials: FabricCredentials) -> AccessToken:
     out : AccessToken
         The access token.
     """
-    token = EnvironmentCredential().get_token(AZURE_CREDENTIAL_SCOPE)
+    token = EnvironmentCredential().get_token(
+        AZURE_CREDENTIAL_SCOPE, timeout=getattr(credentials, "login_timeout", None)
+    )
     return token
 
 

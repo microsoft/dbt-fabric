@@ -11,6 +11,7 @@ from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySuppor
 from dbt.adapters.events.types import SchemaCreation
 from dbt.adapters.sql import SQLAdapter
 from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
+from dbt_common.behavior_flags import BehaviorFlag
 from dbt_common.contracts.constraints import (
     ColumnLevelConstraint,
     ConstraintType,
@@ -43,6 +44,16 @@ class FabricAdapter(SQLAdapter):
         ConstraintType.primary_key: ConstraintSupport.ENFORCED,
         ConstraintType.foreign_key: ConstraintSupport.ENFORCED,
     }
+
+    @property
+    def _behavior_flags(self) -> List[BehaviorFlag]:
+        return [
+            {
+                "name": "empty",
+                "default": False,
+                "description": "When enabled, table and view materializations will be created as empty structures (no data).",
+            },
+        ]
 
     @available.parse(lambda *a, **k: [])
     def get_column_schema_from_query(self, sql: str) -> List[BaseColumn]:
