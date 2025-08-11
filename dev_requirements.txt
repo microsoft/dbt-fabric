@@ -7,7 +7,7 @@ pytest==8.0.1
 twine==5.1.1
 wheel==0.44.0
 pre-commit==3.5.0;python_version<"3.9"
-pre-commit==3.8.0;python_version>="3.9"
+pre-commit==4.3.0;python_version>="3.9"
 pytest-dotenv==0.5.2
 flaky==3.7.0
 pytest-xdist==3.5.0
