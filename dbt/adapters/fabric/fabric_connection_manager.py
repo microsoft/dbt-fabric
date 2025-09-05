@@ -100,6 +100,7 @@ def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToke
     out : AccessToken
         The access token.
     """
+    import notebookutils
     aad_token = notebookutils.getToken(SYNAPSE_SPARK_CREDENTIAL_SCOPE)
     expires_on = int(time.time() + 4500.0)
     token = AccessToken(
