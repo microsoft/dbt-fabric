@@ -23,7 +23,7 @@ from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
-SYNAPSE_SPARK_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
+SYNAPSE_SPARK_CREDENTIAL_SCOPE = "https://database.windows.net/"
 _TOKEN: Optional[AccessToken] = None
 AZURE_AUTH_FUNCTION_TYPE = Callable[[FabricCredentials], AccessToken]
 
