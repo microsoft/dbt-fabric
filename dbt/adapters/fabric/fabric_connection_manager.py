@@ -88,6 +88,7 @@ def convert_access_token_to_mswindows_byte_string(token: AccessToken) -> bytes:
     value = bytes(token.token, "UTF-8")
     return convert_bytes_to_mswindows_byte_string(value)
 
+
 def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToken:
     """
     Get an Azure access token by using mspsarkutils
