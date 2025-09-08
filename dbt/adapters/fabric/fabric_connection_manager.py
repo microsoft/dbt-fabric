@@ -114,7 +114,7 @@ def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToke
 
 def get_fabric_notebook_access_token(credentials: FabricCredentials) -> AccessToken:
     """
-    Get an Azure access token by using notebookutiles. Works in both Fabric pyspark and python notebooks.
+    Get an Azure access token by using notebookutils. Works in both Fabric pyspark and python notebooks.
     Parameters
     -----------
     credentials: FabricCredentials
