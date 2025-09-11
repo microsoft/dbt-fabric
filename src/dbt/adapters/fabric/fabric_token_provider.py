@@ -67,7 +67,7 @@ class FabricTokenProvider:
         token = EnvironmentCredential().get_token(scope)
         return token
 
-    def get_token(self, scope: Optional[str] = None) -> str | None:
+    def get_token(self, scope: Optional[str] = None, used_for_pyodbc: bool = False) -> str | None:
         if self.credentials.access_token:
             return self.credentials.access_token
 
@@ -94,7 +94,7 @@ class FabricTokenProvider:
         if authentication in azure_auth_functions:
             azure_auth_function = azure_auth_functions[authentication]
             self._tokens[scope] = azure_auth_function(scope)
-        elif authentication == "activedirectoryserviceprincipal":
+        elif authentication == "activedirectoryserviceprincipal" and not used_for_pyodbc:
             client_id = self.credentials.client_id
             client_secret = self.credentials.client_secret
             tenant_id = self.credentials.tenant_id
@@ -122,7 +122,7 @@ class FabricTokenProvider:
 
     def get_pyodbc_attributes(self) -> dict[int, bytes]:
         attrs_before: Dict
-        token = self.get_token()
+        token = self.get_token(used_for_pyodbc=True)
         if token:
             token_bytes = self.convert_access_token_to_mswindows_byte_string(token)
             attrs_before = {self.SQL_COPT_SS_ACCESS_TOKEN: token_bytes}
