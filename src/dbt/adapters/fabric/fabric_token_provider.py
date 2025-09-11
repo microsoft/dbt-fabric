@@ -4,7 +4,7 @@ from itertools import chain, repeat
 from typing import Dict, Optional
 
 from azure.core.credentials import AccessToken
-from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
+from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential, ClientSecretCredential
 
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
@@ -67,7 +67,7 @@ class FabricTokenProvider:
         token = EnvironmentCredential().get_token(scope)
         return token
 
-    def get_token(self, scope: Optional[str] = None) -> str:
+    def get_token(self, scope: Optional[str] = None) -> str | None:
         if self.credentials.access_token:
             return self.credentials.access_token
 
@@ -82,17 +82,28 @@ class FabricTokenProvider:
         }
 
         scope = scope or self.credentials.token_scope or self.get_token_scope()
-        current_token = self._tokens.get(scope)
-
         authentication = str(self.credentials.authentication).lower()
-        if authentication in azure_auth_functions:
-            time_remaining = (
-                (current_token.expires_on - time.time()) if current_token else MAX_REMAINING_TIME
-            )
 
-            if current_token is None or (time_remaining < MAX_REMAINING_TIME):
-                azure_auth_function = azure_auth_functions[authentication]
-                self._tokens[scope] = azure_auth_function(scope)
+        current_token = self._tokens.get(scope)
+        time_remaining = (
+            (current_token.expires_on - time.time()) if current_token else MAX_REMAINING_TIME
+        )
+        if current_token and time_remaining >= MAX_REMAINING_TIME:
+            return current_token.token
+        
+        if authentication in azure_auth_functions:
+            azure_auth_function = azure_auth_functions[authentication]
+            self._tokens[scope] = azure_auth_function(scope)
+        elif authentication == "activedirectoryserviceprincipal":
+            client_id = self.credentials.client_id
+            client_secret = self.credentials.client_secret
+            tenant_id = self.credentials.tenant_id
+            cred = ClientSecretCredential(
+                client_id=client_id,
+                client_secret=client_secret,
+                tenant_id=tenant_id,
+            )
+            self._tokens[scope] = cred.get_token(scope)
 
         token = self._tokens.get(scope)
         if token:

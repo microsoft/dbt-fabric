@@ -29,6 +29,7 @@ class FabricCredentials(Credentials):
     workspace_id: Optional[str] = None
     workspace_name: Optional[str] = None
     lakehouse_id: Optional[str] = None
+    tenant_id: Optional[str] = None
 
     _ALIASES = {
         "user": "UID",
@@ -64,6 +65,7 @@ class FabricCredentials(Credentials):
             "schema",
             "UID",
             "client_id",
+            "tenant_id",
             "authentication",
             "token_scope",
             "workspace_id",
