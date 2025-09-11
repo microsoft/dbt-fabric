@@ -60,7 +60,7 @@ class LivySession:
 
     @property
     def _access_token(self) -> str:
-        return self._token_provider.get_token(self._TOKEN_SCOPE)
+        return self._token_provider.get_api_token()
 
     def _wait_for_session_ready(self) -> None:
         attempts = 0

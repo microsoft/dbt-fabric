@@ -171,9 +171,7 @@ class FabricConnectionManager(SQLConnectionManager):
             raise dbt_common.exceptions.DbtConfigError(
                 "Either workspace_id or workspace_name must be provided."
             )
-        token = cls.get_fabric_token_provider(credentials).get_token(
-            FabricTokenProvider.FABRIC_CREDENTIAL_SCOPE
-        )
+        token = cls.get_fabric_token_provider(credentials).get_api_token()
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
@@ -195,9 +193,7 @@ class FabricConnectionManager(SQLConnectionManager):
 
     @classmethod
     def get_warehouse_connection_string(cls, credentials: FabricCredentials) -> str:
-        token = cls.get_fabric_token_provider(credentials).get_token(
-            FabricTokenProvider.FABRIC_CREDENTIAL_SCOPE
-        )
+        token = cls.get_fabric_token_provider(credentials).get_api_token()
         workspace_id = cls.get_workspace_id(credentials)
 
         # first we try to find it in any warehouse (they all have the same connection string)
