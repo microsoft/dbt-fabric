@@ -9,3 +9,15 @@
     {% endif %}
 
 {% endmacro %}
+
+{% macro fabric__get_incremental_merge_sql(arg_dict) %}
+
+    {%- set target = arg_dict["target_relation"] -%}
+    {%- set source = arg_dict["temp_relation"] -%}
+    {%- set unique_key = arg_dict["unique_key"] -%}
+    {%- set dest_columns = arg_dict["dest_columns"] -%}
+    {%- set incremental_predicates = [] if arg_dict.get('incremental_predicates') is none else arg_dict.get('incremental_predicates') -%}
+
+    {% do return(fabric__get_merge_sql(target, source, unique_key, dest_columns, incremental_predicates)) %}
+
+{% endmacro %}
