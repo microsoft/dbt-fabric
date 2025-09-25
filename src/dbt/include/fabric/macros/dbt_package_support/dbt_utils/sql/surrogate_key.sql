@@ -48,7 +48,7 @@
     {%- if col_type == None -%}
         {%- set col_type = var(
             "tsql_utils_surrogate_key_col_type",
-            "varchar(8000)"
+            "varchar(max)"
         ) -%}
     {%- endif -%}
 
