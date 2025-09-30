@@ -60,6 +60,10 @@
 {% endmacro %}
 
 {% macro fabric__get_incremental_microbatch_sql(arg_dict) %}
+    {% if arg_dict["unique_key"] %}
+        {% do return(adapter.dispatch('get_incremental_merge_sql', 'dbt')(arg_dict)) %}
+    {% endif %}
+
     {%- set target = arg_dict["target_relation"] -%}
     {%- set source = arg_dict["temp_relation"] -%}
     {%- set dest_columns = arg_dict["dest_columns"] -%}
