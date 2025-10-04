@@ -24,4 +24,3 @@ class FabricRelation(BaseRelation):
             return f"(select * from {rendered} where 1=0) AS {self._render_limited_alias()}"
         else:
             return f"(select TOP {self.limit} * from {rendered}) AS {self._render_limited_alias()}"
-

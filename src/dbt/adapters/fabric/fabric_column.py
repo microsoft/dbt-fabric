@@ -31,7 +31,7 @@ class FabricColumn(Column):
 
     def is_integer(self):
         return super().is_integer() or self.dtype.lower() == "int"
-    
+
     def is_string(self) -> bool:
         return self.dtype.lower() in ["varchar", "char"]
 

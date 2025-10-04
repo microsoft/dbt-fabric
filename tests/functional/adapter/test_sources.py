@@ -30,7 +30,7 @@ class TestSourcesFabric:
             "v_select_from_source_regular.sql": config_materialized_view
             + select_from_source_regular,
             "t_select_from_source_regular.sql": config_materialized_table
-            + select_from_source_regular
+            + select_from_source_regular,
         }
 
     def test_dbt_run(self, project: TestProjInfo):
