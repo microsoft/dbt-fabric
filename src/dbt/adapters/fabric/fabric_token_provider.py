@@ -1,4 +1,3 @@
-import re
 import struct
 import time
 from itertools import chain, repeat

@@ -1,14 +1,12 @@
 import datetime as dt
 import struct
 import time
-import urllib.parse
 from contextlib import contextmanager
 from typing import Any, Dict, Optional, Tuple, Union
 
 import agate
 import dbt_common.exceptions
 import pyodbc
-import requests
 from dbt_common.clients.agate_helper import empty_table
 from dbt_common.events.contextvars import get_node_info
 from dbt_common.events.functions import fire_event
@@ -18,6 +16,7 @@ from dbt.adapters.contracts.connection import AdapterResponse, Connection, Conne
 from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.fabric import __version__
+from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 from dbt.adapters.sql import SQLConnectionManager
@@ -124,9 +123,8 @@ def byte_array_to_datetime(value: bytes) -> dt.datetime:
     )
 
 
-class FabricConnectionManager(SQLConnectionManager):
+class FabricConnectionManager(SQLConnectionManager, FabricApiClient):
     TYPE = "fabric"
-    _fabric_token_provider = None
     _host = None
 
     @contextmanager
@@ -156,71 +154,6 @@ class FabricConnectionManager(SQLConnectionManager):
                 raise
 
             raise dbt_common.exceptions.DbtRuntimeError(e)
-
-    @classmethod
-    def get_fabric_token_provider(cls, credentials: FabricCredentials) -> FabricTokenProvider:
-        if cls._fabric_token_provider is None:
-            cls._fabric_token_provider = FabricTokenProvider(credentials)
-        return cls._fabric_token_provider
-
-    @classmethod
-    def get_workspace_id(cls, credentials: FabricCredentials) -> str:
-        if credentials.workspace_id:
-            return credentials.workspace_id
-        if not credentials.workspace_name:
-            raise dbt_common.exceptions.DbtConfigError(
-                "Either workspace_id or workspace_name must be provided."
-            )
-        token = cls.get_fabric_token_provider(credentials).get_api_token()
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-        }
-        query_param = f"name eq '{credentials.workspace_name}'"
-        query_param_encoded = urllib.parse.quote_plus(query_param)
-        url = f"https://api.powerbi.com/v1.0/myorg/groups?$filter={query_param_encoded}"
-        response = requests.get(url, headers=headers)
-        if not response.status_code == 200:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to fetch workspace ID for {credentials.workspace_name}: {response.text}"
-            )
-        workspaces = response.json().get("value", [])
-        if len(workspaces) == 0:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"No workspace found with name {credentials.workspace_name}"
-            )
-        return workspaces[0]["id"]
-
-    @classmethod
-    def get_warehouse_connection_string(cls, credentials: FabricCredentials) -> str:
-        token = cls.get_fabric_token_provider(credentials).get_api_token()
-        workspace_id = cls.get_workspace_id(credentials)
-
-        # first we try to find it in any warehouse (they all have the same connection string)
-        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/warehouses"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-        }
-        response = requests.get(url, headers=headers)
-        if not response.status_code == 200:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to fetch warehouse connection string: {response.text}"
-            )
-        warehouses = response.json().get("value", [])
-        if len(warehouses) > 0:
-            return warehouses[0]["properties"]["connectionString"]
-
-        # then we try to find it in any lakehouse (also have the same connection string)
-        url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/lakehouses"
-        response = requests.get(url, headers=headers)
-        if not response.status_code == 200:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to fetch lakehouse connection string: {response.text}"
-            )
-        lakehouses = response.json().get("value", [])
-        if len(lakehouses) > 0:
-            return lakehouses[0]["properties"]["sqlEndpointProperties"]["connectionString"]
 
     @classmethod
     def get_host(cls, credentials: FabricCredentials) -> str:
