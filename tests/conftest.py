@@ -36,12 +36,12 @@ def profile_user(dbt_profile_target):
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--with-grants", action="store_true", default=False, help="run GRANT tests"
-    )
+    parser.addoption("--with-grants", action="store_true", default=False, help="run GRANT tests")
+
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "grants: mark test containing GRANT statements")
+
 
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--with-grants"):
@@ -51,6 +51,7 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "grants" in item.keywords:
             item.add_marker(skip_grants)
+
 
 @pytest.fixture(scope="class")
 def logs_dir(request, prefix):
