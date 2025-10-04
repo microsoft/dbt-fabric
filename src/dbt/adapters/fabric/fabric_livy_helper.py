@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 import requests
 
 from dbt.adapters.base import PythonJobHelper
+from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 
@@ -103,14 +104,14 @@ class LivySession:
             return LivySessionResult(success=False, error_message=str(e))
 
 
-class FabricLivyHelper(PythonJobHelper):
+class FabricLivyHelper(PythonJobHelper, FabricApiClient):
     _livy_session: Optional[LivySession] = None
 
     def __init__(self, parsed_model: Dict, credential: FabricCredentials) -> None:
         if not self._livy_session:
             self._livy_session = LivySession(
-                workspace_id=credential.workspace_id,
-                lakehouse_id=credential.lakehouse_id,
+                workspace_id=self.get_workspace_id(credential),
+                lakehouse_id=self.get_lakehouse_id(credential),
                 token_provider=FabricTokenProvider(credential),
             )
 

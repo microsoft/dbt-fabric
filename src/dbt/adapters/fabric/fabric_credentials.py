@@ -29,6 +29,7 @@ class FabricCredentials(Credentials):
     workspace_id: Optional[str] = None
     workspace_name: Optional[str] = None
     lakehouse_id: Optional[str] = None
+    lakehouse_name: Optional[str] = None
     tenant_id: Optional[str] = None
 
     _ALIASES = {
@@ -44,6 +45,8 @@ class FabricCredentials(Credentials):
         "TrustServerCertificate": "trust_cert",
         "schema_auth": "schema_authorization",
         "SQL_ATTR_TRACE": "trace_flag",
+        "workspace": "workspace_name",
+        "lakehouse": "lakehouse_name",
     }
 
     @property
@@ -71,6 +74,7 @@ class FabricCredentials(Credentials):
             "workspace_id",
             "workspace_name",
             "lakehouse_id",
+            "lakehouse_name",
             "encrypt",
             "trust_cert",
             "retries",
