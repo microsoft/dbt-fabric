@@ -21,6 +21,7 @@ class FabricRelation(BaseRelation):
         if self.limit is None:
             return rendered
         elif self.limit == 0:
-            return f"(select * from {rendered} where 1=0){self._render_limited_alias()}"
+            return f"(select * from {rendered} where 1=0) AS {self._render_limited_alias()}"
         else:
-            return f"(select top {self.limit} * from {rendered}){self._render_limited_alias()}"
+            return f"(select TOP {self.limit} * from {rendered}) AS {self._render_limited_alias()}"
+
