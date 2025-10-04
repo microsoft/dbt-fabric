@@ -319,6 +319,7 @@ class FabricConnectionManager(SQLConnectionManager):
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
             pyodbc.pooling = True
+            pyodbc.odbcversion = "3.8"
             attrs_before = cls.get_fabric_token_provider(credentials).get_pyodbc_attributes()
 
             handle = pyodbc.connect(
