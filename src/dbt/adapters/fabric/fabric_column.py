@@ -5,11 +5,21 @@ from dbt.adapters.base import Column
 
 class FabricColumn(Column):
     TYPE_LABELS: ClassVar[Dict[str, str]] = {
-        "STRING": "VARCHAR(MAX)",
-        "TIMESTAMP": "DATETIME2(6)",
-        "FLOAT": "FLOAT",
-        "INTEGER": "INT",
+        "BINARY": "BINARY(1)",
         "BOOLEAN": "BIT",
+        "CHAR": "CHAR(1)",
+        "DATETIME2": "DATETIME2(6)",
+        "INTEGER": "INT",
+        "MONEY": "DECIMAL",
+        "NCHAR": "CHAR(1)",
+        "NVARCHAR": "VARCHAR(MAX)",
+        "SMALLMONEY": "DECIMAL",
+        "STRING": "VARCHAR(MAX)",
+        "TIME": "TIME(6)",
+        "TIMESTAMP": "DATETIME2(6)",
+        "TINYINT": "SMALLINT",
+        "VARBINARY": "VARBINARY(MAX)",
+        "VARCHAR": "VARCHAR(MAX)",
     }
 
     @classmethod
@@ -21,6 +31,12 @@ class FabricColumn(Column):
 
     def is_integer(self):
         return super().is_integer() or self.dtype.lower() == "int"
+    
+    def is_string(self) -> bool:
+        return self.dtype.lower() in ["varchar", "char"]
+
+    def is_numeric(self) -> bool:
+        return self.dtype.lower() in ["numeric", "decimal", "money", "smallmoney"]
 
     @property
     def data_type(self) -> str:
