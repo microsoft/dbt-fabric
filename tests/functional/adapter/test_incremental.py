@@ -127,7 +127,7 @@ class TestPredicatesDeleteInsertFabric(BaseIncrementalPredicates):
 
 _microbatch_model_no_unique_id_sql = """
 {{ config(materialized='incremental', incremental_strategy='microbatch', unique_key='id', event_time='event_time', batch_size='day', begin='2020-01-01 00:00:00.000000') }}
-select * from {{ ref('input_model') }} a
+select * from {{ ref('input_model') }}
 """
 
 _input_model_sql = """
