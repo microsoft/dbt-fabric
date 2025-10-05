@@ -7,10 +7,6 @@ Given Microsoft's limited investments in the future of the adapter, this fork ai
 
 [![PyPI - Version](https://img.shields.io/pypi/v/dbt-fabric-samdebruyn)](https://pypi.org/project/dbt-fabric-samdebruyn/)
 
-## License
-
-[MIT](./LICENSE)
-
 ## Acknowledgements
 
 Special thanks to:
