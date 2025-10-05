@@ -4,4 +4,4 @@ set -ex
 
 cd ..
 
-uv run --only-group docs mkdocs build
+uv run --only-group docs mkdocs build -d ./docs_build/site
