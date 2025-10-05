@@ -39,11 +39,9 @@ dev = [
 ]
 
 [project.urls]
-"Setup & configuration" = "https://docs.getdbt.com/reference/warehouse-profiles/fabric-profile"
-"Documentation & usage" = "https://docs.getdbt.com/reference/resource-configs/fabric-configs"
-"Changelog" = "https://github.com/microsoft/dbt-fabric/releases"
-"Issue Tracker" = "https://github.com/microsoft/dbt-fabric/issues"
-Homepage = "https://github.com/microsoft/dbt-fabric"
+"Changelog" = "https://github.com/sdebruyn/dbt-fabric/releases"
+"Issue Tracker" = "https://github.com/sdebruyn/dbt-fabric/issues"
+Homepage = "https://github.com/sdebruyn/dbt-fabric"
 
 [build-system]
 requires = ["hatchling"]
