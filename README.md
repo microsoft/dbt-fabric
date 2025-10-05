@@ -1,53 +1,23 @@
-# dbt-fabric
+# dbt-fabric-samdebruyn
 
-[dbt](https://www.getdbt.com) adapter for Microsoft Fabric Synapse Data Warehouse.
+This is a maintained and extended fork of the [dbt-fabric](https://github.com/microsoft/dbt-fabric) adapter. This fork has lots of additional features and bugfixes compared to the original adapter.
 
-The adapter supports dbt-core 1.4 or newer and follows the same versioning scheme.
-E.g. version 1.1.x of the adapter will be compatible with dbt-core 1.1.x.
+The adapter was [originally developed by the community](https://github.com/microsoft/dbt-fabric/graphs/contributors) and later adopted by Microsoft.
+Given Microsoft's limited investments in the future of the adapter, this fork aims to continue its development and maintenance.
 
-## Documentation
-
-We've bundled all documentation on the dbt docs site
-* [Profile setup & authentication](https://docs.getdbt.com/docs/core/connect-data-platform/fabric-setup)
-* [Adapter documentation, usage and important notes](https://docs.getdbt.com/reference/resource-configs/fabric-configs)
-
-## Installation
-
-This adapter requires the Microsoft ODBC driver to be installed:
-[Windows](https://docs.microsoft.com/nl-be/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16#download-for-windows) |
-[macOS](https://docs.microsoft.com/nl-be/sql/connect/odbc/linux-mac/install-microsoft-odbc-driver-sql-server-macos?view=sql-server-ver16) |
-[Linux](https://docs.microsoft.com/nl-be/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16)
-
-<details><summary>Debian/Ubuntu</summary>
-<p>
-
-Make sure to install the ODBC headers as well as the driver linked above:
-
-```shell
-sudo apt-get install -y unixodbc-dev
-```
-
-</p>
-</details>
-
-Latest version: ![PyPI](https://img.shields.io/pypi/v/dbt-fabric-samdebruyn?label=latest&logo=pypi)
-
-```shell
-pip install -U --pre dbt-fabric-samdebruyn
-```
-
-## Contributing
-
-[![Integration tests on Fabric DW](https://github.com/sdebruyn/dbt-fabric/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/integration-tests.yml)
-[![Publish Docker images for CI/CD](https://github.com/sdebruyn/dbt-fabric/actions/workflows/publish-docker.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/publish-docker.yml)
-[![Linting and formatting](https://github.com/sdebruyn/dbt-fabric/actions/workflows/lint-format.yml/badge.svg)](https://github.com/sdebruyn/dbt-fabric/actions/workflows/lint-format.yml)
-
-This is a fork of the [Microsoft version](https://github.com/microsoft/dbt-fabric) in which new features are being developed.
+[![PyPI - Version](https://img.shields.io/pypi/v/dbt-fabric-samdebruyn)](https://pypi.org/project/dbt-fabric-samdebruyn/)
 
 ## License
 
-[![PyPI - License](https://img.shields.io/pypi/l/dbt-fabric-samdebruyn)](https://github.com/sdebruyn/dbt-fabric/blob/main/LICENSE)
+[MIT](./LICENSE)
 
-## Code of Conduct
+## Acknowledgements
 
-This project and everyone involved is expected to follow the [Microsoft Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+Special thanks to:
+
+* [Jacob Mastel](https://github.com/jacobm001): for his initial work on building dbt-sqlserver.
+* [Mikael Ene](https://github.com/mikaelene): for his initial work and continued maintenance on the dbt-sqlserver adapter.
+* [Anders Swanson](https://github.com/dataders): for his continued maintenance of the dbt-sqlserver adapter and the creation of the dbt-synapse adapter. And for his work at [dbt Labs](https://www.getdbt.com/).
+* [dbt Labs](https://www.getdbt.com/): for their continued support of the dbt open source ecosystem.
+* the Microsoft Fabric product team, for their support and contributions to the dbt-fabric adapter.
+* every other contributor to dbt-sqlserver, dbt-synapse, and dbt-fabric.
