@@ -1,0 +1,35 @@
+  <script src="/t1.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      swetrix.init('PkvfqUt8aai5', {
+        apiURL: 'https://swetrix.debruyn.dev/log',
+        respectDNT: true,
+      })
+      swetrix.trackViews()
+      swetrix.trackErrors()
+    })
+  </script>
+  <noscript>
+    <img
+      src="https://swetrix.debruyn.dev/log/noscript?pid=PkvfqUt8aai5"
+      alt=""
+      referrerpolicy="no-referrer-when-downgrade"
+    />
+  </noscript>
+  <script defer
+    src="/t2.js"
+    data-website-id="49cbb7c0-9b2a-45cc-8dab-95a8458cce48"
+    data-host-url="https://umami.debruyn.dev"
+    data-do-not-track="true">
+  </script>
+  <script type="text/javascript">
+    (() => {
+      const name = 'outbound-link-click';
+      document.querySelectorAll('a').forEach(a => {
+        if (a.host !== window.location.host && !a.getAttribute('data-umami-event')) {
+          a.setAttribute('data-umami-event', name);
+          a.setAttribute('data-umami-event-url', a.href);
+        }
+      });
+    })();
+  </script>

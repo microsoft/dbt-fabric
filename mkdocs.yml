@@ -83,3 +83,5 @@ extra_css:
 nav:
 - Home:
   - Overview: index.md
+  - Contributing: contributing.md
+  - License: license.md
