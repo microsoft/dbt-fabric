@@ -19,18 +19,17 @@ To run anything inside the virtual environment, use `uv run ...`. Otherwise, you
 
 ## Testing
 
-The functional tests require a Fabric Data Warehouse. Tell our tests how they should connect to your data warehouse by creating a file called `test.env` in the root of the project.
+The integration tests require a Fabric Data Warehouse. Tell our tests how they should connect to your data warehouse by creating a file called `test.env` in the root of the project.
 You can use the provided `test.env.sample` as a base.
 
 ```shell
 cp test.env.sample test.env
 ```
 
-You can use the following commands to run the unit and the functional tests respectively:
+You can use the following command to run the integration tests:
 
 ```shell
-uv run pytest tests/unit
-uv run pytest tests/functional
+uv run pytest
 ```
 
 ## CI/CD
@@ -42,11 +41,11 @@ There is one tag per supported Python version.
 All CI/CD pipelines are using GitHub Actions. The following pipelines are available:
 
 * `publish-docker`: publishes the image we use in all other pipelines.
-* `unit-tests`: runs the unit tests for each supported Python version.
 * `integration-tests`: runs the integration tests.
 * `release-version`: publishes the adapter to PyPI.
+* `lint-format`: runs `ruff` to check and format the code.
 
 ## Releasing a new version
 
-Make sure the version number is bumped in `__version__.py`. Then, create a git tag named `v<version>` and push it to GitHub.
+Ceate a git tag named `v<version>` and push it to GitHub.
 A GitHub Actions workflow will be triggered to build the package and push it to PyPI. 
