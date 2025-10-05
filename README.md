@@ -7,6 +7,10 @@ Given Microsoft's limited investments in the future of the adapter, this fork ai
 
 [![PyPI - Version](https://img.shields.io/pypi/v/dbt-fabric-samdebruyn)](https://pypi.org/project/dbt-fabric-samdebruyn/)
 
+## Documentation
+
+A website with all documentation with regards to using dbt with Microsoft Fabric can be found at [http://dbt-fabric.debruyn.dev/](http://dbt-fabric.debruyn.dev/).
+
 ## Acknowledgements
 
 Special thanks to:

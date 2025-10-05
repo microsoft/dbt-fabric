@@ -47,6 +47,7 @@ docs = [
 ]
 
 [project.urls]
+"Documentation" = "http://dbt-fabric.debruyn.dev/"
 "Changelog" = "https://github.com/sdebruyn/dbt-fabric/releases"
 "Issue Tracker" = "https://github.com/sdebruyn/dbt-fabric/issues"
 Homepage = "https://github.com/sdebruyn/dbt-fabric"
