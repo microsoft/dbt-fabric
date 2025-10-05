@@ -22,12 +22,12 @@ class LivySession:
     _MAX_POLLING_ATTEMPTS = 60  # 5 minutes
 
     def __init__(
-        self, workspace_id: str, lakehouse_id: str, token_provider: FabricTokenProvider
+        self, name: str, workspace_id: str, lakehouse_id: str, token_provider: FabricTokenProvider
     ) -> None:
         self._workspace_id = workspace_id
         self._lakehouse_id = lakehouse_id
         self._token_provider = token_provider
-        self.session_id = self._initialize_session()
+        self.session_id = self._initialize_session(name)
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -35,11 +35,11 @@ class LivySession:
             "Accept": "application/json",
         }
 
-    def _initialize_session(self) -> str:
+    def _initialize_session(self, name: str) -> str:
         response = requests.post(
             self._get_api_url("sessions"),
             headers=self._get_headers(),
-            json={"name": "dbt-fabric"},
+            json={"name": "dbt-fabric-" + name},
         )
         response.raise_for_status()
         return response.json()["id"]
@@ -105,15 +105,22 @@ class LivySession:
 
 
 class FabricLivyHelper(PythonJobHelper, FabricApiClient):
-    _livy_session: Optional[LivySession] = None
+    _livy_session: LivySession | None = None
+    _sql_endpoint: str | None = None
 
     def __init__(self, parsed_model: Dict, credential: FabricCredentials) -> None:
         if not self._livy_session:
             self._livy_session = LivySession(
+                parsed_model["name"],
                 workspace_id=self.get_workspace_id(credential),
                 lakehouse_id=self.get_lakehouse_id(credential),
                 token_provider=FabricTokenProvider(credential),
             )
+        if not self._sql_endpoint:
+            self._sql_endpoint = self.get_warehouse_connection_string(credential)
 
     def submit(self, compiled_code: str) -> Any:
+        assert self._livy_session is not None
+        assert self._sql_endpoint is not None
+        compiled_code = compiled_code.replace("DBT_FABRIC_REPLACED_WITH_HOST", self._sql_endpoint)
         return self._livy_session.submit(compiled_code)

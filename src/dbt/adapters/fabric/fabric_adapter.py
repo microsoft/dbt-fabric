@@ -262,7 +262,9 @@ class FabricAdapter(SQLAdapter):
         }
 
     def generate_python_submission_response(self, submission_result: Any) -> AdapterResponse:
-        raise NotImplementedError("Not implemented yet")
+        if not submission_result or not submission_result.success:
+            return AdapterResponse(_message="ERROR")
+        return AdapterResponse(_message="OK")
 
 
 COLUMNS_EQUAL_SQL = """

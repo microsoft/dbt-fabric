@@ -6,6 +6,9 @@
 {{ compiled_code }}
 
 import com.microsoft.spark.fabric
+from com.microsoft.spark.fabric.Constants import Constants
+
+spark.conf.set("spark.datawarehouse.{{ target_relation.database }}.sqlendpoint", "DBT_FABRIC_REPLACED_WITH_HOST,1433")
 
 dbt = dbtObj(spark.read.synapsesql)
 df = model(dbt, spark)

@@ -69,6 +69,7 @@ jobs:
         env:
           FABRIC_TEST_HOST: ${{ secrets.FABRIC_TEST_HOST }}
           FABRIC_TEST_DWH_NAME: ${{ matrix.dwh_name }}
+          FABRIC_TEST_LAKEHOUSE_NAME: lh01
           FABRIC_TEST_DRIVER: "ODBC Driver ${{ matrix.msodbc_version }} for SQL Server"
         run: uv run pytest -ra -v
       

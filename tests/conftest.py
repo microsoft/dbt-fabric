@@ -15,6 +15,8 @@ def dbt_profile_target(dbt_profile_target_update):
         "host": os.getenv("FABRIC_TEST_HOST"),
         "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
         "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
+        "lakehouse_id": os.getenv("FABRIC_TEST_LAKEHOUSE_ID"),
+        "lakehouse_name": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
         "authentication": "auto",
         "database": os.getenv("FABRIC_TEST_DWH_NAME"),
         "retries": 3,
