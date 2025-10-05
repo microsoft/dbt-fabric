@@ -47,7 +47,7 @@ plugins:
 theme:
   name: material
   icon:
-    logo: material/database-eye
+    logo: material/receipt
     repo: fontawesome/brands/github
   custom_dir: overrides
   palette:
