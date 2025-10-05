@@ -1,5 +1,14 @@
 # dbt-fabric-samdebruyn
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sdebruyn/dbt-fabric/main/assets/dbt-signature_tm_light.png">
+  <img alt="dbt logo" src="https://raw.githubusercontent.com/sdebruyn/dbt-fabric/main/assets/dbt-signature_tm.png">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sdebruyn/dbt-fabric/main/assets/fabric.png">
+  <img alt="Fabric logo" src="https://raw.githubusercontent.com/sdebruyn/dbt-fabric/main/assets/fabric.png">
+</picture>
+
 This is a maintained and extended fork of the [dbt-fabric](https://github.com/microsoft/dbt-fabric) adapter. This fork has lots of additional features and bugfixes compared to the original adapter.
 
 The adapter was [originally developed by the community](https://github.com/microsoft/dbt-fabric/graphs/contributors) and later adopted by Microsoft.
@@ -10,6 +19,10 @@ Given Microsoft's limited investments in the future of the adapter, this fork ai
 ## Documentation
 
 A website with all documentation with regards to using dbt with Microsoft Fabric can be found at [http://dbt-fabric.debruyn.dev/](http://dbt-fabric.debruyn.dev/).
+
+## Code of Conduct
+
+Everyone interacting in this project's codebases, issues, discussions, and related Slack channels is expected to follow the [dbt Code of Conduct](https://docs.getdbt.com/community/resources/code-of-conduct).
 
 ## Acknowledgements
 
