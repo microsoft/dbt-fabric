@@ -84,6 +84,7 @@ extra_css:
 nav:
 - Home:
   - Overview: index.md
+  - Comparison with dbt-fabric: feature-comparison.md
   - Contributing: contributing.md
   - License: license.md
 - Installation & configuration: 
