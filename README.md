@@ -9,10 +9,10 @@
   <img alt="Fabric logo" src="https://raw.githubusercontent.com/sdebruyn/dbt-fabric/forked-version/assets/fabric.png">
 </picture>
 
-This is a maintained and extended fork of the [dbt-fabric](https://github.com/microsoft/dbt-fabric) adapter. This fork has lots of additional features and bugfixes compared to the original adapter.
+This is a maintained and extended fork of the [dbt-fabric](https://github.com/microsoft/dbt-fabric) adapter. This fork has [additional features and bugfixes](https://dbt-fabric.debruyn.dev/feature-comparison/) compared to the original adapter.
 
 The adapter was [originally developed by the community](https://github.com/microsoft/dbt-fabric/graphs/contributors) and later adopted by Microsoft.
-Given Microsoft's limited investments in the future of the adapter, this fork aims to continue its development and maintenance.
+Given Microsoft's limited investments in the adapter, this fork aims to continue its development and maintenance.
 
 [![PyPI - Version](https://img.shields.io/pypi/v/dbt-fabric-samdebruyn)](https://pypi.org/project/dbt-fabric-samdebruyn/)
 
