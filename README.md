@@ -20,6 +20,10 @@ Given Microsoft's limited investments in the adapter, this fork aims to continue
 
 A website with all documentation with regards to using dbt with Microsoft Fabric can be found at [http://dbt-fabric.debruyn.dev/](http://dbt-fabric.debruyn.dev/).
 
+## Drop-in replacement
+
+This adapter is a drop-in replacement for the original `dbt-fabric` adapter. To start using this adapter, all you have to do is a `pip uninstall dbt-fabric` and a `pip install dbt-fabric-samdebruyn`.
+
 ## Code of Conduct
 
 Everyone interacting in this project's codebases, issues, discussions, and related Slack channels is expected to follow the [dbt Code of Conduct](https://docs.getdbt.com/community/resources/code-of-conduct).
