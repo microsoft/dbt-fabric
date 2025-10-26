@@ -1,5 +1,8 @@
+import atexit
 import datetime as dt
 import struct
+import sys
+import threading
 import time
 from contextlib import contextmanager
 from itertools import chain, repeat
@@ -21,11 +24,21 @@ from dbt_common.utils.casting import cast_to_str
 
 from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.fabric.warehouse_snapshots import WarehouseSnapshotManager as wh_snapshot_manager
+
+_init_done = False
+_init_lock = threading.Lock()
+_snapshot_manager = None
+
+# Command filtering
+TARGET_COMMANDS = {"run", "build", "snapshot"}
+
 
 AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
+POWER_BI_CREDENTIAL_SCOPE = "https://api.fabric.microsoft.com/.default"
 SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
 _TOKEN: Optional[AccessToken] = None
-AZURE_AUTH_FUNCTION_TYPE = Callable[[FabricCredentials], AccessToken]
+AZURE_AUTH_FUNCTION_TYPE = Callable[[FabricCredentials, Optional[str]], AccessToken]
 
 logger = AdapterLogger("fabric")
 
@@ -88,7 +101,9 @@ def convert_access_token_to_mswindows_byte_string(token: AccessToken) -> bytes:
     return convert_bytes_to_mswindows_byte_string(value)
 
 
-def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToken:
+def get_synapse_spark_access_token(
+    credentials: FabricCredentials, scope: Optional[str] = SYNAPSE_SPARK_CREDENTIAL_SCOPE
+) -> AccessToken:
     """
     Get an Azure access token by using mspsarkutils
     Parameters
@@ -102,7 +117,7 @@ def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToke
     """
     from notebookutils import mssparkutils
 
-    aad_token = mssparkutils.credentials.getToken(SYNAPSE_SPARK_CREDENTIAL_SCOPE)
+    aad_token = mssparkutils.credentials.getToken(scope)
     expires_on = int(time.time() + 4500.0)
     token = AccessToken(
         token=aad_token,
@@ -111,7 +126,9 @@ def get_synapse_spark_access_token(credentials: FabricCredentials) -> AccessToke
     return token
 
 
-def get_cli_access_token(credentials: FabricCredentials) -> AccessToken:
+def get_cli_access_token(
+    credentials: FabricCredentials, scope: Optional[str] = AZURE_CREDENTIAL_SCOPE
+) -> AccessToken:
     """
     Get an Azure access token using the CLI credentials
 
@@ -133,12 +150,14 @@ def get_cli_access_token(credentials: FabricCredentials) -> AccessToken:
     """
     _ = credentials
     token = AzureCliCredential().get_token(
-        AZURE_CREDENTIAL_SCOPE, timeout=getattr(credentials, "login_timeout", None)
+        scope, timeout=getattr(credentials, "login_timeout", None)
     )
     return token
 
 
-def get_auto_access_token(credentials: FabricCredentials) -> AccessToken:
+def get_auto_access_token(
+    credentials: FabricCredentials, scope: Optional[str] = AZURE_CREDENTIAL_SCOPE
+) -> AccessToken:
     """
     Get an Azure access token automatically through azure-identity
 
@@ -153,12 +172,14 @@ def get_auto_access_token(credentials: FabricCredentials) -> AccessToken:
         The access token.
     """
     token = DefaultAzureCredential().get_token(
-        AZURE_CREDENTIAL_SCOPE, timeout=getattr(credentials, "login_timeout", None)
+        scope, timeout=getattr(credentials, "login_timeout", None)
     )
     return token
 
 
-def get_environment_access_token(credentials: FabricCredentials) -> AccessToken:
+def get_environment_access_token(
+    credentials: FabricCredentials, scope: Optional[str] = AZURE_CREDENTIAL_SCOPE
+) -> AccessToken:
     """
     Get an Azure access token by reading environment variables
 
@@ -173,7 +194,7 @@ def get_environment_access_token(credentials: FabricCredentials) -> AccessToken:
         The access token.
     """
     token = EnvironmentCredential().get_token(
-        AZURE_CREDENTIAL_SCOPE, timeout=getattr(credentials, "login_timeout", None)
+        scope, timeout=getattr(credentials, "login_timeout", None)
     )
     return token
 
@@ -206,7 +227,9 @@ def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
 
     if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
         if not _TOKEN or (_TOKEN.expires_on - time.time() < MAX_REMAINING_TIME):
-            _TOKEN = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](credentials)
+            _TOKEN = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](
+                credentials, AZURE_CREDENTIAL_SCOPE
+            )
         return {sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(_TOKEN)}
 
     if credentials.authentication.lower() == "activedirectoryaccesstoken":
@@ -278,6 +301,63 @@ def byte_array_to_datetime(value: bytes) -> dt.datetime:
         microsecond=tup[6] // 1000,  # https://bugs.python.org/issue15443
         tzinfo=dt.timezone(dt.timedelta(hours=tup[7], minutes=tup[8])),
     )
+
+
+def _should_run_init() -> bool:
+    """Check if we should run init for this command."""
+    try:
+        argv_lower = [a.lower() for a in sys.argv]
+        # Only run for run, build, snapshot
+        return any(cmd in argv_lower for cmd in TARGET_COMMANDS)
+    except Exception:
+        return False
+
+
+def _run_start_action(credentials: FabricCredentials) -> Dict[str, Any]:
+    """Enhanced run start action with snapshot management."""
+    global _snapshot_manager
+
+    try:
+        # Get credentials from dbt context
+        workspace_id = credentials.workspace_id
+        if workspace_id is None:
+            logger.warning("No workspace_id provided; skipping snapshot management.")
+            return {}
+
+        access_token = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](
+            credentials, POWER_BI_CREDENTIAL_SCOPE
+        ).token
+        _snapshot_manager = wh_snapshot_manager(workspace_id, access_token)
+
+        if credentials.warehouse_snapshot_name is None:
+            logger.info(
+                "No warehouse snapshot name provided; skipping pre-run snapshot management."
+            )
+            return {}
+
+        snapshot_Result = _snapshot_manager.orchestrate_snapshot_management(
+            warehouse_name=credentials.database,
+            snapshot_name=credentials.warehouse_snapshot_name,
+        )
+        return snapshot_Result
+    except Exception as e:
+        logger.error(f"Pre-run snapshot failed: {e}")
+        raise e
+
+
+def _run_end_action(snapshot_result: Optional[Dict[str, Any]] = None):
+    """Enhanced run end action with snapshot result."""
+    global _snapshot_manager
+
+    try:
+        if snapshot_result and _snapshot_manager is not None:
+            print(
+                "Updating warehouse snapshot timestamp at end of run...",
+                snapshot_result["displayName"],
+            )
+            _snapshot_manager.update_warehouse_snapshot(snapshot_id=snapshot_result["snapshot_id"])
+    except Exception as e:
+        logger.error(f"Post-run action failed: {e}")
 
 
 class FabricConnectionManager(SQLConnectionManager):
@@ -422,13 +502,28 @@ class FabricConnectionManager(SQLConnectionManager):
             logger.debug(f"Connected to db: {credentials.database}")
             return handle
 
-        return cls.retry_connection(
+        # Open the connection (with retries) and capture the returned Connection.
+        conn = cls.retry_connection(
             connection,
             connect=connect,
             logger=logger,
             retry_limit=credentials.retries,
             retryable_exceptions=retryable_exceptions,
         )
+
+        # Simple one-time init with command detection
+        if _should_run_init():
+            global _init_done
+            with _init_lock:
+                if not _init_done:
+                    try:
+                        result = _run_start_action(credentials)
+                        atexit.register(lambda: _run_end_action(result))
+                    except Exception as e:
+                        logger.debug("Failed to run init actions", e)
+                    _init_done = True
+
+        return conn
 
     def cancel(self, connection: Connection):
         logger.debug("Cancel query")

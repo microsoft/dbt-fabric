@@ -11,7 +11,7 @@ from dbt.tests.util import (
 )
 
 model_seed_sql = """
-select * from {{target.database}}.{{target.schema}}.seed
+select * from "{{target.database}}".{{target.schema}}.seed
 """
 
 snapshots_multi_key_yml = """
@@ -127,7 +127,7 @@ from {schema}.seed;
 """
 
 model_seed_sql = """
-select * from {{target.database}}.{{target.schema}}.seed
+select * from "{{target.database}}"."{{target.schema}}".seed
 """
 
 snapshots_multi_key_yml = """
@@ -207,7 +207,7 @@ snapshot_actual_sql = """
         )
     }}
 
-    select * from {{target.database}}.{{target.schema}}.seed
+    select * from "{{target.database}}"."{{target.schema}}".seed
 
 {% endsnapshot %}
 """

@@ -97,7 +97,7 @@ _snapshot_actual_sql = """
             unique_key='cast(id as varchar(8000)) + '~ "'-'" ~ ' + cast(first_name as varchar(8000))',
         )
     }}
-    select * from {{target.database}}.{{target.schema}}.seed
+    select * from "{{target.database}}"."{{target.schema}}".seed
 
 {% endsnapshot %}
 """

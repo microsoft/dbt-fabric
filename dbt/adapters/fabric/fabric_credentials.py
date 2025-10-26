@@ -27,6 +27,10 @@ class FabricCredentials(Credentials):
     schema_authorization: Optional[str] = None
     login_timeout: Optional[int] = 0
     query_timeout: Optional[int] = 0
+    workspace_id: Optional[str] = None
+    warehouse_snapshot_name: Optional[str] = None
+    warehouse_snapshot_id: Optional[str] = None
+    snapshot_timestamp: Optional[str] = None
 
     _ALIASES = {
         "user": "UID",
@@ -41,11 +45,23 @@ class FabricCredentials(Credentials):
         "TrustServerCertificate": "trust_cert",
         "schema_auth": "schema_authorization",
         "SQL_ATTR_TRACE": "trace_flag",
+        "workspace_id": "workspace_id",
+        "warehouse_snapshot_name": "warehouse_snapshot_name",
     }
 
     @property
     def type(self):
         return "fabric"
+
+    def validate_snapshot_properties(self):
+        workspace_provided = self.workspace_id is not None
+        snapshot_name_provided = self.warehouse_snapshot_name is not None
+
+        if workspace_provided != snapshot_name_provided:
+            raise ValueError(
+                "Both workspace_id and warehouse_snapshot_name must be provided together, "
+                "or both must be None. Cannot have one without the other."
+            )
 
     def _connection_keys(self):
         # return an iterator of keys to pretty-print in 'dbt debug'
@@ -56,19 +72,23 @@ class FabricCredentials(Credentials):
         if self.authentication.lower().strip() == "serviceprincipal":
             self.authentication = "ActiveDirectoryServicePrincipal"
 
+        self.validate_snapshot_properties()
+
         return (
             "server",
             "database",
             "schema",
+            "warehouse_snapshot_name",
+            "snapshot_timestamp",
             "UID",
-            "client_id",
+            "workspace_id",
             "authentication",
-            "encrypt",
-            "trust_cert",
             "retries",
             "login_timeout",
             "query_timeout",
             "trace_flag",
+            "encrypt",
+            "trust_cert",
         )
 
     @property
