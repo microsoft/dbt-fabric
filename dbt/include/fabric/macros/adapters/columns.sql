@@ -15,7 +15,10 @@
                 row_number() over (partition by object_name(c.object_id) order by c.column_id) as ordinal_position,
                 c.name collate database_default as column_name,
                 t.name as data_type,
-                c.max_length as character_maximum_length,
+                case
+					when (t.name in ('nchar', 'nvarchar', 'sysname') and c.max_length <> -1) then c.max_length / 2
+					else c.max_length
+				end as character_maximum_length,
                 c.precision as numeric_precision,
                 c.scale as numeric_scale
             from sys.columns c {{ information_schema_hints() }}
