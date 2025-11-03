@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools build twine
+          pip install setuptools>=61 wheel build twine
           pip install -r dev_requirements.txt
 
       - name: Verify version match
@@ -34,6 +34,7 @@ jobs:
           echo -e "password = ${{ secrets.PYPI_DBT_FABRIC }}" >> ~/.pypirc
 
       - name: Build and publish package
+        working-directory: ./dbt-fabric
         run: |
           rm -rf dist build *.egg-info
           python -m build
