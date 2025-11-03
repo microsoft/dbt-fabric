@@ -36,6 +36,7 @@ TARGET_COMMANDS = {"run", "build", "snapshot"}
 
 AZURE_CREDENTIAL_SCOPE = "https://database.windows.net//.default"
 POWER_BI_CREDENTIAL_SCOPE = "https://api.fabric.microsoft.com/.default"
+FABRIC_NOTEBOOK_CREDENTIAL_SCOPE = "https://database.windows.net/"
 SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
 _TOKEN: Optional[AccessToken] = None
 AZURE_AUTH_FUNCTION_TYPE = Callable[[FabricCredentials, Optional[str]], AccessToken]
@@ -126,6 +127,31 @@ def get_synapse_spark_access_token(
     return token
 
 
+def get_fabric_notebook_access_token(
+    credentials: FabricCredentials, scope: Optional[str] = FABRIC_NOTEBOOK_CREDENTIAL_SCOPE
+) -> AccessToken:
+    """
+    Get an Azure access token by using notebookutils. Works in both Fabric pyspark and python notebooks.
+    Parameters
+    -----------
+    credentials: FabricCredentials
+        Credentials.
+    Returns
+    -------
+    out : AccessToken
+        The access token.
+    """
+    import notebookutils
+
+    aad_token = notebookutils.credentials.getToken(FABRIC_NOTEBOOK_CREDENTIAL_SCOPE)
+    expires_on = int(time.time() + 4500.0)
+    token = AccessToken(
+        token=aad_token,
+        expires_on=expires_on,
+    )
+    return token
+
+
 def get_cli_access_token(
     credentials: FabricCredentials, scope: Optional[str] = AZURE_CREDENTIAL_SCOPE
 ) -> AccessToken:
@@ -204,6 +230,7 @@ AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
     "auto": get_auto_access_token,
     "environment": get_environment_access_token,
     "synapsespark": get_synapse_spark_access_token,
+    "fabricnotebook": get_fabric_notebook_access_token,
 }
 
 

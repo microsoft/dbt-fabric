@@ -11,4 +11,5 @@ pre-commit==3.8.0;python_version>="3.9"
 pytest-dotenv==0.5.2
 flaky==3.7.0
 pytest-xdist==3.5.0
+build
 -e .
