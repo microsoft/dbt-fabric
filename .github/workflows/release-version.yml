@@ -34,7 +34,6 @@ jobs:
           echo -e "password = ${{ secrets.PYPI_DBT_FABRIC }}" >> ~/.pypirc
 
       - name: Build and publish package
-        working-directory: ./dbt-fabric
         run: |
           rm -rf dist build *.egg-info
           python -m build
