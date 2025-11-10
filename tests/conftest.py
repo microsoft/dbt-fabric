@@ -99,6 +99,7 @@ def _profile_user_azure():
             "encrypt": True,
             "trust_cert": True,
             "database": os.getenv("FABRIC_TEST_DBNAME"),
+            "api_url": "https://msitapi.fabric.microsoft.com/v1",
         },
     }
     return profile
