@@ -58,6 +58,7 @@ def _profile_ci_azure_base():
             "encrypt": True,
             "trust_cert": True,
             "trace_flag": False,
+            "api_url": "https://msitapi.fabric.microsoft.com/v1",
         },
     }
 

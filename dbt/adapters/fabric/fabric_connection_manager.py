@@ -354,7 +354,7 @@ def _run_start_action(credentials: FabricCredentials) -> Dict[str, Any]:
         access_token = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](
             credentials, POWER_BI_CREDENTIAL_SCOPE
         ).token
-        _snapshot_manager = wh_snapshot_manager(workspace_id, access_token)
+        _snapshot_manager = wh_snapshot_manager(workspace_id, access_token, credentials.api_url)
 
         if credentials.warehouse_snapshot_name is None:
             logger.info(
@@ -372,15 +372,53 @@ def _run_start_action(credentials: FabricCredentials) -> Dict[str, Any]:
         raise e
 
 
+def get_dbt_run_status() -> str:
+    """
+    Get simple status of dbt run: 'success', 'error', or 'unknown'
+    """
+    import json
+    from pathlib import Path
+
+    try:
+        run_results_path = Path("target/run_results.json")
+
+        if not run_results_path.exists():
+            return "unknown"
+
+        with open(run_results_path, "r") as f:
+            run_results = json.load(f)
+
+        results = run_results.get("results", [])
+
+        if not results:
+            return "unknown"
+
+        # Check if any result has error status
+        has_errors = any(result.get("status") == "error" for result in results)
+
+        return "error" if has_errors else "success"
+
+    except Exception:
+        return "unknown"
+
+
 def _run_end_action(snapshot_result: Optional[Dict[str, Any]] = None):
     """Enhanced run end action with snapshot result."""
     global _snapshot_manager
+
+    # Get simple status
+    status = get_dbt_run_status()
+
+    if status != "success":
+        logger.info(f"Skipping warehouse snapshot update: {status}")
+        return
 
     try:
         if snapshot_result and _snapshot_manager is not None:
             print(
                 "Updating warehouse snapshot timestamp at end of run...",
                 snapshot_result["displayName"],
+                snapshot_result["snapshot_id"],
             )
             _snapshot_manager.update_warehouse_snapshot(snapshot_id=snapshot_result["snapshot_id"])
     except Exception as e:
