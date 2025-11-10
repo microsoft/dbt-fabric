@@ -9,9 +9,14 @@ logger = AdapterLogger("fabric")
 class WarehouseSnapshotManager:
     """Manager for Microsoft Fabric warehouse snapshots."""
 
-    def __init__(self, workspace_id: Optional[str], access_token: str):
+    def __init__(
+        self,
+        workspace_id: Optional[str],
+        access_token: str,
+        base_url: Optional[str] = "https://api.fabric.microsoft.com/v1",
+    ):
         self.workspace_id = workspace_id
-        self.base_url = "https://msitapi.fabric.microsoft.com/v1"
+        self.base_url = base_url
         self.headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
@@ -29,7 +34,7 @@ class WarehouseSnapshotManager:
             data = response.json()
             warehouses = data.get("value", [])
 
-            logger.info(f"Found {len(warehouses)} warehouses in workspace {self.workspace_id}")
+            logger.debug(f"Found {len(warehouses)} warehouses in workspace {self.workspace_id}")
             return warehouses
 
         except requests.exceptions.RequestException as e:
@@ -71,7 +76,7 @@ class WarehouseSnapshotManager:
             data = response.json()
             snapshots = data.get("value", [])
 
-            logger.info(
+            logger.debug(
                 f"Found {len(snapshots)} warehouse snapshots in workspace {self.workspace_id}"
             )
             return snapshots
@@ -94,7 +99,7 @@ class WarehouseSnapshotManager:
             import time
 
             for attempt in range(max_retries):
-                logger.info(
+                logger.debug(
                     f"Polling operation {operation_id}, attempt {attempt + 1}/{max_retries}"
                 )
 
@@ -102,7 +107,7 @@ class WarehouseSnapshotManager:
 
                 if response.status_code == 201:
                     # Operation is complete - get the result
-                    logger.info(f"Operation {operation_id} completed (201)")
+                    logger.debug(f"Operation {operation_id} completed (201)")
 
                     # Fetch the actual result from /result endpoint
                     result_url = f"{operation_url}/result"
@@ -110,7 +115,7 @@ class WarehouseSnapshotManager:
                     result_response.raise_for_status()
 
                     result = result_response.json()
-                    logger.info(f"Operation {operation_id} result retrieved successfully")
+                    logger.debug(f"Operation {operation_id} result retrieved successfully")
                     return result
 
                 elif response.status_code == 200:

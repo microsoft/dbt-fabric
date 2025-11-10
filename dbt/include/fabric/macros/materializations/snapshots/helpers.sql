@@ -50,6 +50,9 @@
         {% else %}
             {{ columns.dbt_valid_to }} is null
         {% endif %}
+        {%- if strategy.hard_deletes == 'new_record' -%}
+            and {{ columns.dbt_is_deleted }} = 'False'
+        {% endif -%}
     ),
     insertions_source_data as (
         select *,

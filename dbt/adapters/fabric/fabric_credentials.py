@@ -31,6 +31,7 @@ class FabricCredentials(Credentials):
     warehouse_snapshot_name: Optional[str] = None
     warehouse_snapshot_id: Optional[str] = None
     snapshot_timestamp: Optional[str] = None
+    api_url: Optional[str] = "https://api.fabric.microsoft.com/v1"
 
     _ALIASES = {
         "user": "UID",
@@ -47,6 +48,7 @@ class FabricCredentials(Credentials):
         "SQL_ATTR_TRACE": "trace_flag",
         "workspace_id": "workspace_id",
         "warehouse_snapshot_name": "warehouse_snapshot_name",
+        "api_url": "api_url",
     }
 
     @property
@@ -89,6 +91,7 @@ class FabricCredentials(Credentials):
             "trace_flag",
             "encrypt",
             "trust_cert",
+            "api_url",
         )
 
     @property
