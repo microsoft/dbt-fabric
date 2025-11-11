@@ -12,5 +12,5 @@ pytest-dotenv==0.5.2
 flaky==3.7.0
 pytest-xdist==3.5.0
 build<1.2.2
-setuptools<75.0
+setuptools<81.0
 -e .
