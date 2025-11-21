@@ -53,7 +53,7 @@ jobs:
             logging.error("Error occurred while connecting to the database.", exc_info=True)
           EOF
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install dependencies
         run: pip install -r dev_requirements.txt
