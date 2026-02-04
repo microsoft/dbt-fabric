@@ -13,25 +13,51 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
   unit-tests:
-    name: Unit tests
+    name: Unit tests (${{ matrix.python_version }}, ${{ matrix.driver_backend }})
     strategy:
+      fail-fast: false
       matrix:
-        python_version: ["3.10", "3.11"]
+        python_version: ["3.10", "3.11", "3.12", "3.13"]
+        driver_backend: ["mssql-python", "pyodbc", "auto"]
+        exclude:
+          # auto with both drivers only tested on latest Python
+          - python_version: "3.10"
+            driver_backend: "auto"
+          - python_version: "3.11"
+            driver_backend: "auto"
+          - python_version: "3.12"
+            driver_backend: "auto"
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
-    container:
-      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc18
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.github_token }}
     steps:
 
       - uses: actions/checkout@v4
 
+      - name: Set up Python ${{ matrix.python_version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install ODBC driver (pyodbc or auto)
+        if: matrix.driver_backend == 'pyodbc' || matrix.driver_backend == 'auto'
+        run: |
+          curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+          curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+
       - name: Install dependencies
-        run: pip install -r dev_requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r dev_requirements.txt
+          # Install pyodbc for pyodbc and auto modes
+          if [ "${{ matrix.driver_backend }}" == "pyodbc" ] || [ "${{ matrix.driver_backend }}" == "auto" ]; then
+            pip install pyodbc>=5.2.0
+          fi
 
       - name: Run unit tests
+        env:
+          DBT_FABRIC_DRIVER_BACKEND: ${{ matrix.driver_backend }}
         run: pytest -n auto -ra -v tests/unit

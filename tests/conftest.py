@@ -44,6 +44,7 @@ def dbt_profile_target_update():
 def _all_profiles_base():
     return {
         "type": "fabric",
+        "driver_backend": os.getenv("DBT_FABRIC_DRIVER_BACKEND", "auto"),
         "driver": os.getenv("FABRIC_TEST_DRIVER", "ODBC Driver 18 for SQL Server"),
         "retries": 2,
     }
