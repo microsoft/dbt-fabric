@@ -6,10 +6,26 @@ from dbt.adapters.contracts.connection import Credentials
 
 @dataclass
 class FabricCredentials(Credentials):
-    driver: str
+    """
+    Credentials for connecting to Microsoft Fabric Synapse Data Warehouse.
+
+    Attributes
+    ----------
+    driver_backend : str
+        Driver to use for database connections.
+        - "auto" (default): Use mssql-python if available, fallback to pyodbc
+        - "mssql-python": Force mssql-python (fails if unavailable)
+        - "pyodbc": Force pyodbc (requires ODBC driver installed)
+    driver : Optional[str]
+        ODBC driver name. Only used when driver_backend is "pyodbc".
+        Deprecated when using mssql-python backend.
+    """
+
     host: str
     database: str
     schema: str
+    driver_backend: str = "auto"
+    driver: Optional[str] = None  # Only used for pyodbc backend
     UID: Optional[str] = None
     PWD: Optional[str] = None
     windows_login: Optional[bool] = False
@@ -21,8 +37,10 @@ class FabricCredentials(Credentials):
     # Added for access token expiration for oAuth and integration tests scenarios.
     access_token_expires_on: Optional[int] = 0
     authentication: str = "ActiveDirectoryServicePrincipal"
-    encrypt: Optional[bool] = True  # default value in MS ODBC Driver 18 as well
-    trust_cert: Optional[bool] = False  # default value in MS ODBC Driver 18 as well
+    # default value in MS ODBC Driver 18 as well
+    encrypt: Optional[bool] = True
+    # default value in MS ODBC Driver 18 as well
+    trust_cert: Optional[bool] = False
     retries: int = 3
     schema_authorization: Optional[str] = None
     login_timeout: Optional[int] = 0

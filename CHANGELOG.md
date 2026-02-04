@@ -1,5 +1,35 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- New `driver_backend` configuration option to select database driver
+- Support for Microsoft's mssql-python driver (now the default for Python 3.10+)
+- Automatic driver fallback: mssql-python → pyodbc
+- Environment variable override: `DBT_FABRIC_DRIVER_BACKEND`
+- Python 3.12, 3.13, 3.14 support
+
+### Changed
+- Default driver changed from pyodbc to mssql-python for Python 3.10+
+- Simplified installation: ODBC driver no longer required by default
+- Dropped Python 3.8 support (EOL December 2024)
+- Updated minimum Python version to 3.9
+
+### Deprecated
+- The `driver` field is deprecated when using mssql-python backend (ignored with warning)
+
+### Migration Guide
+
+**No action required for most users.** The adapter auto-detects the best driver.
+
+To continue using pyodbc explicitly:
+```yaml
+driver_backend: pyodbc
+driver: "ODBC Driver 18 for SQL Server"
+```
+
+---
+
 ### V1.8.7
 * Improving table materialization to minimize downtime #189
 * Handling temp tables in incremental models #188
