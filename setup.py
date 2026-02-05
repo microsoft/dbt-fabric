@@ -18,7 +18,8 @@ with open(os.path.join(this_directory, "README.md")) as f:
 
 # get this from a separate file
 def _dbt_fabric_version():
-    _version_path = os.path.join(this_directory, "dbt", "adapters", "fabric", "__version__.py")
+    _version_path = os.path.join(
+        this_directory, "dbt", "adapters", "fabric", "__version__.py")
     _version_pattern = r"""version\s*=\s*["'](.+)["']"""
     with open(_version_path) as f:
         match = re.search(_version_pattern, f.read().strip())
@@ -65,14 +66,19 @@ setup(
     url="https://github.com/microsoft/dbt-fabric",
     packages=find_namespace_packages(include=["dbt", "dbt.*"]),
     include_package_data=True,
+    python_requires=">=3.10",
     install_requires=[
-        "pyodbc>=5.2.0",
+        "mssql-python>=1.3.0",
         "azure-identity>=1.14.0",
         "azure-core>=1.26.0",
         "dbt-common>=1.0.4,<2.0",
         "dbt-core>=1.8.0",
         "dbt-adapters>=1.1.1,<2.0",
     ],
+    extras_require={
+        "pyodbc": ["pyodbc>=5.2.0"],
+        "legacy": ["pyodbc>=5.2.0"],
+    },
     cmdclass={
         "verify": VerifyVersionCommand,
     },
@@ -82,10 +88,11 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
     ],
     # TODO
     project_urls={

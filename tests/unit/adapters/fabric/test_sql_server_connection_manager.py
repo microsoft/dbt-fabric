@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import sys
 from unittest import mock
 
 import pytest
@@ -9,6 +10,7 @@ from dbt.adapters.fabric.fabric_connection_manager import (
     bool_to_connection_string_arg,
     byte_array_to_datetime,
     get_pyodbc_attrs_before_credentials,
+    get_token_attrs_before,
 )
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
@@ -20,10 +22,23 @@ CHECK_OUTPUT = AzureCliCredential.__module__ + ".subprocess.check_output"
 @pytest.fixture
 def credentials() -> FabricCredentials:
     credentials = FabricCredentials(
-        driver="ODBC Driver 18 for SQL Server",
         host="fake.sql.fabric.net",
         database="dbt",
         schema="fabric",
+        driver_backend="pyodbc",
+        driver="ODBC Driver 18 for SQL Server",
+    )
+    return credentials
+
+
+@pytest.fixture
+def credentials_mssql_python() -> FabricCredentials:
+    """Credentials configured for mssql-python backend."""
+    credentials = FabricCredentials(
+        host="fake.sql.fabric.net",
+        database="dbt",
+        schema="fabric",
+        driver_backend="mssql-python",
     )
     return credentials
 
@@ -73,7 +88,8 @@ def test_get_pyodbc_attrs_before_contains_access_token_key_for_cli_authenticatio
 
 
 @pytest.mark.parametrize(
-    "key, value, expected", [("somekey", False, "somekey=No"), ("somekey", True, "somekey=Yes")]
+    "key, value, expected", [
+        ("somekey", False, "somekey=No"), ("somekey", True, "somekey=Yes")]
 )
 def test_bool_to_connection_string_arg(key: str, value: bool, expected: str) -> None:
     assert bool_to_connection_string_arg(key, value) == expected
