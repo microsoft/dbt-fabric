@@ -16,6 +16,10 @@ from dbt.adapters.events.logging import AdapterLogger
 
 logger = AdapterLogger("fabric")
 
+# Valid driver backend options
+DEFAULT_BACKEND = "auto"
+VALID_BACKENDS = ("auto", "mssql-python", "pyodbc")
+
 
 def convert_bytes_to_mswindows_byte_string(value: bytes) -> bytes:
     """
@@ -127,6 +131,8 @@ class MssqlPythonBackend(DriverBackend):
     def set_pooling(self, enabled: bool, max_size: int = 100) -> None:
         if enabled:
             self._driver.pooling(max_size=max_size)
+        # Note: mssql-python pooling is enabled by default and controlled per-call
+        # Disabling requires not calling pooling() - the driver handles this internally
 
     def add_output_converter(
         self, connection: Any, sql_type: int, func: Callable
@@ -218,7 +224,6 @@ class PyodbcBackend(DriverBackend):
         autocommit: bool,
         attrs_before: Optional[Dict] = None,
     ) -> Any:
-        self._driver.pooling = True
         handle = self._driver.connect(
             connection_string,
             attrs_before=attrs_before or {},
@@ -246,6 +251,7 @@ class PyodbcBackend(DriverBackend):
         return (
             self._driver.InternalError,
             self._driver.OperationalError,
+            self._driver.InterfaceError,
         )
 
     def get_database_error(self) -> Type[Exception]:
@@ -290,19 +296,12 @@ class PyodbcBackend(DriverBackend):
             )
         elif "ActiveDirectory" in authentication and authentication != "ActiveDirectoryAccessToken":
             con_str.append(f"Authentication={authentication}")
-            if authentication == "ActiveDirectoryPassword":
+            # UID/PWD handling for AD auth types
+            if authentication in ("ActiveDirectoryPassword", "ActiveDirectoryServicePrincipal", "ActiveDirectoryInteractive"):
                 if uid:
                     con_str.append(f"UID={{{uid}}}")
-                if pwd:
+                if pwd and authentication != "ActiveDirectoryInteractive":
                     con_str.append(f"PWD={{{pwd}}}")
-            elif authentication == "ActiveDirectoryServicePrincipal":
-                if uid:
-                    con_str.append(f"UID={{{uid}}}")
-                if pwd:
-                    con_str.append(f"PWD={{{pwd}}}")
-            elif authentication == "ActiveDirectoryInteractive":
-                if uid:
-                    con_str.append(f"UID={{{uid}}}")
 
         # Encryption settings
         con_str.append(f"encrypt={'Yes' if encrypt else 'No'}")
@@ -341,18 +340,18 @@ def get_effective_driver_backend(driver_backend_setting: Optional[str] = None) -
     """
     env_override = os.environ.get("DBT_FABRIC_DRIVER_BACKEND")
     if env_override:
-        if env_override not in ("auto", "mssql-python", "pyodbc"):
+        if env_override not in VALID_BACKENDS:
             raise ValueError(
                 f"Invalid DBT_FABRIC_DRIVER_BACKEND='{env_override}'. "
-                f"Valid values: auto, mssql-python, pyodbc"
+                f"Valid values: {', '.join(VALID_BACKENDS)}"
             )
         logger.debug(f"Using driver backend from environment: {env_override}")
         return env_override
 
-    return driver_backend_setting or "auto"
+    return driver_backend_setting or DEFAULT_BACKEND
 
 
-def get_driver_backend(preferred: str = "auto") -> DriverBackend:
+def get_driver_backend(preferred: str = DEFAULT_BACKEND) -> DriverBackend:
     """
     Get the appropriate driver backend.
 
@@ -374,10 +373,10 @@ def get_driver_backend(preferred: str = "auto") -> DriverBackend:
     ValueError
         If an invalid driver backend is specified.
     """
-    if preferred not in ("auto", "mssql-python", "pyodbc"):
+    if preferred not in VALID_BACKENDS:
         raise ValueError(
             f"Invalid driver_backend='{preferred}'. "
-            f"Valid values: auto, mssql-python, pyodbc"
+            f"Valid values: {', '.join(VALID_BACKENDS)}"
         )
 
     if preferred == "pyodbc":
@@ -409,15 +408,19 @@ def get_driver_backend(preferred: str = "auto") -> DriverBackend:
 
 # Cache for the active backend instance
 _active_backend: Optional[DriverBackend] = None
+_active_backend_preference: Optional[str] = None
 
 
-def get_cached_driver_backend(preferred: str = "auto") -> DriverBackend:
+def get_cached_driver_backend(preferred: str = DEFAULT_BACKEND) -> DriverBackend:
     """
     Get the driver backend, using a cached instance if available.
 
     This avoids repeated import checks during a dbt run.
+    Caches based on the preference string (auto/mssql-python/pyodbc),
+    not the resolved backend name.
     """
-    global _active_backend
-    if _active_backend is None or _active_backend.name != preferred:
+    global _active_backend, _active_backend_preference
+    if _active_backend is None or _active_backend_preference != preferred:
         _active_backend = get_driver_backend(preferred)
+        _active_backend_preference = preferred
     return _active_backend
