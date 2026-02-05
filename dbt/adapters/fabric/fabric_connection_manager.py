@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type
 
 import agate
 import dbt_common.exceptions
@@ -456,22 +456,24 @@ def _run_end_action(snapshot_result: Optional[Dict[str, Any]] = None):
 class FabricConnectionManager(SQLConnectionManager):
     TYPE = "fabric"
     _backend: Optional[DriverBackend] = None
+    _backend_lock = threading.Lock()
 
     @classmethod
     def get_backend(cls, credentials: FabricCredentials) -> DriverBackend:
-        """Get the driver backend for this connection."""
-        if cls._backend is None:
-            effective_backend = get_effective_driver_backend(
-                credentials.driver_backend)
-            cls._backend = get_cached_driver_backend(effective_backend)
+        """Get the driver backend for this connection (thread-safe)."""
+        with cls._backend_lock:
+            if cls._backend is None:
+                effective_backend = get_effective_driver_backend(
+                    credentials.driver_backend)
+                cls._backend = get_cached_driver_backend(effective_backend)
 
-            # Emit deprecation warning if driver field is set but using mssql-python
-            if credentials.driver and cls._backend.name == "mssql-python":
-                logger.warning(
-                    "DEPRECATION: The 'driver' field is ignored when using mssql-python backend. "
-                    "Remove 'driver' from your profile to silence this warning."
-                )
-        return cls._backend
+                # Emit deprecation warning if driver field is set but using mssql-python
+                if credentials.driver and cls._backend.name == "mssql-python":
+                    logger.warning(
+                        "DEPRECATION: The 'driver' field is ignored when using mssql-python backend. "
+                        "Remove 'driver' from your profile to silence this warning."
+                    )
+            return cls._backend
 
     @contextmanager
     def exception_handler(self, sql):
@@ -564,23 +566,8 @@ class FabricConnectionManager(SQLConnectionManager):
             con_str_display = con_str_concat.replace(pwd, "***")
 
         # Get retryable exceptions from backend
+        # InterfaceError is already included by both backends for AAD auth scenarios
         retryable_exceptions = list(backend.get_retryable_exceptions())
-
-        if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
-            # Temporary login/token errors fall into this category when using AAD
-            # Add InterfaceError if not already in the list
-            try:
-                if backend.name == "pyodbc":
-                    import pyodbc
-                    if pyodbc.InterfaceError not in retryable_exceptions:
-                        retryable_exceptions.append(pyodbc.InterfaceError)
-                else:
-                    import mssql_python
-                    if mssql_python.InterfaceError not in retryable_exceptions:
-                        retryable_exceptions.append(
-                            mssql_python.InterfaceError)
-            except (ImportError, AttributeError):
-                pass
 
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
@@ -769,7 +756,7 @@ class FabricConnectionManager(SQLConnectionManager):
         )
 
     @classmethod
-    def data_type_code_to_name(cls, type_code: Union[str, str]) -> str:
+    def data_type_code_to_name(cls, type_code: str) -> str:
         data_type = str(type_code)[str(type_code).index(
             "'") + 1: str(type_code).rindex("'")]
         return datatypes[data_type]
