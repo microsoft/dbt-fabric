@@ -650,7 +650,7 @@ class TestPyodbcBackend:
             backend = PyodbcBackend()
             exceptions = backend.get_retryable_exceptions()
 
-            assert len(exceptions) == 2
+            assert len(exceptions) == 3  # InternalError, OperationalError, InterfaceError
 
     def test_get_database_error(self, mock_pyodbc):
         """Verify get_database_error returns correct exception type."""
