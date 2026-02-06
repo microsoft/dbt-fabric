@@ -4,7 +4,7 @@
 
 ### Python
 
-Make sure you have [Python](https://www.python.org/) 3.10 or higher installed. You can check your Python version by running:
+Make sure you have [Python](https://www.python.org/) 3.11 or higher installed. You can check your Python version by running:
 
 ```bash
 python --version
