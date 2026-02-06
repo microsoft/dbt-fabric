@@ -2,7 +2,7 @@ import datetime as dt
 import struct
 import time
 from contextlib import contextmanager
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 
 import agate
 import dbt_common.exceptions
@@ -38,36 +38,6 @@ datatypes = {
     "datetime.time": "time",
     "decimal.Decimal": "decimal",
 }
-
-
-def get_pyodbc_attrs_before_accesstoken(accessToken: str) -> Dict:
-    """
-    Get the pyodbc attrs before.
-
-    Parameters
-    ----------
-    credentials : Access Token for Integration Tests
-        Credentials.
-
-    Returns
-    -------
-    out : Dict
-        The pyodbc attrs before.
-
-    Source
-    ------
-    Authentication for SQL server with an access token:
-    https://docs.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver15#authenticating-with-an-access-token
-    """
-
-    access_token_utf16 = accessToken.encode("utf-16-le")
-    token_struct = struct.pack(
-        f"<I{len(access_token_utf16)}s", len(access_token_utf16), access_token_utf16
-    )
-    sql_copt_ss_access_token = 1256  # see source in docstring
-    attrs_before = {sql_copt_ss_access_token: token_struct}
-
-    return attrs_before
 
 
 def bool_to_connection_string_arg(key: str, value: bool) -> str:
@@ -123,9 +93,25 @@ def byte_array_to_datetime(value: bytes) -> dt.datetime:
     )
 
 
-class FabricConnectionManager(SQLConnectionManager, FabricApiClient):
+class FabricConnectionManager(SQLConnectionManager):
     TYPE = "fabric"
-    _host = None
+    _host: str | None = None
+    _fabric_token_provider: FabricTokenProvider | None = None
+    _fabric_api_client: FabricApiClient | None = None
+
+    @classmethod
+    def get_fabric_token_provider(cls, credentials: FabricCredentials) -> FabricTokenProvider:
+        if cls._fabric_token_provider is None:
+            cls._fabric_token_provider = FabricTokenProvider(credentials)
+        return cls._fabric_token_provider
+
+    @classmethod
+    def get_fabric_api_client(cls, credentials: FabricCredentials) -> FabricApiClient:
+        if cls._fabric_api_client is None:
+            cls._fabric_api_client = FabricApiClient(
+                credentials, cls.get_fabric_token_provider(credentials)
+            )
+        return cls._fabric_api_client
 
     @contextmanager
     def exception_handler(self, sql):
@@ -161,11 +147,13 @@ class FabricConnectionManager(SQLConnectionManager, FabricApiClient):
             if credentials.host:
                 cls._host = credentials.host
             elif credentials.workspace_id or credentials.workspace_name:
-                cls._host = cls.get_warehouse_connection_string(credentials)
+                api = cls.get_fabric_api_client(credentials)
+                cls._host = api.get_warehouse_connection_string()
             else:
                 raise dbt_common.exceptions.DbtConfigError(
                     "Either host or workspace_id must be provided."
                 )
+        assert cls._host is not None
         return cls._host
 
     @classmethod
@@ -276,19 +264,19 @@ class FabricConnectionManager(SQLConnectionManager, FabricApiClient):
     def cancel(self, connection: Connection):
         pass
 
-    def add_begin_query(self):
+    def add_begin_query(self) -> tuple[Connection, Any]:
         pass
 
-    def add_commit_query(self):
+    def add_commit_query(self) -> tuple[Connection, Any]:
         pass
 
     def add_query(
         self,
         sql: str,
         auto_begin: bool = True,
-        bindings: Optional[Any] = None,
+        bindings: Any | None = None,
         abridge_sql_log: bool = False,
-    ) -> Tuple[Connection, Any]:
+    ) -> tuple[Connection, Any]:
         connection = self.get_thread_connection()
 
         if auto_begin and connection.transaction_open is False:
@@ -355,13 +343,13 @@ class FabricConnectionManager(SQLConnectionManager, FabricApiClient):
         )
 
     @classmethod
-    def data_type_code_to_name(cls, type_code: Union[str, str]) -> str:
+    def data_type_code_to_name(cls, type_code: int|str) -> str:
         data_type = str(type_code)[str(type_code).index("'") + 1 : str(type_code).rindex("'")]
         return datatypes[data_type]
 
     def execute(
-        self, sql: str, auto_begin: bool = True, fetch: bool = False, limit: Optional[int] = None
-    ) -> Tuple[AdapterResponse, agate.Table]:
+        self, sql: str, auto_begin: bool = True, fetch: bool = False, limit: int | None = None
+    ) -> tuple[AdapterResponse, agate.Table]:
         sql = self._add_query_comment(sql)
         _, cursor = self.add_query(sql, auto_begin)
         response = self.get_response(cursor)
