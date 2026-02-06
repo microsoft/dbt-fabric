@@ -1,4 +1,4 @@
-import re
+import time
 import urllib.parse
 from typing import Any, Self
 
@@ -11,6 +11,7 @@ from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 
 class FabricApiClient:
     _LIVY_API_VERSION = "2023-12-01"
+    _WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS = 60 * 30  # 30 minutes
     _instance: Self | None = None
 
     def __init__(
@@ -25,6 +26,7 @@ class FabricApiClient:
         self._cached_warehouses: list[dict] | None = None
         self._cached_lakehouses: list[dict] | None = None
         self._livy_session_id: str | None = None
+        self._warehouse_snapshot_operations: dict[str, str] = {}
 
     @classmethod
     def create(cls, credentials: FabricCredentials, token_provider: FabricTokenProvider) -> Self:
@@ -188,6 +190,96 @@ class FabricApiClient:
             url = response.json().get("continuationUri", None)
 
         return snapshots
+
+    def create_warehouse_snapshot(self, snapshot_name: str) -> None:
+        url = f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots"
+        response = requests.post(
+            url,
+            headers=self._get_auth_headers(),
+            json={
+                "displayName": snapshot_name,
+                "creationPayload": {"parentWarehouseId": self.get_warehouse_id()},
+            },
+        )
+
+        if not response.status_code in (200, 201, 202):
+            raise dbt_common.exceptions.DbtRuntimeError(
+                f"Failed to create Data Warehouse Snapshot via Fabric API: {response.text}"
+            )
+
+        location_uri = response.headers.get("Location")
+        if location_uri is not None and response.status_code == 202:
+            self._warehouse_snapshot_operations[snapshot_name] = location_uri
+
+    def update_warehouse_snapshot(self, snapshot_id: str, snapshot_name: str) -> None:
+        url = f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots/{snapshot_id}"
+        response = requests.patch(
+            url,
+            headers=self._get_auth_headers(),
+            json={
+                "properties": {}  # This will just update the data timestamp to now.
+            },
+        )
+        if not response.status_code in (200, 201, 202):
+            raise dbt_common.exceptions.DbtRuntimeError(
+                f"Failed to create Data Warehouse Snapshot via Fabric API: {response.text}"
+            )
+
+        location_uri = response.headers.get("Location")
+        if location_uri is not None and response.status_code == 202:
+            self._warehouse_snapshot_operations[snapshot_name] = location_uri
+
+    def wait_and_get_snapshot_id_from_operation(self, operation_uri: str) -> str:
+        timer = time.time()
+        while True:
+            if time.time() - timer > self._WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS:
+                raise dbt_common.exceptions.DbtRuntimeError(
+                    f"Timed out waiting for Warehouse Snapshot operation to complete after {self._WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS} seconds."
+                )
+
+            response = requests.get(operation_uri, headers=self._get_auth_headers())
+            if not response.status_code == 200:
+                raise dbt_common.exceptions.DbtRuntimeError(
+                    f"Failed to retrieve Warehouse Snapshot operation status from Fabric API: {response.text}"
+                )
+            operation_status = response.json().get("status", "Unknown")
+            retry_sleep = int(response.headers.get("Retry-After", 5))
+
+            if operation_status == "Succeeded":
+                result_location = response.headers["Location"]
+                result_response = requests.get(result_location, headers=self._get_auth_headers())
+                if not result_response.status_code == 200:
+                    raise dbt_common.exceptions.DbtRuntimeError(
+                        f"Failed to retrieve Warehouse Snapshot operation result from Fabric API: {result_response.text}"
+                    )
+                return result_response.json().get("id")
+
+            if operation_status not in ("NotStarted", "Running"):
+                raise dbt_common.exceptions.DbtRuntimeError(
+                    f"Warehouse Snapshot operation failed with status {operation_status}."
+                )
+
+            time.sleep(retry_sleep)
+
+    def create_or_update_warehouse_snapshot(self, snapshot_name: str) -> None:
+        existing_snapshot_id = None
+
+        snapshot_operation_uri = self._warehouse_snapshot_operations.get(snapshot_name)
+        if snapshot_operation_uri is not None:
+            existing_snapshot_id = self.wait_and_get_snapshot_id_from_operation(
+                snapshot_operation_uri
+            )
+        else:
+            all_snapshots = self.get_warehouse_snapshots()
+            for snapshot in all_snapshots:
+                if snapshot["displayName"] == snapshot_name:
+                    existing_snapshot_id = snapshot["id"]
+                    break
+
+        if existing_snapshot_id is not None:
+            self.update_warehouse_snapshot(existing_snapshot_id, snapshot_name)
+        else:
+            self.create_warehouse_snapshot(snapshot_name)
 
     def get_livy_base_api_uri(self) -> str:
         workspace_id = self.get_workspace_id()

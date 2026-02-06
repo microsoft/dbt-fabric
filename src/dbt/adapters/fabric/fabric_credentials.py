@@ -84,6 +84,7 @@ class FabricCredentials(Credentials):
             "trace_flag",
             "fabric_base_api_uri",
             "powerbi_base_api_uri",
+            "warehouse_snapshot_name",
         )
 
     @property

@@ -23,6 +23,7 @@ from dbt.adapters.base.relation import BaseRelation
 from dbt.adapters.cache import _make_ref_key_dict
 from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
 from dbt.adapters.events.types import SchemaCreation
+from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
@@ -34,6 +35,7 @@ from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
 
 class FabricAdapter(SQLAdapter):
     ConnectionManager = FabricConnectionManager
+    connections: FabricConnectionManager
     Column = FabricColumn
     AdapterSpecificConfigs = FabricConfigs
     Relation = FabricRelation
@@ -265,6 +267,12 @@ class FabricAdapter(SQLAdapter):
         if not submission_result or not submission_result.success:
             return AdapterResponse(_message="ERROR")
         return AdapterResponse(_message="OK")
+
+    @available
+    def create_or_update_warehouse_snapshot(self, snapshot_name: str) -> str:
+        api = self.connections.get_fabric_api_client(self.config.credentials)
+        api.create_or_update_warehouse_snapshot(snapshot_name)
+        return ""
 
 
 COLUMNS_EQUAL_SQL = """
