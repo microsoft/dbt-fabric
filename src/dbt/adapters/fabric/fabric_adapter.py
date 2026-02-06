@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Type
 
 import agate
 import dbt_common.exceptions
@@ -53,7 +53,7 @@ class FabricAdapter(SQLAdapter):
     }
 
     @available.parse(lambda *a, **k: [])
-    def get_column_schema_from_query(self, sql: str) -> List[BaseColumn]:
+    def get_column_schema_from_query(self, sql: str) -> list[BaseColumn]:
         """Get a list of the Columns with names and data types from the given sql."""
         _, cursor = self.connections.add_select_query(sql)
 
@@ -140,7 +140,7 @@ class FabricAdapter(SQLAdapter):
         self,
         relation_a: BaseRelation,
         relation_b: BaseRelation,
-        column_names: Optional[List[str]] = None,
+        column_names: list[str] | None = None,
         except_operator: str = "EXCEPT",
     ) -> str:
         """
@@ -150,7 +150,7 @@ class FabricAdapter(SQLAdapter):
         relations and the number of mismatched rows.
         """
         # This method only really exists for test reasons.
-        names: List[str]
+        names: list[str]
         if column_names is None:
             columns = self.get_columns_in_relation(relation_a)
             names = sorted((self.quote(c.name) for c in columns))
@@ -198,7 +198,7 @@ class FabricAdapter(SQLAdapter):
 
     @available
     @classmethod
-    def render_column_constraint(cls, constraint: ColumnLevelConstraint) -> Optional[str]:
+    def render_column_constraint(cls, constraint: ColumnLevelConstraint) -> str | None:
         rendered_column_constraint = None
         if constraint.type == ConstraintType.not_null:
             rendered_column_constraint = "not null "
@@ -211,7 +211,7 @@ class FabricAdapter(SQLAdapter):
         return rendered_column_constraint
 
     @classmethod
-    def render_model_constraint(cls, constraint: ModelLevelConstraint) -> Optional[str]:
+    def render_model_constraint(cls, constraint: ModelLevelConstraint) -> str | None:
         constraint_prefix = "add constraint "
         column_list = ", ".join(constraint.columns)
 
@@ -242,7 +242,7 @@ class FabricAdapter(SQLAdapter):
         else:
             return None
 
-    def _make_match_kwargs(self, database: str, schema: str, identifier: str) -> Dict[str, str]:
+    def _make_match_kwargs(self, database: str, schema: str, identifier: str) -> dict[str, str]:
         return filter_null_values(
             {
                 "database": database,
@@ -256,7 +256,7 @@ class FabricAdapter(SQLAdapter):
         return "livy"
 
     @property
-    def python_submission_helpers(self) -> Dict[str, Type[PythonJobHelper]]:
+    def python_submission_helpers(self) -> dict[str, Type[PythonJobHelper]]:
         return {
             "livy": FabricLivyHelper,
         }

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 import agate
 
@@ -30,7 +30,7 @@ class FabricRelationConfigBase(RelationConfigBase):
         return relation
 
     @classmethod
-    def parse_relation_config(cls, relation_config: RelationConfig) -> Dict:
+    def parse_relation_config(cls, relation_config: RelationConfig) -> dict:
         raise NotImplementedError(
             "`parse_relation_config()` needs to be implemented on this RelationConfigBase instance"
         )
@@ -42,7 +42,7 @@ class FabricRelationConfigBase(RelationConfigBase):
         return relation  # type: ignore
 
     @classmethod
-    def parse_relation_results(cls, relation_results: RelationResults) -> Dict[str, Any]:
+    def parse_relation_results(cls, relation_results: RelationResults) -> dict[str, Any]:
         raise NotImplementedError(
             "`parse_relation_results()` needs to be implemented on this RelationConfigBase instance"
         )

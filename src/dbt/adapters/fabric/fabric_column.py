@@ -1,10 +1,10 @@
-from typing import Any, ClassVar, Dict
+from typing import Any, ClassVar
 
 from dbt.adapters.base import Column
 
 
 class FabricColumn(Column):
-    TYPE_LABELS: ClassVar[Dict[str, str]] = {
+    TYPE_LABELS: ClassVar[dict[str, str]] = {
         "BINARY": "BINARY(1)",
         "BOOLEAN": "BIT",
         "CHAR": "CHAR(1)",

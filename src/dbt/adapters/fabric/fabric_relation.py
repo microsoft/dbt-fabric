@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Type
+from typing import Type
 
 from dbt.adapters.base.relation import BaseRelation
 from dbt.adapters.fabric.relation_configs import FabricQuotePolicy, FabricRelationType
@@ -8,7 +8,7 @@ from dbt.adapters.utils import classproperty
 
 @dataclass(frozen=True, eq=False, repr=False)
 class FabricRelation(BaseRelation):
-    type: Optional[FabricRelationType] = None  # type: ignore
+    type: FabricRelationType | None = None  # type: ignore
     quote_policy: FabricQuotePolicy = field(default_factory=lambda: FabricQuotePolicy())
     require_alias: bool = True
 

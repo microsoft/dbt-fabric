@@ -1,7 +1,6 @@
 import struct
 import time
 from itertools import chain, repeat
-from typing import Dict, Optional
 
 from azure.core.credentials import AccessToken
 from azure.identity import (
@@ -84,10 +83,10 @@ class FabricTokenProvider:
     def get_api_token(self) -> str | None:
         return self._get_token(usage_is_sql=False)
 
-    def get_sql_token(self, scope: Optional[str] = None) -> str | None:
+    def get_sql_token(self, scope: str | None = None) -> str | None:
         return self._get_token(scope=scope, usage_is_sql=True)
 
-    def _get_token(self, scope: Optional[str] = None, usage_is_sql: bool = False) -> str | None:
+    def _get_token(self, scope: str | None = None, usage_is_sql: bool = False) -> str | None:
         MAX_REMAINING_TIME = 300
 
         if self.credentials.access_token:
@@ -137,7 +136,7 @@ class FabricTokenProvider:
         return FabricTokenProvider.convert_bytes_to_mswindows_byte_string(value)
 
     def get_pyodbc_attributes(self) -> dict[int, bytes]:
-        attrs_before: Dict
+        attrs_before: dict
         token = self.get_sql_token()
         if token:
             token_bytes = self.convert_access_token_to_mswindows_byte_string(token)
