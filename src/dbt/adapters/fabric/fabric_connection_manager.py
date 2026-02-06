@@ -343,7 +343,7 @@ class FabricConnectionManager(SQLConnectionManager):
         )
 
     @classmethod
-    def data_type_code_to_name(cls, type_code: int|str) -> str:
+    def data_type_code_to_name(cls, type_code: int | str) -> str:
         data_type = str(type_code)[str(type_code).index("'") + 1 : str(type_code).rindex("'")]
         return datatypes[data_type]
 
