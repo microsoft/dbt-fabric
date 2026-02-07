@@ -40,6 +40,29 @@ class FabricApiClient:
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
         }
+    
+    def _api_request(self, url: str, method: str = "get", body: dict|None = None) -> requests.Response:
+        response = requests.request(method, url, json=body, headers=self._get_auth_headers())
+        
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 5))
+            time.sleep(retry_after)
+            return self._api_request(url, method, body)
+
+        if not response.status_code >= 200 and response.status_code < 300:
+            raise dbt_common.exceptions.DbtRuntimeError(
+                f"{method} request to {url} failed with status code {response.status_code}: {response.text}"
+            )
+        return response
+    
+    def _api_get(self, url: str) -> requests.Response:
+        return self._api_request(url, method="get")
+    
+    def _api_post(self, url: str, body: dict) -> requests.Response:
+        return self._api_request(url, method="post", body=body)
+    
+    def _api_patch(self, url: str, body: dict) -> requests.Response:
+        return self._api_request(url, method="patch", body=body)
 
     def get_workspace_id(self) -> str:
         if self._workspace_id is not None:
@@ -53,20 +76,16 @@ class FabricApiClient:
 
         query_param = f"name eq '{self._credentials.workspace_name}'"
         query_param_encoded = urllib.parse.quote_plus(query_param)
-        url = (
-            f"{self._credentials.powerbi_base_api_uri}/myorg/groups?$filter={query_param_encoded}"
-        )
-        response = requests.get(url, headers=self._get_auth_headers())
-        if not response.status_code == 200:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to fetch workspace ID for {self._credentials.workspace_name}: {response.text}"
-            )
+        response = self._api_get(f"{self._credentials.powerbi_base_api_uri}/myorg/groups?$filter={query_param_encoded}")
         workspaces = response.json().get("value", [])
+
         if len(workspaces) == 0:
             raise dbt_common.exceptions.DbtRuntimeError(
                 f"No workspace found with name {self._credentials.workspace_name}"
             )
+        
         self._workspace_id = workspaces[0]["id"]
+        assert self._workspace_id is not None
         return self._workspace_id
 
     def get_warehouses(self, fetch_all: bool = True) -> list[dict]:
@@ -79,11 +98,7 @@ class FabricApiClient:
         warehouses = []
 
         while url is not None:
-            response = requests.get(url, headers=self._get_auth_headers())
-            if not response.status_code == 200:
-                raise dbt_common.exceptions.DbtRuntimeError(
-                    f"Failed to retrieve Warehouses from Fabric API: {response.text}"
-                )
+            response = self._api_get(url)
             warehouses = warehouses + response.json().get("value", [])
             url = response.json().get("continuationUri", None) if fetch_all else None
 
@@ -101,11 +116,7 @@ class FabricApiClient:
         lakehouses = []
 
         while url is not None:
-            response = requests.get(url, headers=self._get_auth_headers())
-            if not response.status_code == 200:
-                raise dbt_common.exceptions.DbtRuntimeError(
-                    f"Failed to retrieve Lakehouses from Fabric API: {response.text}"
-                )
+            response = self._api_get(url)
             lakehouses = lakehouses + response.json().get("value", [])
             url = response.json().get("continuationUri", None) if fetch_all else None
 
@@ -121,6 +132,7 @@ class FabricApiClient:
         warehouses = self.get_warehouses(fetch_all=False)
         if len(warehouses) > 0:
             self._warehouse_connection_string = warehouses[0]["properties"]["connectionString"]
+            assert self._warehouse_connection_string is not None
             return self._warehouse_connection_string
 
         # then we try to find it in any lakehouse (also have the same connection string)
@@ -129,6 +141,7 @@ class FabricApiClient:
             self._warehouse_connection_string = lakehouses[0]["properties"][
                 "sqlEndpointProperties"
             ]["connectionString"]
+            assert self._warehouse_connection_string is not None
             return self._warehouse_connection_string
 
         raise dbt_common.exceptions.DbtRuntimeError(
@@ -148,6 +161,7 @@ class FabricApiClient:
         for lakehouse in self.get_lakehouses(self._credentials):
             if lakehouse["displayName"] == self._credentials.lakehouse_name:
                 self._lakehouse_id = lakehouse["id"]
+                assert self._lakehouse_id is not None
                 return self._lakehouse_id
 
         raise dbt_common.exceptions.DbtRuntimeError(
@@ -161,6 +175,7 @@ class FabricApiClient:
         for warehouse in self.get_warehouses():
             if warehouse["displayName"] == self._credentials.database:
                 self._warehouse_id = warehouse["id"]
+                assert self._warehouse_id is not None
                 return self._warehouse_id
 
         raise dbt_common.exceptions.DbtRuntimeError(
@@ -177,11 +192,7 @@ class FabricApiClient:
         snapshots = []
 
         while url is not None:
-            response = requests.get(url, headers=self._get_auth_headers())
-            if not response.status_code == 200:
-                raise dbt_common.exceptions.DbtRuntimeError(
-                    f"Failed to retrieve Data Warehouse Snapshots from Fabric API: {response.text}"
-                )
+            response = self._api_get(url)
             for snapshot in response.json().get("value", []):
                 parent_warehouse_id = snapshot.get("properties", {}).get("parentWarehouseId")
                 if parent_warehouse_id == warehouse_id:
@@ -193,13 +204,12 @@ class FabricApiClient:
 
     def create_warehouse_snapshot(self, snapshot_name: str) -> None:
         url = f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots"
-        response = requests.post(
+        response = self._api_post(
             url,
-            headers=self._get_auth_headers(),
-            json={
+            {
                 "displayName": snapshot_name,
                 "creationPayload": {"parentWarehouseId": self.get_warehouse_id()},
-            },
+            }
         )
 
         if not response.status_code in (200, 201, 202):
@@ -213,17 +223,7 @@ class FabricApiClient:
 
     def update_warehouse_snapshot(self, snapshot_id: str, snapshot_name: str) -> None:
         url = f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots/{snapshot_id}"
-        response = requests.patch(
-            url,
-            headers=self._get_auth_headers(),
-            json={
-                "properties": {}  # This will just update the data timestamp to now.
-            },
-        )
-        if not response.status_code in (200, 201, 202):
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to create Data Warehouse Snapshot via Fabric API: {response.text}"
-            )
+        response = self._api_patch(url, { "properties": {} })
 
         location_uri = response.headers.get("Location")
         if location_uri is not None and response.status_code == 202:
@@ -237,22 +237,14 @@ class FabricApiClient:
                     f"Timed out waiting for Warehouse Snapshot operation to complete after {self._WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS} seconds."
                 )
 
-            response = requests.get(operation_uri, headers=self._get_auth_headers())
-            if not response.status_code == 200:
-                raise dbt_common.exceptions.DbtRuntimeError(
-                    f"Failed to retrieve Warehouse Snapshot operation status from Fabric API: {response.text}"
-                )
+            response = self._api_get(operation_uri)
             operation_status = response.json().get("status", "Unknown")
             retry_sleep = int(response.headers.get("Retry-After", 5))
 
             if operation_status == "Succeeded":
                 result_location = response.headers["Location"]
-                result_response = requests.get(result_location, headers=self._get_auth_headers())
-                if not result_response.status_code == 200:
-                    raise dbt_common.exceptions.DbtRuntimeError(
-                        f"Failed to retrieve Warehouse Snapshot operation result from Fabric API: {result_response.text}"
-                    )
-                return result_response.json().get("id")
+                result_response = self._api_get(result_location)
+                return result_response.json()["id"]
 
             if operation_status not in ("NotStarted", "Running"):
                 raise dbt_common.exceptions.DbtRuntimeError(
@@ -288,11 +280,7 @@ class FabricApiClient:
 
     def get_existing_livy_session(self) -> str | None:
         url = self.get_livy_base_api_uri() + "/sessions"
-        response = requests.get(url, headers=self._get_auth_headers())
-        if not response.status_code == 200:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to retrieve Livy sessions from Fabric API: {response.text}"
-            )
+        response = self._api_get(url)
         sessions = response.json().get("value", [])
         for session in sessions:
             if session["name"] == "dbt-fabric" and session["livyState"] in (
@@ -305,15 +293,7 @@ class FabricApiClient:
 
     def initialize_livy_session(self) -> str:
         url = self.get_livy_base_api_uri() + "/sessions"
-        response = requests.post(
-            url,
-            headers=self._get_auth_headers(),
-            json={"name": "dbt-fabric"},
-        )
-        if not response.status_code in (200, 201, 202):
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to create Livy session via Fabric API: {response.text}"
-            )
+        response = self._api_post(url, {"name": "dbt-fabric"})
         return response.json()["id"]
 
     def get_livy_session_id(self) -> str:
@@ -327,31 +307,15 @@ class FabricApiClient:
         return self.get_livy_base_api_uri() + f"/sessions/{self.get_livy_session_id()}"
 
     def get_livy_session_state(self) -> str:
-        response = requests.get(self.get_livy_session_base_uri(), headers=self._get_auth_headers())
-        if not response.status_code == 200:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to retrieve Livy session state from Fabric API: {response.text}"
-            )
+        response = self._api_get(self.get_livy_session_base_uri())
         return response.json().get("state", "unknown")
 
     def get_livy_statement(self, statement_id: str) -> dict[str, Any]:
         url = self.get_livy_session_base_uri() + f"/statements/{statement_id}"
-        response = requests.get(url, headers=self._get_auth_headers())
-        if not response.status_code == 200:
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to retrieve Livy statement state from Fabric API: {response.text}"
-            )
+        response = self._api_get(url)
         return response.json()
 
     def submit_livy_statement(self, code: str) -> str:
         url = self.get_livy_session_base_uri() + "/statements"
-        response = requests.post(
-            url,
-            headers=self._get_auth_headers(),
-            json={"code": code, "kind": "pyspark"},
-        )
-        if not response.status_code in (200, 201, 202):
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to submit Livy statement via Fabric API: {response.text}"
-            )
+        response = self._api_post(url, {"code": code, "kind": "pyspark"})
         return response.json()["id"]
