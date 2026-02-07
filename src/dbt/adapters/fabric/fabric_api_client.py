@@ -40,10 +40,12 @@ class FabricApiClient:
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
         }
-    
-    def _api_request(self, url: str, method: str = "get", body: dict|None = None) -> requests.Response:
+
+    def _api_request(
+        self, url: str, method: str = "get", body: dict | None = None
+    ) -> requests.Response:
         response = requests.request(method, url, json=body, headers=self._get_auth_headers())
-        
+
         if response.status_code == 429:
             retry_after = int(response.headers.get("Retry-After", 5))
             time.sleep(retry_after)
@@ -54,13 +56,13 @@ class FabricApiClient:
                 f"{method} request to {url} failed with status code {response.status_code}: {response.text}"
             )
         return response
-    
+
     def _api_get(self, url: str) -> requests.Response:
         return self._api_request(url, method="get")
-    
+
     def _api_post(self, url: str, body: dict) -> requests.Response:
         return self._api_request(url, method="post", body=body)
-    
+
     def _api_patch(self, url: str, body: dict) -> requests.Response:
         return self._api_request(url, method="patch", body=body)
 
@@ -76,14 +78,16 @@ class FabricApiClient:
 
         query_param = f"name eq '{self._credentials.workspace_name}'"
         query_param_encoded = urllib.parse.quote_plus(query_param)
-        response = self._api_get(f"{self._credentials.powerbi_base_api_uri}/myorg/groups?$filter={query_param_encoded}")
+        response = self._api_get(
+            f"{self._credentials.powerbi_base_api_uri}/myorg/groups?$filter={query_param_encoded}"
+        )
         workspaces = response.json().get("value", [])
 
         if len(workspaces) == 0:
             raise dbt_common.exceptions.DbtRuntimeError(
                 f"No workspace found with name {self._credentials.workspace_name}"
             )
-        
+
         self._workspace_id = workspaces[0]["id"]
         assert self._workspace_id is not None
         return self._workspace_id
@@ -209,7 +213,7 @@ class FabricApiClient:
             {
                 "displayName": snapshot_name,
                 "creationPayload": {"parentWarehouseId": self.get_warehouse_id()},
-            }
+            },
         )
 
         if not response.status_code in (200, 201, 202):
@@ -223,7 +227,7 @@ class FabricApiClient:
 
     def update_warehouse_snapshot(self, snapshot_id: str, snapshot_name: str) -> None:
         url = f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots/{snapshot_id}"
-        response = self._api_patch(url, { "properties": {} })
+        response = self._api_patch(url, {"properties": {}})
 
         location_uri = response.headers.get("Location")
         if location_uri is not None and response.status_code == 202:
