@@ -1,5 +1,5 @@
 ARG PYTHON_VERSION="3.13"
-FROM python:${PYTHON_VERSION}-trixie AS base
+FROM python:${PYTHON_VERSION}-bookworm AS base
 
 # Setup dependencies for pyodbc
 RUN apt-get update && \
