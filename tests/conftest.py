@@ -4,6 +4,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+from dbt.adapters.fabric.fabric_api_client import FabricApiClient
+from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
+
 pytest_plugins = ["dbt.tests.fixtures.project"]
 
 
@@ -113,3 +117,20 @@ def project(
         database=project_setup.database,
         test_config=project_setup.test_config,
     )
+
+
+@pytest.fixture(scope="class")
+def credentials(adapter) -> FabricCredentials:
+    return adapter.config.credentials
+
+
+@pytest.fixture(scope="class")
+def fabric_token_provider(credentials: FabricCredentials) -> FabricTokenProvider:
+    return FabricTokenProvider(credentials)
+
+
+@pytest.fixture(scope="class")
+def fabric_api_client(
+    fabric_token_provider: FabricTokenProvider, credentials: FabricCredentials
+) -> FabricApiClient:
+    return FabricApiClient.create(credentials, fabric_token_provider)
