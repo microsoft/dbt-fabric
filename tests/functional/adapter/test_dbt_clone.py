@@ -21,8 +21,6 @@ class TestFabricCloneNotPossible(BaseCloneNotPossible):
             )
             project.adapter.drop_schema(relation)
 
-    pass
-
 
 class TestFabricCloneSameTargetAndState(BaseCloneSameTargetAndState):
     pass

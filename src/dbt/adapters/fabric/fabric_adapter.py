@@ -269,9 +269,11 @@ class FabricAdapter(SQLAdapter):
         return AdapterResponse(_message="OK")
 
     @available
-    def create_or_update_warehouse_snapshot(self, snapshot_name: str) -> str:
+    def create_or_update_warehouse_snapshot(
+        self, snapshot_name: str, description: str | None = None
+    ) -> str:
         api = self.connections.get_fabric_api_client(self.config.credentials)
-        api.create_or_update_warehouse_snapshot(snapshot_name)
+        api.create_or_update_warehouse_snapshot(snapshot_name, description)
         return ""
 
 

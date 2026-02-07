@@ -66,6 +66,9 @@ class FabricApiClient:
     def _api_patch(self, url: str, body: dict) -> requests.Response:
         return self._api_request(url, method="patch", body=body)
 
+    def _api_delete(self, url: str) -> requests.Response:
+        return self._api_request(url, method="delete")
+
     def get_workspace_id(self) -> str:
         if self._workspace_id is not None:
             return self._workspace_id
@@ -206,28 +209,34 @@ class FabricApiClient:
 
         return snapshots
 
-    def create_warehouse_snapshot(self, snapshot_name: str) -> None:
+    def create_warehouse_snapshot(
+        self, snapshot_name: str, description: str | None = None
+    ) -> None:
         url = f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots"
+        body = {
+            "displayName": snapshot_name,
+            "creationPayload": {"parentWarehouseId": self.get_warehouse_id()},
+        }
+        if description is not None:
+            body["description"] = description
+
         response = self._api_post(
             url,
-            {
-                "displayName": snapshot_name,
-                "creationPayload": {"parentWarehouseId": self.get_warehouse_id()},
-            },
+            body,
         )
-
-        if not response.status_code in (200, 201, 202):
-            raise dbt_common.exceptions.DbtRuntimeError(
-                f"Failed to create Data Warehouse Snapshot via Fabric API: {response.text}"
-            )
 
         location_uri = response.headers.get("Location")
         if location_uri is not None and response.status_code == 202:
             self._warehouse_snapshot_operations[snapshot_name] = location_uri
 
-    def update_warehouse_snapshot(self, snapshot_id: str, snapshot_name: str) -> None:
+    def update_warehouse_snapshot(
+        self, snapshot_id: str, snapshot_name: str, description: str | None = None
+    ) -> None:
         url = f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots/{snapshot_id}"
-        response = self._api_patch(url, {"properties": {}})
+        body: dict[str, Any] = {"properties": {}}
+        if description is not None:
+            body["description"] = description
+        response = self._api_patch(url, body)
 
         location_uri = response.headers.get("Location")
         if location_uri is not None and response.status_code == 202:
@@ -257,7 +266,9 @@ class FabricApiClient:
 
             time.sleep(retry_sleep)
 
-    def create_or_update_warehouse_snapshot(self, snapshot_name: str) -> None:
+    def create_or_update_warehouse_snapshot(
+        self, snapshot_name: str, description: str | None = None
+    ) -> None:
         existing_snapshot_id = None
 
         snapshot_operation_uri = self._warehouse_snapshot_operations.get(snapshot_name)
@@ -273,9 +284,16 @@ class FabricApiClient:
                     break
 
         if existing_snapshot_id is not None:
-            self.update_warehouse_snapshot(existing_snapshot_id, snapshot_name)
+            self.update_warehouse_snapshot(existing_snapshot_id, snapshot_name, description)
         else:
-            self.create_warehouse_snapshot(snapshot_name)
+            self.create_warehouse_snapshot(snapshot_name, description)
+
+    def delete_warehouse_snapshot(self, snapshot_name: str) -> None:
+        for snapshot in self.get_warehouse_snapshots():
+            if snapshot["displayName"] == snapshot_name:
+                self._api_delete(
+                    f"{self._credentials.fabric_base_api_uri}/workspaces/{self.get_workspace_id()}/warehousesnapshots/{snapshot['id']}"
+                )
 
     def get_livy_base_api_uri(self) -> str:
         workspace_id = self.get_workspace_id()
