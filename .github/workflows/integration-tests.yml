@@ -39,9 +39,6 @@ jobs:
           - msodbc_version: "18"
             python_version: "3.13"
             dwh_name: "ci04"
-          - msodbc_version: "18"
-            python_version: "3.14"
-            dwh_name: "ci05"
 
     runs-on: ubuntu-latest
     environment: azure

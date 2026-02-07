@@ -7,7 +7,7 @@ license = "MIT"
 authors = [
     {name = "Sam Debruyn"}
 ]
-requires-python = ">=3.11,<3.15"
+requires-python = ">=3.11,<3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: Microsoft :: Windows",
