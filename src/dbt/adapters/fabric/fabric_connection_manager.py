@@ -6,6 +6,7 @@ from typing import Any, Type
 
 import agate
 import dbt_common.exceptions
+import mssql_python
 from dbt_common.clients.agate_helper import empty_table
 
 from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
@@ -16,7 +17,7 @@ from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 logger = AdapterLogger("fabric")
 
-# https://github.com/mkleehammer/pyodbc/wiki/Data-Types
+# https://github.com/microsoft/mssql-python/wiki/Data-Type-Conversion
 datatypes = {
     "str": "varchar",
     "uuid.UUID": "uniqueidentifier",
@@ -97,13 +98,13 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         try:
             yield
 
-        except pyodbc.DatabaseError as e:
+        except mssql_python.DatabaseError as e:
             logger.debug("Database error: {}".format(str(e)))
 
             try:
                 # attempt to release the connection
                 self.release()
-            except pyodbc.Error:
+            except mssql_python.Error:
                 logger.debug("Failed to release connection!")
 
             raise dbt_common.exceptions.DbtDatabaseError(str(e).strip()) from e
@@ -146,50 +147,30 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         assert isinstance(connection.credentials, FabricCredentials)
         credentials: FabricCredentials = connection.credentials
 
-        con_str = [f"DRIVER={{{credentials.driver}}}"]
-
-        con_str.append(f"SERVER={cls.get_host(credentials)}")
+        con_str = [f"Server={cls.get_host(credentials)}"]
 
         con_str.append(f"Database={credentials.database}")
-        con_str.append("Pooling=true")
-
-        # Enabling trace flag
-        if credentials.trace_flag:
-            con_str.append("SQL_ATTR_TRACE=SQL_OPT_TRACE_ON")
-        else:
-            con_str.append("SQL_ATTR_TRACE=SQL_OPT_TRACE_OFF")
 
         assert credentials.authentication is not None
 
         if "ActiveDirectory" in credentials.authentication:
             con_str.append(f"Authentication={credentials.authentication}")
-
-            if credentials.authentication == "ActiveDirectoryPassword":
-                con_str.append(f"UID={{{credentials.UID}}}")
-                con_str.append(f"PWD={{{credentials.PWD}}}")
-            if credentials.authentication == "ActiveDirectoryServicePrincipal":
-                con_str.append(f"UID={{{credentials.client_id}}}")
-                con_str.append(f"PWD={{{credentials.client_secret}}}")
-            elif credentials.authentication == "ActiveDirectoryInteractive":
-                con_str.append(f"UID={{{credentials.UID}}}")
-
-        elif credentials.windows_login:
-            con_str.append("trusted_connection=Yes")
-        elif credentials.authentication == "sql":
-            raise pyodbc.DatabaseError("SQL Authentication is not supported by Microsoft Fabric")
+        if credentials.authentication == "ActiveDirectoryPassword":
+            con_str.append(f"UID={{{credentials.UID}}}")
+            con_str.append(f"PWD={{{credentials.PWD}}}")
+        if credentials.authentication == "ActiveDirectoryServicePrincipal":
+            con_str.append(f"UID={{{credentials.client_id}}}")
+            con_str.append(f"PWD={{{credentials.client_secret}}}")
+            con_str.append(f"Authority Id={{{credentials.tenant_id}}}")
 
         # https://docs.microsoft.com/en-us/sql/relational-databases/native-client/features/using-encryption-without-validation?view=sql-server-ver15
         assert credentials.encrypt is not None
         assert credentials.trust_cert is not None
 
-        con_str.append(bool_to_connection_string_arg("encrypt", credentials.encrypt))
+        con_str.append(bool_to_connection_string_arg("Encrypt", credentials.encrypt))
         con_str.append(
             bool_to_connection_string_arg("TrustServerCertificate", credentials.trust_cert)
         )
-
-        plugin_version = __version__.version
-        application_name = f"dbt-{credentials.type}/{plugin_version}"
-        con_str.append(f"APP={application_name}")
 
         try:
             con_str.append(f"ConnectRetryCount={credentials.retries}")
@@ -213,19 +194,16 @@ class FabricConnectionManager(BaseFabricConnectionManager):
 
         con_str_display = ";".join(con_str)
 
-        retryable_exceptions = [  # https://github.com/mkleehammer/pyodbc/wiki/Exceptions
-            pyodbc.InternalError,  # not used according to docs, but defined in PEP-249
-            pyodbc.OperationalError,
-            pyodbc.InterfaceError,
+        retryable_exceptions = [
+            mssql_python.InternalError,  # not used according to docs, but defined in PEP-249
+            mssql_python.OperationalError,
         ]
 
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
-            pyodbc.pooling = True
-            pyodbc.odbcversion = "3.8"
-            attrs_before = cls.get_fabric_token_provider(credentials).get_pyodbc_attributes()
+            attrs_before = cls.get_fabric_token_provider(credentials).get_sql_attrs_before()
 
-            handle = pyodbc.connect(
+            handle = mssql_python.connect(
                 con_str_concat,
                 attrs_before=attrs_before,
                 autocommit=True,
@@ -252,7 +230,7 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         logger.debug("Cancel not supported for Fabric adapter.")
 
     @classmethod
-    def get_response(cls, cursor: Any) -> AdapterResponse:
+    def get_response(cls, cursor: mssql_python.Cursor) -> AdapterResponse:
         messages_to_add = []
         query_id = None
         if cursor.messages:

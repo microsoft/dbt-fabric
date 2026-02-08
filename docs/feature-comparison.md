@@ -29,7 +29,6 @@ default:
     outputs:
     dev:
       type: fabric
-      driver: ODBC Driver 18 for SQL Server
       workspace: "gold_{{ env_var('FABRIC_ENV', 'dev') }}"
       database: dwh
       schema: dbt

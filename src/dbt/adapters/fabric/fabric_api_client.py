@@ -40,7 +40,7 @@ class FabricApiClient:
         return cls._instance
 
     def _get_auth_headers(self) -> dict[str, str]:
-        token = self._token_provider.get_api_token()
+        token = self._token_provider.get_access_token()
         return {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",

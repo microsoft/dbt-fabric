@@ -27,23 +27,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - msodbc_version: "17"
-            python_version: "3.13"
-            dwh_name: "ci01"
-          - msodbc_version: "18"
-            python_version: "3.11"
+          - python_version: "3.11"
             dwh_name: "ci02"
-          - msodbc_version: "18"
-            python_version: "3.12"
+          - python_version: "3.12"
             dwh_name: "ci03"
-          - msodbc_version: "18"
-            python_version: "3.13"
+          - python_version: "3.13"
             dwh_name: "ci04"
 
     runs-on: ubuntu-latest
     environment: azure
     container: 
-      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
+      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-mssql-python
     steps:
       - name: Azure CLI Login
         uses: azure/login@v2
@@ -67,14 +61,13 @@ jobs:
           FABRIC_TEST_WORKSPACE_NAME: adapter-ci
           FABRIC_TEST_DWH_NAME: ${{ matrix.dwh_name }}
           FABRIC_TEST_LAKEHOUSE_NAME: cilh
-          FABRIC_TEST_DRIVER: "ODBC Driver ${{ matrix.msodbc_version }} for SQL Server"
         run: uv run pytest -ra -v --dw
       
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: logs-${{ matrix.msodbc_version }}-${{ matrix.python_version }}-${{ matrix.dwh_name }}
+          name: logs-${{ matrix.python_version }}-${{ matrix.dwh_name }}
           path: logs/
 
   integration-tests-fabric-de:

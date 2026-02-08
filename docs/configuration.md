@@ -4,7 +4,7 @@ You'll need to create a profile in the [profiles.yml](https://docs.getdbt.com/do
 
 ## Example profiles.yml
 
-Here's an example `profiles.yml` file that connects to a Microsoft Fabric instance using the ODBC Driver 18 for SQL Server and automatic authentication:
+Here's an example `profiles.yml` file that connects to a Microsoft Fabric instance using automatic authentication:
 
 ```yaml
 default:
@@ -12,7 +12,6 @@ default:
     outputs:
     dev:
       type: fabric
-      driver: ODBC Driver 18 for SQL Server
       workspace: your workspace name
       database: name_of_your_data_warehouse
       schema: schema_to_build_models_in
@@ -28,7 +27,6 @@ default:
       outputs:
         dev:
           type: fabric
-          driver: ODBC Driver 18 for SQL Server
           ...
           client_id: "{{ env_var('AZURE_CLIENT_ID', 'an optional default value') }}"
           client_secret: "{{ env_var('AZURE_CLIENT_SECRET') }}"
@@ -45,17 +43,6 @@ default:
 Only possible value: `fabric`
 
 The type of the adapter. This must be set to `fabric` to use this adapter.
-
-### `driver`
-
-**Required configuration option.**
-
-Possible values:
-
-- `ODBC Driver 18 for SQL Server`
-- `ODBC Driver 17 for SQL Server`
-
-The ODBC driver to use to connect to Microsoft Fabric. You must have [this driver installed](installation.md) on your machine.
 
 ### `host`
 
@@ -149,7 +136,7 @@ If you can't find a suitable method for your use case, please [open an issue](ht
 
 #### `ActiveDirectoryIntegrated`
 
-Authenticate with a Windows credential federated through Microsoft Entra ID with integrated authentication. This works on domain-joined machines. On macOS and Linux, it's recommended to use the latest version of the ODBC Driver 18.
+Authenticate with a Windows credential federated through Microsoft Entra ID with integrated authentication. This works on domain-joined machines.
 
 ??? info "Workspace info and Python models"
 
@@ -316,17 +303,10 @@ The number of times to retry a failed connection before failing. This will not r
 
 Possible values: any integer (seconds) :timer:
 
-The timeout for establishing a connection to the server. This can be useful if you are receiving the `Login timeout expired` error. A value of 30 seconds could improve the connection resiliency. The adapter has no default value and will use the ODBC driver's default if not set.
+The timeout for establishing a connection to the server. This can be useful if you are receiving the `Login timeout expired` error. A value of 30 seconds could improve the connection resiliency. The adapter has no default value and will use the driver's default if not set.
 
 ### `query_timeout`
 
 Possible values: any integer (seconds) :timer:
 
 The timeout for executing a query. This can be useful if you are receiving the `Query timeout expired` error. The default is no timeout.
-
-### `trace_flag`
-
-Alias: `SQL_ATTR_TRACE`<br>
-Possible values: `true`, `false`
-
-Set this to true to enable ODBC tracing. This is useful for debugging connection issues.
