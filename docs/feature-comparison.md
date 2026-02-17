@@ -35,6 +35,10 @@ While most authentication methods have been contributed back to dbt-fabric, some
 
 ## MERGE in incremental and microbatch models
 
+!!! info
+
+    MERGE has recently been added in Microsoft's version as well.
+
 Incremental models in dbt-fabric support the `append`, `insert_overwrite`, and `delete+insert` strategies.
 
 This adapter adds support for [MERGE](https://learn.microsoft.com/sql/t-sql/statements/merge-transact-sql?view=sql-server-ver17&WT.mc_id=MVP_310840).
@@ -71,6 +75,10 @@ This also works for microbatch models:
 select * from source('my_source', 'my_table')
 {% endif %}
 ```
+
+## Better support for [warehouse snapshots](warehouse-snapshots.md)
+
+Both adapters support Fabric [warehouse snapshots](https://learn.microsoft.com/fabric/data-warehouse/warehouse-snapshot?WT.mc_id=MVP_310840), but Microsoft's implementation hijacks Python runtime components and does not respect the proper dbt lifecycle. This adapter exposes a macro you can call from `on-run-start`, `on-run-end`, `post-hook`, or any other Jinja context — giving you full control over when and how often snapshots are taken.
 
 ## Better support for popular packages
 

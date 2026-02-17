@@ -91,3 +91,7 @@ nav:
     - Installing the adapter: installation.md
     - Compatibility: compatibility.md
     - Configuration: configuration.md
+- Feature guides:
+    - Authentication: authentication.md
+    - Python models: python-models.md
+    - Warehouse snapshots: warehouse-snapshots.md
