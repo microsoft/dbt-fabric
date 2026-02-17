@@ -16,7 +16,6 @@
 
 {%- endmacro %}
 
-
 {% macro fabric__get_unit_test_sql(main_sql, expected_fixture_sql, expected_column_names) -%}
   -- Build actual result given inputs
   WITH dbt_internal_unit_test_actual AS (
