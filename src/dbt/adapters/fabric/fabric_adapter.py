@@ -53,7 +53,7 @@ class FabricAdapter(BaseFabricAdapter, SQLAdapter):
 
         columns = [
             self.Column.create(
-                column_name, self.connections.data_type_code_to_name(column_type_code.type_code)
+                column_name, self.connections.data_type_code_to_name(column_type_code)
             )
             # https://peps.python.org/pep-0249/#description
             for column_name, column_type_code, *_ in cursor.description
