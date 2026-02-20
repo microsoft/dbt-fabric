@@ -1,8 +1,12 @@
 {% macro fabric__validate_sql(sql) -%}
-  {% call statement('validate_sql') -%}
-    SET SHOWPLAN_ALL ON;
-    {{ sql }}
-    SET SHOWPLAN_ALL OFF;
+  {% call statement('set_showplan_on') -%}
+    SET SHOWPLAN_XML ON;
   {% endcall %}
-  {{ return(load_result('validate_sql')) }}
+  {% call statement('run_sql') -%}
+    {{ sql }}
+  {% endcall %}
+  {% call statement('set_showplan_off') -%}
+    SET SHOWPLAN_XML OFF;
+  {% endcall %}
+  {{ return(load_result('run_sql')) }}
 {% endmacro %}
