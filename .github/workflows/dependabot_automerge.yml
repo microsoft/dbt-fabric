@@ -1,0 +1,47 @@
+### .github/workflows/dependabot_automerge.yml
+name: Dependabot Workflow
+on:
+  pull_request_target
+ 
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests-fabric-dw:
+    name: Integration tests on Fabric DW
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    environment: azure
+    container: 
+      image: ghcr.io/${{ github.repository }}:CI-3.13-msodbc18
+    steps:
+      - name: Azure CLI Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: 3.13
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run functional tests
+        env:
+          FABRIC_TEST_WORKSPACE_NAME: adapter-ci
+          FABRIC_TEST_DWH_NAME: ci05
+          FABRIC_TEST_LAKEHOUSE_NAME: cilh
+          FABRIC_TEST_DRIVER: "ODBC Driver 18 for SQL Server"
+        run: uv run pytest -ra -v

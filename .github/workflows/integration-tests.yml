@@ -76,5 +76,3 @@ jobs:
         with:
           name: logs-${{ matrix.msodbc_version }}-${{ matrix.python_version }}-${{ matrix.dwh_name }}
           path: logs/
-
-  
