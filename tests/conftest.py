@@ -25,8 +25,8 @@ def dbt_profile_target(dbt_profile_target_update):
         "database": os.getenv("FABRIC_TEST_DWH_NAME"),
         "retries": 3,
         "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
-        "login_timeout": 30,
-        "query_timeout": 10,
+        "login_timeout": 60,
+        "query_timeout": 30,
     }
 
     target.update(dbt_profile_target_update)
