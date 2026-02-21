@@ -2,6 +2,8 @@ import pytest
 
 from dbt.tests.adapter.dbt_clone.test_dbt_clone import (
     BaseCloneNotPossible,
+    BaseClonePossible,
+    BaseCloneSameSourceAndTarget,
     BaseCloneSameTargetAndState,
 )
 
@@ -23,4 +25,12 @@ class TestFabricCloneNotPossible(BaseCloneNotPossible):
 
 
 class TestFabricCloneSameTargetAndState(BaseCloneSameTargetAndState):
+    pass
+
+
+class TestFabricClonePossible(BaseClonePossible):
+    pass
+
+
+class TestFabricCloneSameSourceAndTarget(BaseCloneSameSourceAndTarget):
     pass
