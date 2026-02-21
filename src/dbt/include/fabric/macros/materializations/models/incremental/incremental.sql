@@ -1,62 +1,65 @@
-{% materialization incremental, adapter='fabric', supported_languages=['sql', 'python'] -%}
-
-  {%- set language = model['language'] -%}
-  {%- set full_refresh_mode = (should_full_refresh()) -%}
-  {%- set target_relation = this.incorporate(type='table') -%}
-  {%- set relation = load_cached_relation(this) -%}
-  {%- set existing_relation = none -%}
-
-  {% if relation.type == 'table' %}
-    {% set existing_relation = target_relation %}
-  {% elif relation.type == 'view' %}
-    {# Can't overwrite a view with a table - we must drop #}
-    {% set existing_relation = get_or_create_relation(relation.database, relation.schema, relation.identifier, relation.type)[1] %}
-    {{ log("Dropping relation " ~ existing_relation ~ " because it is a view and target is a table.") }}
-    {{ adapter.drop_relation(existing_relation) }}
-  {% endif %}
+{% materialization incremental, adapter='fabric', supported_languages=['sql', 'python'] %}
 
   {# Configs #}
+  {%- set language = model['language'] -%}
+  {%- set full_refresh_mode = should_full_refresh() -%}
   {%- set unique_key = config.get('unique_key') -%}
   {%- set incremental_strategy = config.get('incremental_strategy') or 'default' -%}
   {%- set grant_config = config.get('grants') -%}
   {%- set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') -%}
 
+  {# Load target relation #}
+  {%- set target_relation = this.incorporate(type='table') -%}
+  {%- set existing_relation = load_cached_relation(this) -%}
+
+  {# Can't overwrite a view with a table - we must drop #}
+  {% if existing_relation is not none and existing_relation.type == 'view' %}
+    {{ log("Dropping relation " ~ existing_relation ~ " because it is a view and target is a table.") }}
+    {% do adapter.drop_relation(existing_relation) %}
+    {%- set existing_relation = none -%}
+  {% endif %}
+
+  {{ run_hooks(pre_hooks, inside_transaction=False) }}
+  {# `BEGIN` happens here: #}
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
-  {# Full rebuild when no target table exists, full refresh requested, or existing relation is a view #}
-  {% if existing_relation is none or full_refresh_mode or existing_relation.is_view %}
+  {# Full rebuild when no target table exists or full refresh requested #}
+  {% if existing_relation is none or full_refresh_mode %}
 
-    {%- set tmp_vw_relation = target_relation.incorporate(
-        path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view'
-    ) -%}
+    {# Set up intermediate and backup relations #}
+    {%- set intermediate_relation = make_intermediate_relation(target_relation) -%}
+    {%- set preexisting_intermediate_relation = load_cached_relation(intermediate_relation) -%}
+    {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
+    {%- set preexisting_backup_relation = load_cached_relation(backup_relation) -%}
 
-    {# Drop temp view and target relations if they exist #}
-    {{ adapter.drop_relation(tmp_vw_relation) }}
-    {{ adapter.drop_relation(target_relation) }}
+    {{ drop_relation_if_exists(preexisting_backup_relation) }}
+    {{ drop_relation_if_exists(preexisting_intermediate_relation) }}
 
+    {# Build model into intermediate relation #}
     {%- call statement('main', language=language) -%}
-      {{ create_table_as(False, target_relation, compiled_code, language) }}
+      {{ create_table_as(False, intermediate_relation, compiled_code, language) }}
     {%- endcall -%}
 
-    {{ adapter.drop_relation(tmp_vw_relation) }}
-    {{ build_model_constraints(target_relation) }}
+    {% do create_indexes(intermediate_relation) %}
+
+    {# Swap: rename existing → backup, intermediate → target, then drop backup #}
+    {% if existing_relation is not none %}
+      {{ adapter.rename_relation(existing_relation, backup_relation) }}
+      {{ adapter.rename_relation(intermediate_relation, target_relation) }}
+      {{ adapter.drop_relation(backup_relation) }}
+    {% else %}
+      {{ adapter.rename_relation(intermediate_relation, target_relation) }}
+    {% endif %}
 
   {# Incremental merge into existing target table #}
   {% else %}
 
     {%- set temp_relation = make_temp_relation(target_relation) -%}
-    {%- set tmp_tble_vw_relation = temp_relation.incorporate(
-        path={"identifier": temp_relation.identifier ~ '__dbt_tmp_vw'}, type='view'
-    ) -%}
-
-    {{ adapter.drop_relation(temp_relation) }}
-    {{ adapter.drop_relation(tmp_tble_vw_relation) }}
+    {{ drop_relation_if_exists(temp_relation) }}
 
     {%- call statement('create_tmp_relation', language=language) -%}
       {{ create_table_as(True, temp_relation, compiled_code, language) }}
     {%- endcall -%}
-
-    {{ adapter.drop_relation(tmp_tble_vw_relation) }}
 
     {% do adapter.expand_target_column_types(
         from_relation=temp_relation,
@@ -85,16 +88,22 @@
     {%- endcall -%}
 
     {{ adapter.drop_relation(temp_relation) }}
+
   {% endif %}
 
   {{ run_hooks(post_hooks, inside_transaction=True) }}
 
-  {%- set target_relation = target_relation.incorporate(type='table') -%}
   {%- set should_revoke = should_revoke(existing_relation, full_refresh_mode) -%}
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
   {% do persist_docs(target_relation, model) %}
+
+  {# `COMMIT` happens here #}
   {% do adapter.commit() %}
+
+  {# Add constraints including FK relation #}
+  {{ build_model_constraints(target_relation) }}
+  {{ run_hooks(post_hooks, inside_transaction=False) }}
 
   {{ return({'relations': [target_relation]}) }}
 
-{%- endmaterialization %}
+{% endmaterialization %}
