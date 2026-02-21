@@ -1,7 +1,6 @@
 
 {% macro apply_label() %}
-    {{ log (config.get('query_tag','dbt-fabric'))}}
-    {%- set query_label = config.get('query_tag','dbt-fabric-dw') -%}
+    {%- set query_label = config.get('query_tag','dbt-fabric-samdebruyn') -%}
     OPTION (LABEL = '{{query_label}}');
 {% endmacro %}
 
