@@ -11,6 +11,9 @@ from dbt.tests.adapter.incremental.fixtures import (
     _MODELS__INCREMENTAL_SYNC_ALL_COLUMNS,
     _MODELS__INCREMENTAL_SYNC_REMOVE_ONLY,
 )
+from dbt.tests.adapter.incremental.test_incremental_merge_exclude_columns import (
+    BaseMergeExcludeColumns,
+)
 from dbt.tests.adapter.incremental.test_incremental_microbatch import BaseMicrobatch
 from dbt.tests.adapter.incremental.test_incremental_on_schema_change import (
     BaseIncrementalOnSchemaChange,
@@ -135,6 +138,10 @@ select 2 as id, cast('2020-01-02 00:00:00.000000' as datetime2(6)) as event_time
 union all
 select 3 as id, cast('2020-01-03 00:00:00.000000' as datetime2(6)) as event_time
 """
+
+
+class TestMergeExcludeColumnsFabric(BaseMergeExcludeColumns):
+    pass
 
 
 class TestFabricMicrobatch(BaseMicrobatch):

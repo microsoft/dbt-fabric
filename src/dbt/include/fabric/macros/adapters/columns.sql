@@ -124,7 +124,6 @@
     {%- endcall %}
 {% endmacro %}
 
---TODO
 {% macro fabric__alter_relation_add_remove_columns(relation, add_columns, remove_columns) %}
   {% call statement('add_drop_columns') -%}
     {% if add_columns %}

@@ -11,6 +11,7 @@ from dbt.tests.adapter.store_test_failures_tests.basic import (
 )
 from dbt.tests.adapter.store_test_failures_tests.test_store_test_failures import (
     BaseStoreTestFailures,
+    BaseStoreTestFailuresLimit,
 )
 
 tests__passing_test = """
@@ -49,4 +50,8 @@ class TestFabricStoreTestFailuresAsProjectLevelOff(StoreTestFailuresAsProjectLev
 
 
 class TestFabricStoreTestFailuresAsProjectLevelView(StoreTestFailuresAsProjectLevelView):
+    pass
+
+
+class TestFabricStoreTestFailuresLimit(BaseStoreTestFailuresLimit):
     pass
