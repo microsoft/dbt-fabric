@@ -46,50 +46,32 @@
     {{ get_use_database_sql(schema_relation.database) }}
     with base as (
       select
-        DB_NAME() as [database],
-        t.name as [name],
-        SCHEMA_NAME(t.schema_id) as [schema],
-        'table' as table_type
+          DB_NAME() as [database],
+          t.name as [name],
+          SCHEMA_NAME(t.schema_id) as [schema],
+          'table' as table_type
       from sys.tables as t {{ information_schema_hints() }}
       union all
       select
-        DB_NAME() as [database],
-        v.name as [name],
-        SCHEMA_NAME(v.schema_id) as [schema],
-        'view' as table_type
+          DB_NAME() as [database],
+          v.name as [name],
+          SCHEMA_NAME(v.schema_id) as [schema],
+          'view' as table_type
       from sys.views as v {{ information_schema_hints() }}
+      union all
+      select
+          DB_NAME() as [database],
+          f.name as [name],
+          SCHEMA_NAME(f.schema_id) as [schema],
+          'function' as table_type
+      from sys.objects as f {{ information_schema_hints() }}
+      where f.type_desc like '%function%'
     )
     select * from base
     where [schema] like '{{ schema_relation.schema }}'
     {{ apply_label() }}
   {% endcall %}
   {{ return(load_result('list_relations_without_caching').table) }}
-{% endmacro %}
-
-{% macro fabric__get_relation_without_caching(schema_relation) -%}
-  {% call statement('get_relation_without_caching', fetch_result=True) -%}
-    {{ get_use_database_sql(schema_relation.database) }}
-    with base as (
-      select
-        DB_NAME() as [database],
-        t.name as [name],
-        SCHEMA_NAME(t.schema_id) as [schema],
-        'table' as table_type
-      from sys.tables as t {{ information_schema_hints() }}
-      union all
-      select
-        DB_NAME() as [database],
-        v.name as [name],
-        SCHEMA_NAME(v.schema_id) as [schema],
-        'view' as table_type
-      from sys.views as v {{ information_schema_hints() }}
-    )
-    select * from base
-    where [schema] like '{{ schema_relation.schema }}'
-    and [name] like '{{ schema_relation.identifier }}'
-    {{ apply_label() }}
-  {% endcall %}
-  {{ return(load_result('get_relation_without_caching').table) }}
 {% endmacro %}
 
 {% macro fabric__get_relation_last_modified(information_schema, relations) -%}
