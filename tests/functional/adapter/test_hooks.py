@@ -249,7 +249,7 @@ create table {project.test_schema}.on_run_hook (
         project.run_sql(f"drop table if exists {project.test_schema}.schemas")
         project.run_sql(f"drop table if exists {project.test_schema}.db_schemas")
         os.environ["TERM_TEST"] = "TESTING"
-    
+
     @pytest.fixture(scope="class")
     def project_config_update(self):
         return {
@@ -275,7 +275,7 @@ create table {project.test_schema}.on_run_hook (
                 "quote_columns": False,
             },
         }
-    
+
     def check_hooks(self, state, project, host):
         ctx = self.get_ctx_vars(state, project)
         assert ctx["test_state"] == state
