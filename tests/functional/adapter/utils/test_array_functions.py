@@ -9,7 +9,6 @@ class TestArrayAppendFabric(BaseArrayAppend):
     pass
 
 
-@pytest.mark.skip(reason="Array concat is not supported in Fabric")
 class TestArrayConcatFabric(BaseArrayConcat):
     pass
 
