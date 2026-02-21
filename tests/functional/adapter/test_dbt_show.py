@@ -3,7 +3,10 @@ import pytest
 from dbt.tests.adapter.dbt_show.fixtures import (
     models__second_ephemeral_model,
 )
-from dbt.tests.adapter.dbt_show.test_dbt_show import BaseShowLimit, BaseShowSqlHeader
+from dbt.tests.adapter.dbt_show.test_dbt_show import (
+    BaseShowLimit,
+    BaseShowSqlHeader,
+)
 from dbt.tests.util import run_dbt
 
 
