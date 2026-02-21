@@ -5,7 +5,6 @@ from dbt.tests.adapter.utils.test_array_concat import BaseArrayConcat
 from dbt.tests.adapter.utils.test_array_construct import BaseArrayConstruct
 
 
-@pytest.mark.skip(reason="Array concat is not supported in Fabric")
 class TestArrayAppendFabric(BaseArrayAppend):
     pass
 
