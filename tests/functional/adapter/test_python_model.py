@@ -15,5 +15,6 @@ class TestPythonIncrementalTestsFabric(BasePythonIncrementalTests):
     pass
 
 
+@pytest.mark.skip("Other DataFrames than PySpark are not supported in Fabric yet")
 class TestPySparkTestsFabric(BasePySparkTests):
     pass
