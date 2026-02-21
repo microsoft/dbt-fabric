@@ -7,6 +7,8 @@
   {%- set incremental_strategy = config.get('incremental_strategy') or 'default' -%}
   {%- set grant_config = config.get('grants') -%}
   {%- set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') -%}
+  {%- set incremental_predicates = config.get('predicates', none) or config.get('incremental_predicates', none) -%}
+  {%- set strategy_sql_macro_func = adapter.get_incremental_strategy_macro(context, incremental_strategy) -%}
 
   {# Load target relation #}
   {%- set target_relation = this.incorporate(type='table') -%}
@@ -72,9 +74,7 @@
       {% set dest_columns = adapter.get_columns_in_relation(existing_relation) %}
     {% endif %}
 
-    {# Get the incremental strategy macro and build the sql #}
-    {%- set incremental_predicates = config.get('predicates', none) or config.get('incremental_predicates', none) -%}
-    {%- set strategy_sql_macro_func = adapter.get_incremental_strategy_macro(context, incremental_strategy) -%}
+    {# Build the SQL for the incremental strategy macro #}
     {%- set strategy_arg_dict = ({
         'target_relation': target_relation,
         'temp_relation': temp_relation,

@@ -15,8 +15,12 @@ from dbt.tests.adapter.basic.test_docs_generate import (
 from dbt.tests.adapter.basic.test_empty import BaseEmpty
 from dbt.tests.adapter.basic.test_ephemeral import BaseEphemeral
 from dbt.tests.adapter.basic.test_generic_tests import BaseGenericTests
+from dbt.tests.adapter.basic.test_get_catalog_for_single_relation import (
+    BaseGetCatalogForSingleRelation,
+)
 from dbt.tests.adapter.basic.test_incremental import (
     BaseIncremental,
+    BaseIncrementalBadStrategy,
     BaseIncrementalNotSchemaChange,
 )
 from dbt.tests.adapter.basic.test_singular_tests import BaseSingularTests
@@ -149,4 +153,13 @@ select first_name, ct from {{ref('ephemeral_summary')}}
 
 
 class TestTableMaterializationFabric(BaseTableMaterialization):
+    pass
+
+
+@pytest.mark.skip("Catalog for single relation does not give any benefits in Fabric")
+class TestGetCatalogForSingleRelationFabric(BaseGetCatalogForSingleRelation):
+    pass
+
+
+class TestIncrementalBadStrategyFabric(BaseIncrementalBadStrategy):
     pass
