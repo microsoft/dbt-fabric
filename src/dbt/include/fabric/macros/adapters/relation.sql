@@ -25,10 +25,6 @@
             identifier = reference[1], schema = reference[0], database = relation.database, type='view'
           ))%}
       {% endfor %}
-    {% elif relation.type == 'table'%}
-      {% set object_id_type = 'U' %}
-    {%- else -%}
-        {{ exceptions.raise_not_implemented('Invalid relation being dropped: ' ~ relation) }}
     {% endif %}
     {{ get_use_database_sql(relation.database) }}
     EXEC('DROP {{ relation.type }} IF EXISTS {{ relation.include(database=False) }};');
