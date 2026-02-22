@@ -8,6 +8,15 @@ from dbt.tests.adapter.python_model.test_python_model import (
 )
 from dbt.tests.adapter.python_model.test_spark import BasePySparkTests
 
+input_model_sql = """
+{{ config(materialized='table', event_time='event_time') }}
+select 1 as id, cast('2025-01-01 01:25:00+00:00' as datetime2(6)) as event_time
+UNION ALL
+select 2 as id, cast('2025-01-02 13:47:00+00:00' as datetime2(6)) as event_time
+UNION ALL
+select 3 as id, cast('2025-01-03 01:32:00+00:00' as datetime2(6)) as event_time
+"""
+
 
 class TestPythonModelTestsFabric(BasePythonModelTests):
     pass
@@ -22,11 +31,19 @@ class TestPySparkTestsFabric(BasePySparkTests):
     pass
 
 
-@pytest.mark.skip("TODO: Failing test - to investigate")
-class TestPythonEmptyTestsFabric(BasePythonEmptyTests):
+class FabricInputModel:
+    @pytest.fixture(scope="class")
+    def input_model_sql(self) -> str:
+        """
+        This is the SQL that defines the input model to be sampled, including any {{ config(..) }}.
+        event_time is a required configuration of this input
+        """
+        return input_model_sql
+
+
+class TestPythonEmptyTestsFabric(FabricInputModel, BasePythonEmptyTests):
     pass
 
 
-@pytest.mark.skip("TODO: Failing test - to investigate")
-class TestPythonSampleTestsFabric(BasePythonSampleTests):
+class TestPythonSampleTestsFabric(FabricInputModel, BasePythonSampleTests):
     pass
