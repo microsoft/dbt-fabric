@@ -368,7 +368,7 @@ create table <model_identifier>(id int not null,color varchar(100),date_day varc
         )
         generated_sql_wodb = generated_sql_generic.replace("USE [" + project.database + "];", "")
         generated_sql_option_cluase = generated_sql_wodb.replace(
-            "OPTION (LABEL = 'dbt-fabric-dw');", ""
+            "OPTION (LABEL = 'dbt-fabric-samdebruyn');", ""
         )
         assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
             generated_sql_option_cluase.strip()
@@ -420,7 +420,7 @@ create table <model_identifier>(id int not null,color varchar(100),date_day varc
         )
         generated_sql_wodb = generated_sql_generic.replace("USE [" + project.database + "];", "")
         generated_sql_option_cluase = generated_sql_wodb.replace(
-            "OPTION (LABEL = 'dbt-fabric-dw');", ""
+            "OPTION (LABEL = 'dbt-fabric-samdebruyn');", ""
         )
         assert _normalize_whitespace(expected_sql.strip()) == _normalize_whitespace(
             generated_sql_option_cluase.strip()
