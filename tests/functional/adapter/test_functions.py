@@ -75,7 +75,7 @@ class TestSqlUDFDefaultArgSupportFabric(TestUDFsBasicFabric):
         assert result.results[0].agate_table.rows[0].values()[0] == 200
 
 
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
+@pytest.mark.skip(reason="Aggregate functions don't exist in T-SQL.")
 class TestBasicSQLUDAFFabric(BasicSQLUDAF):
     pass
 

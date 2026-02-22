@@ -10,8 +10,9 @@
     {% set args = [] %}
     {% for arg in model.arguments -%}
         {%- set arg_str = '@' ~ arg.name ~ ' ' ~ arg.data_type -%}
-        {%- if arg.default_value is not none -%}
-            {% set arg_str = arg_str ~ ' = ' ~ arg.default_value %}
+        {%- set default_value = arg.get('default_value', none) -%}
+        {%- if default_value is not none -%}
+            {%- set arg_str = arg_str ~ ' = ' ~ arg.default_value -%}
         {%- endif -%}
         {%- do args.append(arg_str) -%}
     {%- endfor %}
@@ -29,4 +30,13 @@
     BEGIN
        RETURN ({{ model.compiled_code }});
     END
+{% endmacro %}
+
+{% macro fabric__scalar_function_volatility_sql() %}
+    {% set volatility = model.config.get('volatility') %}
+    {% if volatility != none %}
+        {# This shouldn't happen unless a new volatility is invented #}
+        {% do unsupported_volatility_warning(volatility) %}
+    {% endif %}
+    {# If no volatility is set, don't add anything and let the data warehouse default it #}
 {% endmacro %}
