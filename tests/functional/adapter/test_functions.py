@@ -1,6 +1,6 @@
 import pytest
 from dbt_common.events.base_types import EventMsg
-from dbt.tests.util import run_dbt
+
 import dbt.tests.adapter.functions.files as files
 from dbt.tests.adapter.functions.test_udafs import (
     BasicPythonUDAF,
@@ -21,6 +21,7 @@ from dbt.tests.adapter.functions.test_udfs import (
     StableUDF,
     UDFsBasic,
 )
+from dbt.tests.util import run_dbt
 
 my_udf_sql = """
 SELECT @price * 2
