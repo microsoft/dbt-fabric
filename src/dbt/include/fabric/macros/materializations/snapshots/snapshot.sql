@@ -4,7 +4,7 @@
   {%- set target_table = model.get('alias', model.get('name')) -%}
   {%- set strategy_name = config.get('strategy') -%}
   {%- set unique_key = config.get('unique_key') %}
-  -- grab current tables grants config for comparision later on
+  {# Grab current tables grants config for comparison later on #}
   {%- set grant_config = config.get('grants') -%}
 
   {% set target_relation_exists, target_relation = get_or_create_relation(
@@ -29,7 +29,7 @@
           identifier=target_table+"_snapshot_staging_temp_view",
           type='view') -%}
 
-  -- Create a temporary view to manage if user SQl uses CTE
+  {# Create a temporary view to handle user SQL that uses CTEs #}
   {% set temp_snapshot_relation_sql = model['compiled_code'] %}
   {{ adapter.drop_relation(temp_snapshot_relation) }}
 
@@ -42,10 +42,9 @@
       {% set build_sql = build_snapshot_table(strategy, temp_snapshot_relation) %}
       {% set build_or_select_sql = build_sql %}
 
-      -- naming a temp relation
+      {# Naming a temp relation #}
       {% set tmp_relation_view = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-      -- Fabric & Synapse adapters use temp relation because of lack of CTE support for CTE in CTAS, Insert
-      -- drop temp relation if exists
+      {# Fabric uses temp view relation because of lack of CTE support in CTAS/INSERT #}
       {{ adapter.drop_relation(tmp_relation_view) }}
       {% set final_sql = get_create_table_as_sql(False, target_relation, build_sql) %}
       {{ adapter.drop_relation(tmp_relation_view) }}
@@ -56,7 +55,7 @@
       {{ adapter.valid_snapshot_target(target_relation, columns) }}
       {% set build_or_select_sql = snapshot_staging_table(strategy, temp_snapshot_relation, target_relation) %}
       {% set staging_table = build_snapshot_staging_table(strategy, temp_snapshot_relation, target_relation) %}
-      -- this may no-op if the database does not require column expansion
+      {# This may no-op if the database does not require column expansion #}
       {% do adapter.expand_target_column_types(from_relation=staging_table,
                                                to_relation=target_relation) %}
 
