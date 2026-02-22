@@ -27,6 +27,7 @@ jobs:
           echo "Setting version to $VERSION"
           # Update the version in __version__.py
           echo "version = \"$VERSION\"" > src/dbt/adapters/fabric/__version__.py
+          echo "version = \"$VERSION\"" > src/dbt/adapters/fabricspark/__version__.py
 
       - name: Install dependencies
         run: uv sync

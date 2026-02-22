@@ -12,22 +12,32 @@ pytest_plugins = ["dbt.tests.fixtures.project"]
 
 
 @pytest.fixture(scope="class")
-def dbt_profile_target(dbt_profile_target_update):
-    target = {
-        "type": "fabric",
-        "driver": os.getenv("FABRIC_TEST_DRIVER", "ODBC Driver 18 for SQL Server"),
-        "host": os.getenv("FABRIC_TEST_HOST"),
-        "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
-        "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
-        "lakehouse_id": os.getenv("FABRIC_TEST_LAKEHOUSE_ID"),
-        "lakehouse_name": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
-        "authentication": "auto",
-        "database": os.getenv("FABRIC_TEST_DWH_NAME"),
-        "retries": 3,
-        "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
-        "login_timeout": 60,
-        "query_timeout": 30,
-    }
+def adapter_type(request) -> str:
+    tests_root = Path(__file__).parent
+    test_child_path = Path(request.fspath).relative_to(tests_root).parts[0]
+    return test_child_path
+
+
+@pytest.fixture(scope="class")
+def dbt_profile_target(dbt_profile_target_update, adapter_type: str):
+    if adapter_type == "fabric":
+        target = {
+            "type": "fabric",
+            "driver": os.getenv("FABRIC_TEST_DRIVER", "ODBC Driver 18 for SQL Server"),
+            "host": os.getenv("FABRIC_TEST_HOST"),
+            "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
+            "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
+            "lakehouse_id": os.getenv("FABRIC_TEST_LAKEHOUSE_ID"),
+            "lakehouse_name": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
+            "authentication": "auto",
+            "database": os.getenv("FABRIC_TEST_DWH_NAME"),
+            "retries": 3,
+            "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
+            "login_timeout": 60,
+            "query_timeout": 30,
+        }
+    else:
+        raise ValueError(f"Unsupported adapter_type: {adapter_type}")
 
     target.update(dbt_profile_target_update)
     return target
@@ -45,6 +55,12 @@ def profile_user(dbt_profile_target):
 
 def pytest_addoption(parser):
     parser.addoption("--with-grants", action="store_true", default=False, help="run GRANT tests")
+    parser.addoption(
+        "--de", action="store_true", default=False, help="run only Fabric Spark tests"
+    )
+    parser.addoption(
+        "--dw", action="store_true", default=False, help="run only Fabric T-SQL tests"
+    )
 
 
 def pytest_configure(config):
@@ -52,13 +68,30 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--with-grants"):
-        # --with-grants given in cli: do not skip slow tests
-        return
+    if config.getoption("--de") and config.getoption("--dw"):
+        raise ValueError("Cannot specify both --de and --dw options")
+    elif config.getoption("--de"):
+        adapter_type = "fabricspark"
+    elif config.getoption("--dw"):
+        adapter_type = "fabric"
+    else:
+        adapter_type = None
+
     skip_grants = pytest.mark.skip(reason="need --with-grants option to run")
+    tests_root = Path(__file__).parent
+
     for item in items:
-        if "grants" in item.keywords:
+        tests_child_path = Path(item.fspath).relative_to(tests_root).parts[0]
+
+        if "grants" in item.keywords and not config.getoption("--with-grants"):
             item.add_marker(skip_grants)
+
+        if adapter_type is not None and tests_child_path != adapter_type:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason=f"Test is for {tests_child_path} adapter, not {adapter_type}"
+                )
+            )
 
 
 @pytest.fixture(scope="class")

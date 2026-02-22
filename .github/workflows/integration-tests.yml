@@ -7,9 +7,11 @@ on:
   pull_request:
     branches:
       - forked-version
+      - with-spark
   push:
     branches:
       - forked-version
+      - with-spark
 
 permissions:
   contents: read
@@ -60,19 +62,62 @@ jobs:
           python-version: ${{ matrix.python_version }}
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --all-extras --all-groups
 
-      - name: Run functional tests
+      - name: Run integration tests
         env:
           FABRIC_TEST_WORKSPACE_NAME: adapter-ci
           FABRIC_TEST_DWH_NAME: ${{ matrix.dwh_name }}
           FABRIC_TEST_LAKEHOUSE_NAME: cilh
           FABRIC_TEST_DRIVER: "ODBC Driver ${{ matrix.msodbc_version }} for SQL Server"
-        run: uv run pytest -ra -v
+        run: uv run pytest -ra -v --dw
       
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: logs-${{ matrix.msodbc_version }}-${{ matrix.python_version }}-${{ matrix.dwh_name }}
+          path: logs/
+
+  integration-tests-fabric-de:
+    name: Integration tests on Fabric DE
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python_version: "3.11"
+          - python_version: "3.12"
+          - python_version: "3.13"
+    runs-on: ubuntu-latest
+    environment: azure
+    container: 
+      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-mssql-python
+    steps:
+      - name: Azure CLI Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras --all-groups
+
+      - name: Run integration tests
+        env:
+          FABRIC_TEST_WORKSPACE_NAME: adapter-ci
+        run: uv run pytest -ra -v --de
+        
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: logs-fs-${{ matrix.python_version }}
           path: logs/

@@ -428,6 +428,11 @@ dependencies = [
     { name = "requests" },
 ]
 
+[package.optional-dependencies]
+spark = [
+    { name = "dbt-spark" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "dbt-core" },
@@ -450,9 +455,11 @@ requires-dist = [
     { name = "azure-identity", specifier = ">=1.12.0" },
     { name = "dbt-adapters", specifier = ">=1.22.6,<2.0" },
     { name = "dbt-common", specifier = ">=1.37.2,<2.0" },
+    { name = "dbt-spark", marker = "extra == 'spark'", specifier = ">=1.10.1" },
     { name = "pyodbc", specifier = ">=4.0.35" },
     { name = "requests", specifier = ">=2.32.3" },
 ]
+provides-extras = ["spark"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -501,6 +508,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b0/91/c702d8fb143541fda10f5eb7a7a89f34bda38ee043ecb3e3653363d0c5a0/dbt_semantic_interfaces-0.9.0.tar.gz", hash = "sha256:5c921257dce8bb51c9ffb5479f2bdd959e16ebfb98ee833de6daa70788c47271", size = 93865, upload-time = "2025-07-09T20:06:30.454Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/82/41708b2b69d5fead88dea5ca0d863d6291da83ca6f1bd19246842d397e2b/dbt_semantic_interfaces-0.9.0-py3-none-any.whl", hash = "sha256:1b54c06ba89190a47a7f0563360930a0cce869e55b484ca09d261ade0e319155", size = 147008, upload-time = "2025-07-09T20:06:32.466Z" },
+]
+
+[[package]]
+name = "dbt-spark"
+version = "1.10.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dbt-adapters" },
+    { name = "dbt-common" },
+    { name = "dbt-core" },
+    { name = "sqlparams" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/01/16/fa90c03bbc83dd44b6ce3a4a06dffee224b8763a08a7bc64fe745b49e2c3/dbt_spark-1.10.1.tar.gz", hash = "sha256:fc39d57e6bc6afc8bc75472bfd25f6d6fbfbf178c9e455e927300748270d1a5e", size = 77182, upload-time = "2026-02-12T00:42:04.41Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/9c/fd9429f4a5bb211a6a5d61000f03639d6f748a939b5ba46e041cc36f49a6/dbt_spark-1.10.1-py3-none-any.whl", hash = "sha256:6904822cad26014ecdc93d52b8d288ef10c8354f58da55d33baf702b707bd9f9", size = 51432, upload-time = "2026-02-12T00:42:02.54Z" },
 ]
 
 [[package]]
@@ -1552,6 +1574,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ff/77/1ab6e5bafb9c80d8128f065a355377a04ac5b3c38eb719d920a9909d346e/snowplow_tracker-1.1.0.tar.gz", hash = "sha256:95d8fdc8bd542fd12a0b9a076852239cbaf0599eda8721deaf5f93f7138fe755", size = 34135, upload-time = "2025-02-21T10:58:48.112Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/78/10/1c76269cbf2d6e127f4415044d9ddb0295858230678bbf4bfba905593c82/snowplow_tracker-1.1.0-py3-none-any.whl", hash = "sha256:24ea32ddac9cca547421bf9ab162f5f33c00711c6ef118ad5f78093cee962224", size = 44128, upload-time = "2025-02-21T10:58:45.818Z" },
+]
+
+[[package]]
+name = "sqlparams"
+version = "6.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/76/ec/5d6a5ca217ecd7b08d404b7dc2025c752bdb393c9b34fcc6d48e1f70bb7e/sqlparams-6.2.0.tar.gz", hash = "sha256:3744a2ad16f71293db6505b21fd5229b4757489a9b09f3553656a1ae97ba7ca5", size = 34932, upload-time = "2025-01-25T16:21:59.646Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/97/e2/f1355629bb1eeb274babc947e2ba4e2e49250e934c86adcce3e54943bc8a/sqlparams-6.2.0-py3-none-any.whl", hash = "sha256:63b32ed9051bdc52e7e8b38bc4f78aed51796cdd9135e730f4c6a7db1048dedf", size = 17629, upload-time = "2025-01-25T16:21:58.272Z" },
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 import pytest
 
-from tests.functional.packages.base_package_test import BaseDbtPackageTests
+from tests.fabric.packages.base_package_test import BaseDbtPackageTests
 
 
 class TestDbtUtils(BaseDbtPackageTests):
