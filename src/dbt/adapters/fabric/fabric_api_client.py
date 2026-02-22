@@ -6,7 +6,7 @@ from typing import Any, Self
 import dbt_common.exceptions
 import requests
 
-from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 
 _livy_session_thread_lock = threading.Lock()
@@ -15,11 +15,12 @@ _livy_session_thread_lock = threading.Lock()
 class FabricApiClient:
     _LIVY_API_VERSION = "2023-12-01"
     _WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS = 60 * 30  # 30 minutes
+    _POLLING_INTERVAL = 10  # seconds
     LIVY_SESSION_NAME = "dbt-fabric-samdebruyn"
     _instance: Self | None = None
 
     def __init__(
-        self, credentials: FabricCredentials, token_provider: FabricTokenProvider
+        self, credentials: BaseFabricCredentials, token_provider: FabricTokenProvider
     ) -> None:
         self._credentials = credentials
         self._token_provider = token_provider
@@ -33,7 +34,9 @@ class FabricApiClient:
         self._warehouse_snapshot_operations: dict[str, str] = {}
 
     @classmethod
-    def create(cls, credentials: FabricCredentials, token_provider: FabricTokenProvider) -> Self:
+    def create(
+        cls, credentials: BaseFabricCredentials, token_provider: FabricTokenProvider
+    ) -> Self:
         if cls._instance is None:
             cls._instance = FabricApiClient(credentials, token_provider)
         return cls._instance
@@ -162,14 +165,10 @@ class FabricApiClient:
     def get_lakehouse_id(self) -> str:
         if self._lakehouse_id is not None:
             return self._lakehouse_id
-        if self._credentials.lakehouse_id:
-            return self._credentials.lakehouse_id
         if not self._credentials.lakehouse_name:
-            raise dbt_common.exceptions.DbtConfigError(
-                "Either lakehouse_id or lakehouse_name must be provided."
-            )
+            raise dbt_common.exceptions.DbtConfigError("lakehouse must be provided.")
 
-        for lakehouse in self.get_lakehouses(self._credentials):
+        for lakehouse in self.get_lakehouses():
             if lakehouse["displayName"] == self._credentials.lakehouse_name:
                 self._lakehouse_id = lakehouse["id"]
                 assert self._lakehouse_id is not None
@@ -342,7 +341,12 @@ class FabricApiClient:
         response = self._api_get(url)
         return response.json()
 
-    def submit_livy_statement(self, code: str) -> str:
+    def submit_livy_python_statement(self, code: str) -> str:
         url = self.get_livy_session_base_uri() + "/statements"
         response = self._api_post(url, {"code": code, "kind": "pyspark"})
+        return response.json()["id"]
+
+    def submit_livy_sql_statement(self, code: str) -> str:
+        url = self.get_livy_session_base_uri() + "/statements"
+        response = self._api_post(url, {"code": code, "kind": "sql"})
         return response.json()["id"]

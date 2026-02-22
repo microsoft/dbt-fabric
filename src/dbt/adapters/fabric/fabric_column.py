@@ -1,6 +1,6 @@
 from typing import Any, ClassVar
 
-from dbt.adapters.base import Column
+from dbt.adapters.base.column import Column
 
 
 class FabricColumn(Column):

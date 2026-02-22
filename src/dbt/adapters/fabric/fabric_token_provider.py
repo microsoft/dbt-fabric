@@ -10,7 +10,7 @@ from azure.identity import (
     EnvironmentCredential,
 )
 
-from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
 
 
 def get_mssparkutils_access_token(scope: str) -> AccessToken:
@@ -57,26 +57,26 @@ class FabricTokenProvider:
     _tokens: dict[str, AccessToken] = {}
     SQL_COPT_SS_ACCESS_TOKEN = 1256
 
-    def __init__(self, credentials: FabricCredentials):
+    def __init__(self, credentials: BaseFabricCredentials):
         self.credentials = credentials
 
     def get_token_scope(self) -> str:
         if self.credentials.token_scope:
             return self.credentials.token_scope
 
-        if not self.credentials.host and (
-            self.credentials.workspace_id or self.credentials.workspace_name
-        ):
+        host = getattr(self.credentials, "host", None)
+
+        if not host and (self.credentials.workspace_id or self.credentials.workspace_name):
             return self.FABRIC_CREDENTIAL_SCOPE
         if "synapse" in self.credentials.authentication.lower():
             return self.SYNAPSE_SPARK_CREDENTIAL_SCOPE
         if "fabric" in self.credentials.authentication.lower():
             return self.FABRIC_SPARK_CREDENTIAL_SCOPE
-        if "azuresynapse.net" in self.credentials.host.lower():
+        if host and "azuresynapse.net" in host.lower():
             return self.SYNAPSE_SPARK_CREDENTIAL_SCOPE
-        if "fabric.microsoft.com" in self.credentials.host.lower():
+        if host and "fabric.microsoft.com" in host.lower():
             return self.FABRIC_CREDENTIAL_SCOPE
-        if "database.windows.net" in self.credentials.host.lower():
+        if host and "database.windows.net" in host.lower():
             return self.AZURE_CREDENTIAL_SCOPE
         return self.FABRIC_CREDENTIAL_SCOPE
 
@@ -114,6 +114,14 @@ class FabricTokenProvider:
             client_id = self.credentials.client_id
             client_secret = self.credentials.client_secret
             tenant_id = self.credentials.tenant_id
+            if not all([client_id, client_secret, tenant_id]):
+                raise ValueError(
+                    "client_id, client_secret, and tenant_id must be provided for ActiveDirectoryServicePrincipal authentication."
+                )
+            assert client_id is not None
+            assert client_secret is not None
+            assert tenant_id is not None
+
             cred = ClientSecretCredential(
                 client_id=client_id,
                 client_secret=client_secret,

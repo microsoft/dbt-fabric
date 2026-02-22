@@ -27,14 +27,23 @@ def dbt_profile_target(dbt_profile_target_update, adapter_type: str):
             "host": os.getenv("FABRIC_TEST_HOST"),
             "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
             "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
-            "lakehouse_id": os.getenv("FABRIC_TEST_LAKEHOUSE_ID"),
-            "lakehouse_name": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
+            "lakehouse": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
             "authentication": "auto",
             "database": os.getenv("FABRIC_TEST_DWH_NAME"),
             "retries": 3,
             "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
             "login_timeout": 60,
-            "query_timeout": 30,
+            "query_timeout": 60,
+        }
+    elif adapter_type == "fabricspark":
+        target = {
+            "type": "fabricspark",
+            "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
+            "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
+            "authentication": "auto",
+            "database": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
+            "retries": 3,
+            "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
         }
     else:
         raise ValueError(f"Unsupported adapter_type: {adapter_type}")

@@ -277,27 +277,16 @@ Example value: `some_group_or_user`
 
 If your dbt project is using a schema which does not exist yet, dbt will create it for you. Use this configuration option to set the owner of the schema after creation. This can be a user or a group.
 
-### `lakehouse_name` :fontawesome-brands-python:
+### `lakehouse` :fontawesome-brands-python:
 
-Alias: `lakehouse`<br>
+Alias: `lakehouse_name`<br>
 Example value: `My Lakehouse`
 
 The name of the Lakehouse in Fabric you wish to use for running Python models.
 
 This is not used for SQL models.
-This is not used if [`lakehouse_id`](#lakehouse_id) is also provided.
 
-If you are using Python models in your project, either [`lakehouse_name`](#lakehouse_name) or [`lakehouse_id`](#lakehouse_id) must be provided.
-
-When using this option together with [`authentication`](#authentication) set to `ActiveDirectoryServicePrincipal`, you also need to provide the [`tenant_id`](#tenant_id) option.
-
-### `lakehouse_id` :fontawesome-brands-python:
-
-Example value: `123e4567-e89b-12d3-a456-426614174000`
-
-The ID of the Lakehouse in Fabric you wish to use for running Python models. This is not used for SQL models.
-
-If you are using Python models in your project, either [`lakehouse_name`](#lakehouse_name) or [`lakehouse_id`](#lakehouse_id) must be provided.
+If you are using Python models in your project, this option must be provided.
 
 When using this option together with [`authentication`](#authentication) set to `ActiveDirectoryServicePrincipal`, you also need to provide the [`tenant_id`](#tenant_id) option.
 

@@ -1,5 +1,3 @@
-from typing import Any, Type
-
 import agate
 import dbt_common.exceptions
 from dbt_common.contracts.constraints import (
@@ -8,32 +6,26 @@ from dbt_common.contracts.constraints import (
     ModelLevelConstraint,
 )
 from dbt_common.events.functions import fire_event
-from dbt_common.utils import (
+from dbt_common.utils.dict import (
     filter_null_values,
 )
 
-from dbt.adapters.base import Column as BaseColumn
-from dbt.adapters.base import PythonJobHelper
-from dbt.adapters.base.connections import (
-    AdapterResponse,
-)
+from dbt.adapters.base.column import Column as BaseColumn
 from dbt.adapters.base.impl import ConstraintSupport
 from dbt.adapters.base.meta import available
 from dbt.adapters.base.relation import BaseRelation
-from dbt.adapters.cache import _make_ref_key_dict
 from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
 from dbt.adapters.events.types import SchemaCreation
-from dbt.adapters.fabric.fabric_api_client import FabricApiClient
+from dbt.adapters.fabric.base_fabric_adapter import BaseFabricAdapter
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
-from dbt.adapters.fabric.fabric_livy_helper import FabricLivyHelper
 from dbt.adapters.fabric.fabric_relation import FabricRelation
-from dbt.adapters.sql import SQLAdapter
-from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
+from dbt.adapters.reference_keys import _make_ref_key_dict
+from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME, SQLAdapter
 
 
-class FabricAdapter(SQLAdapter):
+class FabricAdapter(BaseFabricAdapter, SQLAdapter):
     ConnectionManager = FabricConnectionManager
     connections: FabricConnectionManager
     Column = FabricColumn
@@ -252,21 +244,6 @@ class FabricAdapter(SQLAdapter):
                 "schema": schema,
             }
         )
-
-    @property
-    def default_python_submission_method(self) -> str:
-        return "livy"
-
-    @property
-    def python_submission_helpers(self) -> dict[str, Type[PythonJobHelper]]:
-        return {
-            "livy": FabricLivyHelper,
-        }
-
-    def generate_python_submission_response(self, submission_result: Any) -> AdapterResponse:
-        if not submission_result or not submission_result.success:
-            return AdapterResponse(_message="ERROR")
-        return AdapterResponse(_message="OK")
 
     @available
     def create_or_update_warehouse_snapshot(

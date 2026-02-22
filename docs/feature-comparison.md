@@ -13,7 +13,7 @@ This adapter supports creating scalar functions as introduced in dbt Core 1.11, 
 
 ## Support for Python models
 
-This adapter supports [Python models](https://docs.getdbt.com/docs/build/python-models). To use this, just add information about your [Fabric Workspace](configuration.md#workspace_name) and [Lakehouse](configuration.md#lakehouse_name) to the `profiles.yml` file.
+This adapter supports [Python models](https://docs.getdbt.com/docs/build/python-models). To use this, just add information about your [Fabric Workspace](configuration.md#workspace_name) and [Lakehouse](configuration.md#lakehouse) to the `profiles.yml` file.
 
 ## Automatically find the host name of your Fabric Workspace
 

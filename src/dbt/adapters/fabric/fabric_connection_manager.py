@@ -16,10 +16,8 @@ from dbt.adapters.contracts.connection import AdapterResponse, Connection, Conne
 from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.fabric import __version__
-from dbt.adapters.fabric.fabric_api_client import FabricApiClient
+from dbt.adapters.fabric.base_connection_manager import BaseFabricConnectionManager
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
-from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
-from dbt.adapters.sql import SQLConnectionManager
 
 logger = AdapterLogger("fabric")
 
@@ -93,25 +91,9 @@ def byte_array_to_datetime(value: bytes) -> dt.datetime:
     )
 
 
-class FabricConnectionManager(SQLConnectionManager):
+class FabricConnectionManager(BaseFabricConnectionManager):
     TYPE = "fabric"
     _host: str | None = None
-    _fabric_token_provider: FabricTokenProvider | None = None
-    _fabric_api_client: FabricApiClient | None = None
-
-    @classmethod
-    def get_fabric_token_provider(cls, credentials: FabricCredentials) -> FabricTokenProvider:
-        if cls._fabric_token_provider is None:
-            cls._fabric_token_provider = FabricTokenProvider(credentials)
-        return cls._fabric_token_provider
-
-    @classmethod
-    def get_fabric_api_client(cls, credentials: FabricCredentials) -> FabricApiClient:
-        if cls._fabric_api_client is None:
-            cls._fabric_api_client = FabricApiClient(
-                credentials, cls.get_fabric_token_provider(credentials)
-            )
-        return cls._fabric_api_client
 
     @contextmanager
     def exception_handler(self, sql):

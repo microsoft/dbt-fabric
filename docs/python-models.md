@@ -13,7 +13,7 @@ To use Python models, your `profiles.yml` must include the following additional 
 | Option | Description |
 | --- | --- |
 | [`workspace`](configuration.md#workspace_name) or [`workspace_id`](configuration.md#workspace_id) | Identifies your Fabric Workspace. Required so the adapter can locate the Livy API endpoint. |
-| [`lakehouse`](configuration.md#lakehouse_name) or [`lakehouse_id`](configuration.md#lakehouse_id) | Identifies the Lakehouse where Spark sessions run. A Lakehouse must exist in your workspace. |
+| [`lakehouse`](configuration.md#lakehouse) | Identifies the Lakehouse where Spark sessions run. A Lakehouse must exist in your workspace. |
 
 !!! warning "Tenant ID required for service principal auth"
 
@@ -96,7 +96,7 @@ All Python models in a single dbt run share the same Livy session, which avoids 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | `workspace_id must be provided` | Missing workspace configuration | Add [`workspace`](configuration.md#workspace_name) or [`workspace_id`](configuration.md#workspace_id) to your profile |
-| `lakehouse_id must be provided` | Missing lakehouse configuration | Add [`lakehouse`](configuration.md#lakehouse_name) or [`lakehouse_id`](configuration.md#lakehouse_id) to your profile |
+| `lakehouse must be provided` | Missing lakehouse configuration | Add [`lakehouse`](configuration.md#lakehouse) to your profile |
 | Livy session times out | The Spark session took too long to start | Retry — Fabric Spark sessions can be slow to start on first use |
 | Statement fails with `synapsesql` error | Connection between Spark and the Data Warehouse failed | Verify that the Lakehouse and Data Warehouse are in the same workspace |
 | `HTTP 429` errors in logs | Fabric API rate limiting | The adapter handles this automatically with retries — no action needed |
