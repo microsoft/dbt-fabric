@@ -1,5 +1,5 @@
 ---
-name: Integration tests on Fabric DW
+name: Integration tests on Fabric
 on:
   workflow_dispatch:
   schedule:
