@@ -1,12 +1,17 @@
 import pytest
+import yaml
 
 from dbt.tests.adapter.python_model.test_python_model import (
     BasePythonEmptyTests,
     BasePythonIncrementalTests,
     BasePythonModelTests,
     BasePythonSampleTests,
+    basic_python,
+    basic_sql,
+    schema_yml,
 )
 from dbt.tests.adapter.python_model.test_spark import BasePySparkTests
+from dbt.tests.util import run_dbt
 
 input_model_sql = """
 {{ config(materialized='table', event_time='event_time') }}
@@ -47,3 +52,35 @@ class TestPythonEmptyTestsFabric(FabricInputModel, BasePythonEmptyTests):
 
 class TestPythonSampleTestsFabric(FabricInputModel, BasePythonSampleTests):
     pass
+
+
+class TestConcurrentPythonModelsPerformance(BasePythonModelTests):
+    def count_python_models(self) -> int:
+        return 10
+
+    @pytest.fixture(scope="class")
+    def profiles_config_update(self):
+        return {"threads": self.count_python_models()}
+
+    @pytest.fixture(scope="class")
+    def models(self):
+        m = {
+            "schema.yml": schema_yml,
+            "my_sql_model.sql": basic_sql,
+            "my_versioned_sql_model_v1.sql": basic_sql,
+        }
+
+        for i in range(self.count_python_models()):
+            m[f"my_python_model_{i}.py"] = basic_python
+
+        return m
+
+    def test_singular_tests(self, project):
+        # test command
+        vars_dict = {
+            "test_run_schema": project.test_schema,
+        }
+
+        run_dbt(["seed", "--vars", yaml.safe_dump(vars_dict)])
+        results = run_dbt(["run", "--vars", yaml.safe_dump(vars_dict)])
+        assert len(results) == self.count_python_models() + 2

@@ -15,7 +15,8 @@ class LivySessionResult:
 
 class LivySession:
     _POLLING_INTERVAL = 5  # seconds
-    _MAX_POLLING_ATTEMPTS = 60  # 5 minutes
+    _MAX_POLLING_ATTEMPTS_SESSION_READY = 120  # 10 minutes
+    _MAX_POLLING_ATTEMPTS_STATEMENT_READY = 720  # 60 minutes
 
     def __init__(self, fabric_api_client: FabricApiClient) -> None:
         self._fabric_api_client = fabric_api_client
@@ -26,7 +27,7 @@ class LivySession:
     def _wait_for_session_ready(self) -> None:
         attempts = 0
         while self._fabric_api_client.get_livy_session_state() != "idle":
-            if attempts >= self._MAX_POLLING_ATTEMPTS:
+            if attempts >= self._MAX_POLLING_ATTEMPTS_SESSION_READY:
                 raise TimeoutError("Livy session did not become idle in time.")
             attempts += 1
             time.sleep(self._POLLING_INTERVAL)
@@ -39,7 +40,7 @@ class LivySession:
             statement_state = statement_response.get("state", "unknown")
             if statement_state in ("available", "error"):
                 return statement_response
-            if attempts >= self._MAX_POLLING_ATTEMPTS:
+            if attempts >= self._MAX_POLLING_ATTEMPTS_STATEMENT_READY:
                 raise TimeoutError("Livy statement did not become available in time.")
             attempts += 1
 

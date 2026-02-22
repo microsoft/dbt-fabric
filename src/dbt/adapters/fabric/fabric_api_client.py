@@ -1,3 +1,4 @@
+import threading
 import time
 import urllib.parse
 from typing import Any, Self
@@ -8,10 +9,13 @@ import requests
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 
+_livy_session_thread_lock = threading.Lock()
+
 
 class FabricApiClient:
     _LIVY_API_VERSION = "2023-12-01"
     _WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS = 60 * 30  # 30 minutes
+    LIVY_SESSION_NAME = "dbt-fabric-samdebruyn"
     _instance: Self | None = None
 
     def __init__(
@@ -303,9 +307,9 @@ class FabricApiClient:
     def get_existing_livy_session(self) -> str | None:
         url = self.get_livy_base_api_uri() + "/sessions"
         response = self._api_get(url)
-        sessions = response.json().get("value", [])
+        sessions = response.json().get("items", [])
         for session in sessions:
-            if session["name"] == "dbt-fabric" and session["livyState"] in (
+            if session["name"] == self.LIVY_SESSION_NAME and session["livyState"] in (
                 "idle",
                 "starting",
                 "running",
@@ -315,15 +319,16 @@ class FabricApiClient:
 
     def initialize_livy_session(self) -> str:
         url = self.get_livy_base_api_uri() + "/sessions"
-        response = self._api_post(url, {"name": "dbt-fabric"})
+        response = self._api_post(url, {"name": self.LIVY_SESSION_NAME})
         return response.json()["id"]
 
     def get_livy_session_id(self) -> str:
-        if self._livy_session_id is None:
-            self._livy_session_id = (
-                self.get_existing_livy_session() or self.initialize_livy_session()
-            )
-        return self._livy_session_id
+        with _livy_session_thread_lock:
+            if self._livy_session_id is None:
+                self._livy_session_id = (
+                    self.get_existing_livy_session() or self.initialize_livy_session()
+                )
+            return self._livy_session_id
 
     def get_livy_session_base_uri(self) -> str:
         return self.get_livy_base_api_uri() + f"/sessions/{self.get_livy_session_id()}"
