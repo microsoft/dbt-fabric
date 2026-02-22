@@ -9,7 +9,11 @@
 {% macro fabric__formatted_scalar_function_args_sql() %}
     {% set args = [] %}
     {% for arg in model.arguments -%}
-        {%- do args.append('@' ~ arg.name ~ ' ' ~ arg.data_type) -%}
+        {%- set arg_str = '@' ~ arg.name ~ ' ' ~ arg.data_type -%}
+        {%- if arg.default_value is not none -%}
+            {% set arg_str = arg_str ~ ' = ' ~ arg.default_value %}
+        {%- endif -%}
+        {%- do args.append(arg_str) -%}
     {%- endfor %}
     {{ args | join(', ') }}
 {% endmacro %}

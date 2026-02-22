@@ -1,6 +1,6 @@
 import pytest
 from dbt_common.events.base_types import EventMsg
-
+from dbt.tests.util import run_dbt
 import dbt.tests.adapter.functions.files as files
 from dbt.tests.adapter.functions.test_udafs import (
     BasicPythonUDAF,
@@ -22,6 +22,10 @@ from dbt.tests.adapter.functions.test_udfs import (
     UDFsBasic,
 )
 
+my_udf_sql = """
+SELECT @price * 2
+""".strip()
+
 
 class TestUDFsBasicFabric(UDFsBasic):
     def is_function_create_event(self, event: EventMsg) -> bool:
@@ -36,34 +40,12 @@ class TestUDFsBasicFabric(UDFsBasic):
     @pytest.fixture(scope="class")
     def functions(self):
         return {
-            "price_for_xlarge.sql": """
-SELECT @price * 2
-""".strip(),
+            "price_for_xlarge.sql": my_udf_sql,
             "price_for_xlarge.yml": files.MY_UDF_YML,
         }
 
 
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestDeterministicUDFFabric(DeterministicUDF):
-    pass
-
-
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestStableUDFFabric(StableUDF):
-    pass
-
-
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestNonDeterministicUDFFabric(NonDeterministicUDF):
-    pass
-
-
 class TestErrorForUnsupportedTypeFabric(ErrorForUnsupportedType):
-    pass
-
-
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestPythonUDFSupportedFabric(PythonUDFSupported):
     pass
 
 
@@ -71,32 +53,25 @@ class TestPythonUDFNotSupportedFabric(PythonUDFNotSupported):
     pass
 
 
-class TestPythonUDFRuntimeVersionRequiredFabric(PythonUDFRuntimeVersionRequired):
-    pass
+class TestSqlUDFDefaultArgSupportFabric(TestUDFsBasicFabric):
+    @pytest.fixture(scope="class")
+    def functions(self):
+        return {
+            "price_for_xlarge.sql": my_udf_sql,
+            "price_for_xlarge.yml": files.MY_UDF_WITH_DEFAULT_ARG_YML,
+        }
 
+    def test_udfs(self, project, sql_event_catcher):
+        result = run_dbt(["build", "--debug"], callbacks=[sql_event_catcher.catch])
+        assert len(result.results) == 1
 
-class TestPythonUDFEntryPointRequiredFabric(PythonUDFEntryPointRequired):
-    pass
+        assert "= 100" in sql_event_catcher.caught_events[0].data.sql
 
-
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestSqlUDFDefaultArgSupportFabric(SqlUDFDefaultArgSupport):
-    pass
-
-
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestPythonUDFDefaultArgSupportFabric(PythonUDFDefaultArgSupport):
-    pass
-
-
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestPythonUDFVolatilitySupportFabric(PythonUDFVolatilitySupport):
-    pass
-
-
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
-class TestBasicPythonUDAFFabric(BasicPythonUDAF):
-    pass
+        result = run_dbt(
+            ["show", "--inline", "SELECT {{ function('price_for_xlarge') }}(DEFAULT)"]
+        )
+        assert len(result.results) == 1
+        assert result.results[0].agate_table.rows[0].values()[0] == 200
 
 
 @pytest.mark.skip(reason="Functions are not fully supported yet.")
@@ -104,6 +79,51 @@ class TestBasicSQLUDAFFabric(BasicSQLUDAF):
     pass
 
 
-@pytest.mark.skip(reason="Functions are not fully supported yet.")
+@pytest.mark.skip(reason="Functions in T-SQL don't have volatility.")
+class TestDeterministicUDFFabric(DeterministicUDF):
+    pass
+
+
+@pytest.mark.skip(reason="Functions in T-SQL don't have volatility.")
+class TestStableUDFFabric(StableUDF):
+    pass
+
+
+@pytest.mark.skip(reason="Functions in T-SQL don't have volatility.")
+class TestNonDeterministicUDFFabric(NonDeterministicUDF):
+    pass
+
+
+@pytest.mark.skip(reason="Python functions are not supported.")
+class TestPythonUDFSupportedFabric(PythonUDFSupported):
+    pass
+
+
+@pytest.mark.skip(reason="Python functions are not supported.")
+class TestPythonUDFRuntimeVersionRequiredFabric(PythonUDFRuntimeVersionRequired):
+    pass
+
+
+@pytest.mark.skip(reason="Python functions are not supported.")
+class TestPythonUDFEntryPointRequiredFabric(PythonUDFEntryPointRequired):
+    pass
+
+
+@pytest.mark.skip(reason="Python functions are not supported.")
+class TestPythonUDFDefaultArgSupportFabric(PythonUDFDefaultArgSupport):
+    pass
+
+
+@pytest.mark.skip(reason="Python functions are not supported.")
+class TestPythonUDFVolatilitySupportFabric(PythonUDFVolatilitySupport):
+    pass
+
+
+@pytest.mark.skip(reason="Python functions are not supported.")
+class TestBasicPythonUDAFFabric(BasicPythonUDAF):
+    pass
+
+
+@pytest.mark.skip(reason="Python functions are not supported.")
 class TestPythonUDAFDefaultArgSupportFabric(PythonUDAFDefaultArgSupport):
     pass
