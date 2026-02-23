@@ -16,7 +16,6 @@ class FabricApiClient:
     _LIVY_API_VERSION = "2023-12-01"
     _WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS = 60 * 30  # 30 minutes
     _POLLING_INTERVAL = 10  # seconds
-    LIVY_SESSION_NAME = "dbt-fabric-samdebruyn"
     _instance: Self | None = None
 
     def __init__(
@@ -308,7 +307,7 @@ class FabricApiClient:
         response = self._api_get(url)
         sessions = response.json().get("items", [])
         for session in sessions:
-            if session["name"] == self.LIVY_SESSION_NAME and session["livyState"] in (
+            if session["name"] == self._credentials.livy_session_name and session["livyState"] in (
                 "idle",
                 "starting",
                 "running",
@@ -319,7 +318,7 @@ class FabricApiClient:
 
     def initialize_livy_session(self) -> str:
         url = self.get_livy_base_api_uri() + "/sessions"
-        response = self._api_post(url, {"name": self.LIVY_SESSION_NAME})
+        response = self._api_post(url, {"name": self._credentials.livy_session_name})
         return response.json()["id"]
 
     def get_livy_session_id(self) -> str:

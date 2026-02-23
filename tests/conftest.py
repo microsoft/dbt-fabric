@@ -19,35 +19,35 @@ def adapter_type(request) -> str:
 
 
 @pytest.fixture(scope="class")
-def dbt_profile_target(dbt_profile_target_update, adapter_type: str):
+def dbt_profile_target(dbt_profile_target_update, adapter_type: str, prefix: str):
+    target = {
+        "livy_session_name": prefix,
+        "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
+        "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
+        "authentication": "auto",
+        "retries": 3,
+        "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
+    }
+
     if adapter_type == "fabric":
-        target = {
+        adapter_settings = {
             "type": "fabric",
             "driver": os.getenv("FABRIC_TEST_DRIVER", "ODBC Driver 18 for SQL Server"),
             "host": os.getenv("FABRIC_TEST_HOST"),
-            "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
-            "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
             "lakehouse": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
-            "authentication": "auto",
             "database": os.getenv("FABRIC_TEST_DWH_NAME"),
-            "retries": 3,
-            "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
             "login_timeout": 60,
             "query_timeout": 60,
         }
     elif adapter_type == "fabricspark":
-        target = {
+        adapter_settings = {
             "type": "fabricspark",
-            "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
-            "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
-            "authentication": "auto",
             "database": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
-            "retries": 3,
-            "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
         }
     else:
         raise ValueError(f"Unsupported adapter_type: {adapter_type}")
 
+    target.update(adapter_settings)
     target.update(dbt_profile_target_update)
     return target
 

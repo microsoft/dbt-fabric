@@ -22,6 +22,7 @@ class BaseFabricCredentials(Credentials, metaclass=abc.ABCMeta):
     workspace_name: str | None = None
     fabric_base_api_uri: str = "https://api.fabric.microsoft.com/v1"
     powerbi_base_api_uri: str = "https://api.powerbi.com/v1.0"
+    livy_session_name: str = "dbt-fabric-samdebruyn"
 
     _ALIASES = {
         "trusted_connection": "windows_login",
@@ -59,6 +60,7 @@ class BaseFabricCredentials(Credentials, metaclass=abc.ABCMeta):
             "query_timeout",
             "fabric_base_api_uri",
             "powerbi_base_api_uri",
+            "livy_session_name",
         )
 
     @property
