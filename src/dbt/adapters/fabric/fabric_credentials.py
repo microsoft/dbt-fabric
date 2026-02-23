@@ -15,7 +15,7 @@ class FabricCredentials(BaseFabricCredentials):
     encrypt: bool | None = True  # default value in MS ODBC Driver 18 as well
     trust_cert: bool | None = False  # default value in MS ODBC Driver 18 as well
     schema_authorization: str | None = None
-    login_timeout: int | None = 0
+    login_timeout: int = 0
     lakehouse: str | None = None
 
     _ALIASES = BaseFabricCredentials._ALIASES | {
