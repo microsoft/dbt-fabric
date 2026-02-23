@@ -1,20 +1,15 @@
 import datetime as dt
+import re
 import struct
-import time
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, Type
 
 import agate
 import dbt_common.exceptions
-import pyodbc
 from dbt_common.clients.agate_helper import empty_table
-from dbt_common.events.contextvars import get_node_info
-from dbt_common.events.functions import fire_event
-from dbt_common.utils.casting import cast_to_str
 
 from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
 from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.fabric import __version__
 from dbt.adapters.fabric.base_connection_manager import BaseFabricConnectionManager
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
@@ -97,6 +92,8 @@ class FabricConnectionManager(BaseFabricConnectionManager):
 
     @contextmanager
     def exception_handler(self, sql):
+        import pyodbc
+
         try:
             yield
 
@@ -140,11 +137,13 @@ class FabricConnectionManager(BaseFabricConnectionManager):
 
     @classmethod
     def open(cls, connection: Connection) -> Connection:
+        import pyodbc
+
         if connection.state == ConnectionState.OPEN:
             logger.debug("Connection is already open, skipping open.")
             return connection
 
-        credentials = cls.get_credentials(connection.credentials)
+        credentials: FabricCredentials = connection.credentials # type: ignore
 
         con_str = [f"DRIVER={{{credentials.driver}}}"]
 
@@ -233,6 +232,11 @@ class FabricConnectionManager(BaseFabricConnectionManager):
             )
             handle.timeout = credentials.query_timeout
             logger.debug(f"Connected to db: {credentials.database}")
+
+            # convert DATETIMEOFFSET binary structures to datetime ojbects
+            # https://github.com/mkleehammer/pyodbc/issues/134#issuecomment-281739794
+            handle.add_output_converter(-155, byte_array_to_datetime)
+
             return handle
 
         return cls.retry_connection(
@@ -244,84 +248,31 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         )
 
     def cancel(self, connection: Connection):
-        pass
-
-    def add_begin_query(self) -> tuple[Connection, Any]:
-        pass
-
-    def add_commit_query(self) -> tuple[Connection, Any]:
-        pass
-
-    def add_query(
-        self,
-        sql: str,
-        auto_begin: bool = True,
-        bindings: Any | None = None,
-        abridge_sql_log: bool = False,
-    ) -> tuple[Connection, Any]:
-        connection = self.get_thread_connection()
-
-        if auto_begin and connection.transaction_open is False:
-            self.begin()
-
-        fire_event(
-            ConnectionUsed(
-                conn_type=self.TYPE,
-                conn_name=cast_to_str(connection.name),
-                node_info=get_node_info(),
-            )
-        )
-
-        with self.exception_handler(sql):
-            if abridge_sql_log:
-                log_sql = "{}...".format(sql[:512])
-            else:
-                log_sql = sql
-
-            fire_event(
-                SQLQuery(
-                    conn_name=cast_to_str(connection.name), sql=log_sql, node_info=get_node_info()
-                )
-            )
-
-            pre = time.time()
-
-            cursor = connection.handle.cursor()
-
-            # pyodbc does not handle a None type binding!
-            if bindings is None:
-                cursor.execute(sql)
-            else:
-                bindings = [
-                    binding if not isinstance(binding, dt.datetime) else binding.isoformat()
-                    for binding in bindings
-                ]
-                cursor.execute(sql, bindings)
-
-            # convert DATETIMEOFFSET binary structures to datetime ojbects
-            # https://github.com/mkleehammer/pyodbc/issues/134#issuecomment-281739794
-            connection.handle.add_output_converter(-155, byte_array_to_datetime)
-
-            fire_event(
-                SQLQueryStatus(
-                    status=str(self.get_response(cursor)),
-                    elapsed=round((time.time() - pre)),
-                    node_info=get_node_info(),
-                )
-            )
-
-            return connection, cursor
+        logger.debug("Cancel not supported for Fabric adapter.")
 
     @classmethod
-    def get_credentials(cls, credentials: FabricCredentials) -> FabricCredentials:
-        return credentials
+    def get_response(cls, cursor: Any) -> AdapterResponse:
+        messages_to_add = []
+        query_id = None
+        if cursor.messages:
+            for msg in cursor.messages:
+                marker = "statement id:"
+                pos = msg[1].lower().find(marker)
 
-    @classmethod
-    def get_response(cls, cursor: pyodbc.Cursor) -> AdapterResponse:
-        message = "\n".join(msg[1] for msg in cursor.messages) if cursor.messages else ""
+                if pos != -1:
+                    sub = msg[1][pos + len(marker) :]
+                    m = re.search(r"\{([^{}]+)\}", sub)
+                    if m:
+                        query_id = m.group(1)
+                elif "changed database context" in msg[1].lower():
+                    pass
+                else:
+                    messages_to_add.append(msg[1])
+        message = "\n".join(messages_to_add)
         return AdapterResponse(
             _message=message,
             rows_affected=cursor.rowcount,
+            query_id=query_id,
         )
 
     @classmethod
@@ -338,6 +289,7 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         if fetch:
             # Get the result of the first non-empty result set (if any)
             while cursor.description is None:
+                logger.debug("Skipping empty result set...")
                 if not cursor.nextset():
                     break
             table = self.get_result_from_cursor(cursor, limit)
@@ -345,5 +297,23 @@ class FabricConnectionManager(BaseFabricConnectionManager):
             table = empty_table()
         # Step through all result sets so we process all errors
         while cursor.nextset():
+            logger.debug("Stepping through remaining result sets...")
             pass
         return response, table
+
+    def add_query(
+        self,
+        sql: str,
+        auto_begin: bool = True,
+        bindings: Any | None = None,
+        abridge_sql_log: bool = False,
+        retryable_exceptions: tuple[Type[Exception], ...] = tuple(),
+        retry_limit: int = 1,
+    ):
+        if bindings is None:
+            bindings = ()
+        else:
+            bindings = [b.isoformat() if isinstance(b, dt.datetime) else b for b in bindings]
+        return super().add_query(
+            sql, auto_begin, bindings, abridge_sql_log, retryable_exceptions, retry_limit
+        )

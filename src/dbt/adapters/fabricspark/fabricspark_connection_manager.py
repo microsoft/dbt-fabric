@@ -28,24 +28,7 @@ class FabricSparkConnectionManager(BaseFabricConnectionManager):
 
     @classmethod
     def get_response(cls, cursor: Any) -> AdapterResponse:
-        message = "\n".join(msg[1] for msg in cursor.messages) if cursor.messages else ""
-        return AdapterResponse(
-            _message=message,
-            rows_affected=cursor.rowcount,
-        )
-
-    # No transaction support through Livy
-    def add_begin_query(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
-        logger.debug("Not supported: add_begin_query")
-
-    def add_commit_query(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
-        logger.debug("Not supported: add_commit_query")
-
-    def commit(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
-        logger.debug("Not supported: commit")
-
-    def rollback(self, *args: Any, **kwargs: Any) -> None:
-        logger.debug("Not supported: rollback")
+        raise NotImplementedError
 
     @classmethod
     def open(cls, connection: Connection) -> Connection:

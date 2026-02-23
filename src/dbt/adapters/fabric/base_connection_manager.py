@@ -1,9 +1,13 @@
 import abc
+from typing import Any
 
+from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 from dbt.adapters.sql.connections import SQLConnectionManager
+
+logger = AdapterLogger("fabricspark")
 
 
 class BaseFabricConnectionManager(SQLConnectionManager, metaclass=abc.ABCMeta):
@@ -23,3 +27,10 @@ class BaseFabricConnectionManager(SQLConnectionManager, metaclass=abc.ABCMeta):
                 credentials, cls.get_fabric_token_provider(credentials)
             )
         return cls._fabric_api_client
+
+    # No transaction support
+    def add_begin_query(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
+        logger.debug("Not supported: add_begin_query")
+
+    def add_commit_query(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
+        logger.debug("Not supported: add_commit_query")
