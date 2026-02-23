@@ -21,12 +21,12 @@ def adapter_type(request) -> str:
 @pytest.fixture(scope="class")
 def dbt_profile_target(dbt_profile_target_update, adapter_type: str, prefix: str):
     target = {
-        "livy_session_name": prefix,
+        "livy_session_name": os.getenv("FABRIC_TEST_LIVY_SESSION_NAME", prefix),
         "workspace_name": os.getenv("FABRIC_TEST_WORKSPACE_NAME"),
         "workspace_id": os.getenv("FABRIC_TEST_WORKSPACE_ID"),
         "authentication": "auto",
         "retries": 3,
-        "threads": int(os.getenv("FABRIC_TEST_THREADS", 20)),
+        "threads": int(os.getenv("FABRIC_TEST_THREADS", 10)),
     }
 
     if adapter_type == "fabric":

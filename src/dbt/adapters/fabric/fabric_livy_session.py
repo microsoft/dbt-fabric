@@ -8,18 +8,30 @@ from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 logger = AdapterLogger("fabricspark")
 
 
-class LivySessionResult(PythonSubmissionResult):
+class LivySessionResult:
     def __init__(
-        self, statement_id: str | None, success: bool, code: str, error_message: str | None = None
+        self,
+        statement_id: int | None,
+        success: bool,
+        json_data: dict[str, Any] | None = None,
+        status_code: str | None = None,
+        error_message: str | None = None,
     ) -> None:
         self.error_message = error_message
         self.success = success
-        self.run_id = statement_id or ""
-        self.compiled_code = code
+        self.statement_id = statement_id or -1
+        self.status_code = status_code
+        self.json_data = json_data or {}
+
+    def to_submission_result(self, code: str) -> PythonSubmissionResult:
+        return PythonSubmissionResult(
+            run_id=str(self.statement_id),
+            compiled_code=code,
+        )
 
 
 class LivySession:
-    _POLLING_INTERVAL = 10  # seconds
+    _POLLING_INTERVAL = 3  # seconds
 
     def __init__(self, fabric_api_client: FabricApiClient) -> None:
         self._fabric_api_client = fabric_api_client
@@ -37,18 +49,48 @@ class LivySession:
                 raise TimeoutError("Livy session did not become idle in time.")
             time.sleep(self._POLLING_INTERVAL)
 
-    def wait_for_statement_ready(self, statement_id: str) -> dict[str, Any]:
+    def wait_for_statement_ready(self, statement_id: int) -> dict[str, Any]:
         start_time = time.time()
         while True:
-            time.sleep(self._POLLING_INTERVAL)
             statement_response = self._fabric_api_client.get_livy_statement(statement_id)
             statement_state = statement_response.get("state", "unknown")
             if statement_state in ("available", "error"):
                 return statement_response
             if time.time() - start_time >= self._fabric_api_client._credentials.query_timeout:
                 raise TimeoutError("Livy statement did not become available in time.")
+            time.sleep(self._POLLING_INTERVAL)
 
-    def run_statement(self, statement_code: str, statement_language: str) -> LivySessionResult:
+    def wait_and_get_statement_result(self, statement_id: int) -> LivySessionResult:
+        try:
+            response = self.wait_for_statement_ready(statement_id)
+            return LivySessionResult(
+                statement_id=statement_id,
+                success=response["state"] == "available"
+                and response.get("output", {}).get("status") == "ok",
+                error_message=response.get("output", {}).get("evalue"),
+                status_code=response.get("output", {}).get("status"),
+                json_data=response.get("output", {}).get("data", {}).get("application/json", {}),
+            )
+        except TimeoutError as e:
+            logger.error(
+                f"Timeout (> {self._fabric_api_client._credentials.query_timeout}s) while waiting for Livy statement to be ready. Logs URL: {self.get_logs_url()}"
+            )
+            logger.exception(e)
+            return LivySessionResult(
+                statement_id=statement_id, success=False, error_message=str(e)
+            )
+        except Exception as e:
+            logger.error(
+                f"Error while waiting for Livy statement to be ready. Logs URL: {self.get_logs_url()}"
+            )
+            logger.exception(e)
+            return LivySessionResult(
+                statement_id=statement_id, success=False, error_message=str(e)
+            )
+
+    def run_statement(
+        self, statement_code: str, statement_language: str, wait_for_result: bool = True
+    ) -> LivySessionResult | int:
         try:
             self.wait_for_session_ready()
             func = (
@@ -62,32 +104,8 @@ class LivySession:
                 f"Error while creating for Livy statement. Logs URL: {self.get_logs_url()}"
             )
             logger.exception(e)
-            return LivySessionResult(
-                statement_id=None, success=False, code=statement_code, error_message=str(e)
-            )
-
-        try:
-            response = self.wait_for_statement_ready(statement_id)
-            return LivySessionResult(
-                statement_id=statement_id,
-                code=statement_code,
-                success=response["state"] == "available"
-                and response.get("output", {}).get("status") == "ok",
-                error_message=response.get("output", {}).get("evalue"),
-            )
-        except TimeoutError as e:
-            logger.error(
-                f"Timeout (> {self._fabric_api_client._credentials.query_timeout}s) while waiting for Livy statement to be ready. Logs URL: {self.get_logs_url()}"
-            )
-            logger.exception(e)
-            return LivySessionResult(
-                statement_id=statement_id, code=statement_code, success=False, error_message=str(e)
-            )
-        except Exception as e:
-            logger.error(
-                f"Error while waiting for Livy statement to be ready. Logs URL: {self.get_logs_url()}"
-            )
-            logger.exception(e)
-            return LivySessionResult(
-                statement_id=statement_id, code=statement_code, success=False, error_message=str(e)
-            )
+            return LivySessionResult(statement_id=None, success=False, error_message=str(e))
+        if wait_for_result:
+            return self.wait_and_get_statement_result(statement_id)
+        else:
+            return statement_id

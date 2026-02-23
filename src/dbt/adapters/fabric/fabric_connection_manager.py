@@ -143,7 +143,8 @@ class FabricConnectionManager(BaseFabricConnectionManager):
             logger.debug("Connection is already open, skipping open.")
             return connection
 
-        credentials: FabricCredentials = connection.credentials  # type: ignore
+        assert isinstance(connection.credentials, FabricCredentials)
+        credentials: FabricCredentials = connection.credentials
 
         con_str = [f"DRIVER={{{credentials.driver}}}"]
 

@@ -15,7 +15,6 @@ _livy_session_thread_lock = threading.Lock()
 class FabricApiClient:
     _LIVY_API_VERSION = "2023-12-01"
     _WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS = 60 * 30  # 30 minutes
-    _POLLING_INTERVAL = 10  # seconds
     _instance: Self | None = None
 
     def __init__(
@@ -57,7 +56,7 @@ class FabricApiClient:
             time.sleep(retry_after)
             return self._api_request(url, method, body)
 
-        if not response.status_code >= 200 and response.status_code < 300:
+        if not (200 <= response.status_code < 300):
             raise dbt_common.exceptions.DbtRuntimeError(
                 f"{method} request to {url} failed with status code {response.status_code}: {response.text}"
             )
@@ -318,7 +317,8 @@ class FabricApiClient:
 
     def initialize_livy_session(self) -> str:
         url = self.get_livy_base_api_uri() + "/sessions"
-        response = self._api_post(url, {"name": self._credentials.livy_session_name})
+        response = self._api_post(url, {"name": self._credentials.livy_session_name, "ttl": "30s"})
+        time.sleep(10)  # give it a moment to initialize before we try to use it
         return response.json()["id"]
 
     def get_livy_session_id(self) -> str:
@@ -336,17 +336,22 @@ class FabricApiClient:
         response = self._api_get(self.get_livy_session_base_uri())
         return response.json().get("state", "unknown")
 
-    def get_livy_statement(self, statement_id: str) -> dict[str, Any]:
+    def get_livy_statement(self, statement_id: int) -> dict[str, Any]:
         url = self.get_livy_session_base_uri() + f"/statements/{statement_id}"
         response = self._api_get(url)
         return response.json()
 
-    def submit_livy_python_statement(self, code: str) -> str:
+    def submit_livy_python_statement(self, code: str) -> int:
         url = self.get_livy_session_base_uri() + "/statements"
         response = self._api_post(url, {"code": code, "kind": "pyspark"})
         return response.json()["id"]
 
-    def submit_livy_sql_statement(self, code: str) -> str:
+    def submit_livy_sql_statement(self, code: str) -> int:
         url = self.get_livy_session_base_uri() + "/statements"
         response = self._api_post(url, {"code": code, "kind": "sql"})
         return response.json()["id"]
+
+    def cancel_livy_statement(self, statement_id: int) -> str:
+        url = self.get_livy_session_base_uri() + f"/statements/{statement_id}/cancel"
+        response = self._api_post(url, {})
+        return response.json()["msg"]

@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 from dbt_common.exceptions import DbtRuntimeError
@@ -6,7 +5,7 @@ from dbt_common.exceptions import DbtRuntimeError
 from dbt.adapters.base.impl import PythonJobHelper
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
-from dbt.adapters.fabric.fabric_livy_session import LivySession
+from dbt.adapters.fabric.fabric_livy_session import LivySession, LivySessionResult
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 
 
@@ -30,8 +29,9 @@ class FabricLivyHelper(PythonJobHelper):
         assert self._sql_endpoint is not None
         compiled_code = compiled_code.replace("DBT_FABRIC_REPLACED_WITH_HOST", self._sql_endpoint)
         result = self._livy_session.run_statement(compiled_code, "python")
+        assert isinstance(result, LivySessionResult)
         if not result.success:
             raise DbtRuntimeError(
                 f"Python statement execution failed. Logs URL: {self._livy_session.get_logs_url()}. Error: {result.error_message}"
             )
-        return result
+        return result.to_submission_result(compiled_code)

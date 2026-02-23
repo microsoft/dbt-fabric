@@ -28,7 +28,12 @@ class FabricSparkConnectionManager(BaseFabricConnectionManager):
 
     @classmethod
     def get_response(cls, cursor: Any) -> AdapterResponse:
-        raise NotImplementedError
+        return AdapterResponse(
+            _message="\n".join(str(message) for message in cursor.messages),
+            rows_affected=cursor.rowcount,
+            query_id=str(cursor.statement_id),
+            code=cursor.status_code,
+        )
 
     @classmethod
     def open(cls, connection: Connection) -> Connection:

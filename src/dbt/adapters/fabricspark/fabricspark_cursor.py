@@ -1,8 +1,10 @@
 from collections.abc import Iterator
+from datetime import date, datetime
+from decimal import Decimal
 from types import TracebackType
 from typing import Any, Self
 
-from dbt_common.exceptions import DbtDatabaseError
+from dbt_common.exceptions import DbtDatabaseError, DbtRuntimeError
 
 from dbt.adapters.fabric.fabric_livy_session import LivySession, LivySessionResult
 
@@ -13,6 +15,10 @@ class FabricSparkCursor:
     def __init__(self, connection: Any) -> None:
         self._connection = connection
         self._result: LivySessionResult | None = None
+        self._rows: list[tuple[Any, ...]] | None = None
+        self._position: int = 0
+        self._arraysize: int = 1
+        self._statement_id: int | None = None
 
     @property
     def connection(self) -> Any:
@@ -22,6 +28,9 @@ class FabricSparkCursor:
     def close(self) -> None:
         self._connection = None
         self._result = None
+        self._rows = None
+        self._position = 0
+        self._statement_id = None
 
     def get_livy_session(self) -> LivySession:
         return self.connection.get_livy_session()
@@ -38,35 +47,158 @@ class FabricSparkCursor:
         self.close()
         return True
 
-    def execute(self, sql: str, *parameters: Any) -> None:
-        params_not_none = [p for p in parameters if p is not None]
-        if len(params_not_none) > 0:
-            raise NotImplementedError(
-                "Parameterized queries are not supported in Fabric Spark adapter."
-            )
+    @staticmethod
+    def _format_param(value: Any) -> str:
+        """Format a Python value as a Spark SQL literal for safe substitution."""
+        if value is None:
+            return "NULL"
+        if isinstance(value, bool):
+            return "TRUE" if value else "FALSE"
+        if isinstance(value, (int, Decimal)):
+            return str(value)
+        if isinstance(value, float):
+            return repr(value)
+        if isinstance(value, datetime):
+            return f"'{value.isoformat()}'"
+        if isinstance(value, date):
+            return f"'{value.isoformat()}'"
+        if isinstance(value, bytes):
+            return "X'" + value.hex() + "'"
+        # Default: treat as string, escape single quotes
+        escaped = str(value).replace("'", "''")
+        return f"'{escaped}'"
 
-        self._result = self.get_livy_session().run_statement(sql, "sql")
+    def execute(self, sql: str, *parameters: Any) -> None:
+        if parameters and parameters[0] is not None:
+            params = parameters[0]
+            if not isinstance(params, (list, tuple)):
+                raise DbtDatabaseError("Parameters must be a list or tuple.")
+            sql = sql % tuple(self._format_param(p) for p in params)
+
+        statement_id = self.get_livy_session().run_statement(sql, "sql", wait_for_result=False)
+        assert isinstance(statement_id, int), "Expected statement_id to be an int"
+        self._statement_id = statement_id
+
+        self._result = self.get_livy_session().wait_and_get_statement_result(statement_id)
         if not self._result.success:
             raise DbtDatabaseError(f"Error executing SQL statement: {self._result.error_message}")
 
+        self._rows = [tuple(row) for row in self._result.json_data.get("data", [])]
+        self._position = 0
+
+    def cancel(self) -> None:
+        if self._statement_id is not None and self._result is None:
+            self.get_livy_session()._fabric_api_client.cancel_livy_statement(self._statement_id)
+            self._statement_id = None
+
     @property
     def messages(self) -> list[tuple[type[Exception], Any]]:
-        raise NotImplementedError
+        return []  # TODO: return actual messages once we have a way to get them from Livy
 
     @property
     def rowcount(self) -> int:
-        raise NotImplementedError
+        return len(self._rows) if self._rows is not None else -1
+
+    @property
+    def statement_id(self) -> int | None:
+        return self._result.statement_id if self._result else None
+
+    @property
+    def status_code(self) -> str | None:
+        return self._result.status_code if self._result else None
+
+    def _check_result(self) -> list[tuple[Any, ...]]:
+        """Ensure a result set is available, raising an error if not."""
+        if self._rows is None:
+            raise DbtRuntimeError("No result set. Call execute() first.")
+        return self._rows
+
+    def fetchone(self) -> tuple[Any, ...] | None:
+        rows = self._check_result()
+        if self._position >= len(rows):
+            return None
+        row = rows[self._position]
+        self._position += 1
+        return row
+
+    def fetchmany(self, size: int | None = None) -> list[tuple[Any, ...]]:
+        rows = self._check_result()
+        if size is None:
+            size = self._arraysize
+        end = min(self._position + size, len(rows))
+        result = rows[self._position : end]
+        self._position = end
+        return result
+
+    def fetchall(self) -> list[tuple[Any, ...]]:
+        rows = self._check_result()
+        result = rows[self._position :]
+        self._position = len(rows)
+        return result
+
+    @property
+    def arraysize(self) -> int:
+        return self._arraysize
+
+    @arraysize.setter
+    def arraysize(self, value: int) -> None:
+        self._arraysize = value
+
+    @property
+    def rownumber(self) -> int | None:
+        if self._rows is None:
+            return None
+        return self._position
+
+    def next(self) -> tuple[Any, ...]:
+        row = self.fetchone()
+        if row is None:
+            raise StopIteration
+        return row
+
+    __next__ = next
+
+    def __iter__(self) -> Iterator[tuple[Any, ...]]:
+        return self
+
+    def scroll(self, value: int, mode: str = "relative") -> None:
+        self._check_result()
+        if mode == "relative":
+            new_position = self._position + value
+        elif mode == "absolute":
+            new_position = value
+        else:
+            raise DbtDatabaseError(f"Invalid scroll mode: {mode!r}. Use 'relative' or 'absolute'.")
+
+        if new_position < 0 or new_position > len(self._rows):  # type: ignore[arg-type]
+            raise IndexError(f"Scroll position {new_position} is out of range.")
+        self._position = new_position
 
     @property
     def description(
         self,
-    ) -> list[tuple[str, Any, None, None, None, None, None]] | None:
-        raise NotImplementedError
+    ) -> list[tuple[str, str, None, None, None, None, bool]] | None:
+        if self._result is None:
+            return None
+
+        schema = self._result.json_data.get("schema")
+        if schema is None:
+            return None
+
+        return [
+            (
+                field["name"],  # name
+                field["type"],  # type_code
+                None,  # display_size
+                None,  # internal_size
+                None,  # precision
+                None,  # scale
+                field.get("nullable", True),  # null_ok
+            )
+            for field in schema.get("fields", [])
+        ]
 
     def callproc(self, procname: str, parameters: tuple[Any, ...] = ()) -> tuple[Any, ...]:
-        raise NotImplementedError
-
-    def cancel(self) -> None:
         raise NotImplementedError
 
     def executemany(
@@ -74,45 +206,11 @@ class FabricSparkCursor:
     ) -> None:
         raise NotImplementedError
 
-    def fetchone(self) -> tuple[Any, ...] | None:
-        raise NotImplementedError
-
-    def fetchmany(self, size: int | None = None) -> list[tuple[Any, ...]]:
-        raise NotImplementedError
-
-    def fetchall(self) -> list[tuple[Any, ...]]:
-        raise NotImplementedError
-
     def nextset(self) -> bool | None:
-        raise NotImplementedError
-
-    @property
-    def arraysize(self) -> int:
-        raise NotImplementedError
-
-    @arraysize.setter
-    def arraysize(self, value: int) -> None:
         raise NotImplementedError
 
     def setinputsizes(self, sizes: list[Any]) -> None:
         raise NotImplementedError
 
     def setoutputsize(self, size: int, column: int | None = None) -> None:
-        raise NotImplementedError
-
-    @property
-    def rownumber(self) -> int | None:
-        raise NotImplementedError
-
-    def scroll(self, value: int, mode: str = "relative") -> None:
-        raise NotImplementedError
-
-    def next(self) -> tuple[Any, ...]:
-        raise NotImplementedError
-
-    def __iter__(self) -> Iterator[tuple[Any, ...]]:
-        raise NotImplementedError
-
-    @property
-    def lastrowid(self) -> int | None:
         raise NotImplementedError

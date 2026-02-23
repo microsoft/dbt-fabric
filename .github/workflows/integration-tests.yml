@@ -113,6 +113,9 @@ jobs:
       - name: Run integration tests
         env:
           FABRIC_TEST_WORKSPACE_NAME: adapter-ci
+          FABRIC_TEST_LAKEHOUSE_NAME: cilh
+          FABRIC_TEST_THREADS: 2
+          FABRIC_TEST_LIVY_SESSION_NAME: ${{ github.run_id }}
         run: uv run pytest -ra -v --de
         
       - name: Upload test logs
