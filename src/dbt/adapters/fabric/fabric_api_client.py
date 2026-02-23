@@ -312,6 +312,7 @@ class FabricApiClient:
                 "idle",
                 "starting",
                 "running",
+                "busy",
             ):
                 return session["id"]
         return None
@@ -322,12 +323,12 @@ class FabricApiClient:
         return response.json()["id"]
 
     def get_livy_session_id(self) -> str:
-        with _livy_session_thread_lock:
-            if self._livy_session_id is None:
+        if self._livy_session_id is None:
+            with _livy_session_thread_lock:
                 self._livy_session_id = (
                     self.get_existing_livy_session() or self.initialize_livy_session()
                 )
-            return self._livy_session_id
+        return self._livy_session_id
 
     def get_livy_session_base_uri(self) -> str:
         return self.get_livy_base_api_uri() + f"/sessions/{self.get_livy_session_id()}"
