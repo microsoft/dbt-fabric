@@ -3,6 +3,17 @@
 This adapter has all the features of [Microsoft's dbt-fabric adapter](https://github.com/microsoft/dbt-fabric), plus some additional features.
 The following features are exclusive to dbt-fabric-samdebruyn:
 
+## dbt Core 1.11 support
+
+This adapter is compatible with dbt Core 1.11, while Microsoft's dbt-fabric adapter is only compatible with dbt Core 1.10.
+
+## Functions in dbt
+
+This adapter supports creating scalar functions as introduced in dbt Core 1.11, while Microsoft's dbt-fabric does not.
+
+```sql
+{{ config(materialized='function') }}
+
 ## Support for Python models
 
 This adapter supports [Python models](https://docs.getdbt.com/docs/build/python-models). To use this, just add information about your [Fabric Workspace](configuration.md#workspace_name) and [Lakehouse](configuration.md#lakehouse_name) to the `profiles.yml` file.
