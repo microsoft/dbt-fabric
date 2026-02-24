@@ -48,6 +48,49 @@ class FabricSparkCursor:
         return True
 
     @staticmethod
+    def _convert_value(value: Any, spark_type: str) -> Any:
+        """Convert a raw JSON value to the appropriate Python type based on the Spark SQL type."""
+        if value is None:
+            return None
+
+        spark_type = spark_type.lower()
+
+        if spark_type in (
+            "long",
+            "bigint",
+            "int",
+            "integer",
+            "short",
+            "smallint",
+            "byte",
+            "tinyint",
+        ):
+            return int(value)
+        if spark_type in ("float", "double"):
+            return float(value)
+        if spark_type.startswith("decimal"):
+            return Decimal(value)
+        if spark_type in ("boolean",):
+            if isinstance(value, bool):
+                return value
+            return str(value).lower() in ("true", "1")
+        if spark_type in ("date",):
+            return date.fromisoformat(value) if isinstance(value, str) else value
+        if spark_type in ("timestamp",):
+            return datetime.fromisoformat(value) if isinstance(value, str) else value
+        if spark_type in ("binary",):
+            return bytes.fromhex(value) if isinstance(value, str) else value
+        # string, void, and anything else: return as-is
+        return value
+
+    def _convert_row(self, row: list[Any], fields: list[dict[str, Any]]) -> tuple[Any, ...]:
+        """Convert a raw data row using schema type information."""
+        return tuple(
+            self._convert_value(val, fields[i]["type"]) if i < len(fields) else val
+            for i, val in enumerate(row)
+        )
+
+    @staticmethod
     def _format_param(value: Any) -> str:
         """Format a Python value as a Spark SQL literal for safe substitution."""
         if value is None:
@@ -83,7 +126,9 @@ class FabricSparkCursor:
         if not self._result.success:
             raise DbtDatabaseError(f"Error executing SQL statement: {self._result.error_message}")
 
-        self._rows = [tuple(row) for row in self._result.json_data.get("data", [])]
+        data = self._result.json_data.get("data", [])  # type: ignore[union-attr]
+        fields = self._result.json_data.get("schema", {}).get("fields", [])  # type: ignore[union-attr]
+        self._rows = [self._convert_row(row, fields) for row in data]
         self._position = 0
 
     def cancel(self) -> None:
@@ -181,7 +226,7 @@ class FabricSparkCursor:
         if self._result is None:
             return None
 
-        schema = self._result.json_data.get("schema")
+        schema = self._result.json_data.get("schema")  # type: ignore[union-attr]
         if schema is None:
             return None
 
