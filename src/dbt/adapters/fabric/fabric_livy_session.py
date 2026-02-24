@@ -1,4 +1,5 @@
 import time
+from dataclasses import dataclass
 from typing import Any
 
 from dbt.adapters.base.impl import PythonSubmissionResult
@@ -8,25 +9,26 @@ from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 logger = AdapterLogger("fabricspark")
 
 
-class LivySessionResult:
-    def __init__(
-        self,
-        statement_id: int | None,
-        success: bool,
-        json_data: dict[str, Any] | None = None,
-        status_code: str | None = None,
-        error_message: str | None = None,
-    ) -> None:
-        self.error_message = error_message
-        self.success = success
-        self.statement_id = statement_id or -1
-        self.status_code = status_code
-        self.json_data = json_data or {}
+@dataclass
+class LivySubmissionResult(PythonSubmissionResult):
+    success: bool
+    error_message: str | None = None
 
-    def to_submission_result(self, code: str) -> PythonSubmissionResult:
-        return PythonSubmissionResult(
+
+@dataclass
+class LivySessionResult:
+    statement_id: int = -1
+    success: bool = False
+    error_message: str | None = None
+    status_code: str | None = None
+    json_data: dict[str, Any] | None = {}
+
+    def to_submission_result(self, code: str) -> LivySubmissionResult:
+        return LivySubmissionResult(
             run_id=str(self.statement_id),
             compiled_code=code,
+            success=self.success,
+            error_message=self.error_message,
         )
 
 
@@ -104,7 +106,7 @@ class LivySession:
                 f"Error while creating for Livy statement. Logs URL: {self.get_logs_url()}"
             )
             logger.exception(e)
-            return LivySessionResult(statement_id=None, success=False, error_message=str(e))
+            return LivySessionResult(success=False, error_message=str(e))
         if wait_for_result:
             return self.wait_and_get_statement_result(statement_id)
         else:
