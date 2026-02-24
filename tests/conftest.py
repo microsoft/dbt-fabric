@@ -7,6 +7,7 @@ import yaml
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
+from dbt.tests.util import write_file
 
 pytest_plugins = ["dbt.tests.fixtures.project"]
 
@@ -176,3 +177,24 @@ def fabric_api_client(
     fabric_token_provider: FabricTokenProvider, credentials: FabricCredentials
 ) -> FabricApiClient:
     return FabricApiClient.create(credentials, fabric_token_provider)
+
+
+@pytest.fixture(scope="class")
+def dbt_project_yml(project_root, project_config_update, adapter_type: str):
+    project_config = {
+        "name": "test",
+        "profile": "test",
+        "flags": {"send_anonymous_usage_stats": False},
+    }
+
+    if adapter_type == "fabricspark":
+        project_config["models"] = {"+materialized": "materialized_view"}
+
+    if project_config_update:
+        if isinstance(project_config_update, dict):
+            project_config.update(project_config_update)
+        elif isinstance(project_config_update, str):
+            updates = yaml.safe_load(project_config_update)
+            project_config.update(updates)
+    write_file(yaml.safe_dump(project_config), project_root, "dbt_project.yml")
+    return project_config

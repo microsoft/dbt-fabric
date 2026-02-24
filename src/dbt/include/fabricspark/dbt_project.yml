@@ -4,3 +4,6 @@ version: 1.0
 config-version: 2
 
 macro-paths: ["macros"]
+
+models:
+  +materialized: materialized_view
