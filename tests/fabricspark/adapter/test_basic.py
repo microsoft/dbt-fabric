@@ -20,6 +20,7 @@ from dbt.tests.adapter.basic.test_snapshot_check_cols import BaseSnapshotCheckCo
 from dbt.tests.adapter.basic.test_snapshot_timestamp import BaseSnapshotTimestamp
 from dbt.tests.adapter.basic.test_table_materialization import BaseTableMaterialization
 from dbt.tests.adapter.basic.test_validate_connection import BaseValidateConnection
+from dbt.tests.util import run_dbt
 
 
 class TestSimpleMaterializationsSpark(BaseSimpleMaterializations):
@@ -87,4 +88,12 @@ class TestGetCatalogForSingleRelationSpark(BaseGetCatalogForSingleRelation):
 
 
 class TestIncrementalBadStrategySpark(BaseIncrementalBadStrategy):
-    pass
+    def test_incremental_invalid_strategy(self, project):
+        # seed command
+        results = run_dbt(["seed"])
+        assert len(results) == 2
+
+        # try to run the incremental model, it should fail on the first attempt
+        results = run_dbt(["run"], expect_pass=False)
+        assert len(results.results) == 1
+        assert "Invalid incremental strategy provided: bad_strategy" in results.results[0].message
