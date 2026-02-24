@@ -37,7 +37,7 @@ def dbt_profile_target(dbt_profile_target_update, adapter_type: str, prefix: str
             "lakehouse": os.getenv("FABRIC_TEST_LAKEHOUSE_NAME"),
             "database": os.getenv("FABRIC_TEST_DWH_NAME"),
             "login_timeout": 60,
-            "query_timeout": 60,
+            "query_timeout": 300,  # 5 minutes
         }
     elif adapter_type == "fabricspark":
         adapter_settings = {
