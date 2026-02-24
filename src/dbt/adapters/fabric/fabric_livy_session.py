@@ -1,5 +1,5 @@
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from dbt.adapters.base.impl import PythonSubmissionResult
@@ -21,7 +21,7 @@ class LivySessionResult:
     success: bool = False
     error_message: str | None = None
     status_code: str | None = None
-    json_data: dict[str, Any] | None = {}
+    json_data: dict[str, Any] | None = field(default_factory=dict)
 
     def to_submission_result(self, code: str) -> LivySubmissionResult:
         return LivySubmissionResult(
