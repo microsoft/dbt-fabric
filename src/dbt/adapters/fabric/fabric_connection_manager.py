@@ -270,6 +270,8 @@ class FabricConnectionManager(BaseFabricConnectionManager):
                 else:
                     messages_to_add.append(msg[1])
         message = "\n".join(messages_to_add)
+        if not message:
+            message = "OK"
         return AdapterResponse(
             _message=message,
             rows_affected=cursor.rowcount,

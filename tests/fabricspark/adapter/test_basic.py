@@ -62,7 +62,7 @@ class TestSimpleMaterializationsSpark(BaseSimpleMaterializations):
         # check relation types
         expected = {
             "base": "table",
-            "view_model": "view",
+            "view_model": "materialized_view",
             "table_model": "table",
             "swappable": "table",
         }

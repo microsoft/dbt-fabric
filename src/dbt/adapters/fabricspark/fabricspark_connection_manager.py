@@ -28,8 +28,9 @@ class FabricSparkConnectionManager(BaseFabricConnectionManager):
 
     @classmethod
     def get_response(cls, cursor: Any) -> AdapterResponse:
+        msg = "\n".join(str(message) for message in cursor.messages)
         return AdapterResponse(
-            _message="\n".join(str(message) for message in cursor.messages),
+            _message="OK" if not msg else msg,
             rows_affected=cursor.rowcount,
             query_id=str(cursor.statement_id),
             code=cursor.status_code,
