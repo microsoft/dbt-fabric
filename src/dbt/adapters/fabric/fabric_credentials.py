@@ -40,10 +40,10 @@ class FabricCredentials(BaseFabricCredentials):
 
     def __post_serialize__(self, dct: dict, context: dict | None = None) -> dict[Any, Any]:
         des = super().__post_serialize__(dct, context)
-        
+
         if des.get("authentication", "").lower() == "auto":
             des["authentication"] = "ActiveDirectoryDefault"
-        
+
         if des.get("windows_login", False) is True:
             des["authentication"] = "Windows Login"
 

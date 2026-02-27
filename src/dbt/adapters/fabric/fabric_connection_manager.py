@@ -6,7 +6,6 @@ from typing import Any, Type
 
 import agate
 import dbt_common.exceptions
-import mssql_python
 from dbt_common.clients.agate_helper import empty_table
 
 from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
@@ -93,7 +92,7 @@ class FabricConnectionManager(BaseFabricConnectionManager):
 
     @contextmanager
     def exception_handler(self, sql):
-        import pyodbc
+        import mssql_python
 
         try:
             yield
@@ -138,7 +137,7 @@ class FabricConnectionManager(BaseFabricConnectionManager):
 
     @classmethod
     def open(cls, connection: Connection) -> Connection:
-        import pyodbc
+        import mssql_python
 
         if connection.state == ConnectionState.OPEN:
             logger.debug("Connection is already open, skipping open.")
@@ -230,7 +229,7 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         logger.debug("Cancel not supported for Fabric adapter.")
 
     @classmethod
-    def get_response(cls, cursor: mssql_python.Cursor) -> AdapterResponse:
+    def get_response(cls, cursor: Any) -> AdapterResponse:
         messages_to_add = []
         query_id = None
         if cursor.messages:

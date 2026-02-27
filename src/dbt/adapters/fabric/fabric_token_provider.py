@@ -59,14 +59,20 @@ class FabricTokenProvider:
         token: AccessToken
 
         if self.credentials.authentication.lower() == "activedirectoryserviceprincipal":
-            if not all([self.credentials.client_id, self.credentials.client_secret, self.credentials.tenant_id]):
+            if not all(
+                [
+                    self.credentials.client_id,
+                    self.credentials.client_secret,
+                    self.credentials.tenant_id,
+                ]
+            ):
                 raise ValueError(
                     "client_id, client_secret, and tenant_id must be provided for ActiveDirectoryServicePrincipal authentication."
                 )
             credential = ClientSecretCredential(
-                client_id=self.credentials.client_id, # type: ignore
-                client_secret=self.credentials.client_secret, # type: ignore
-                tenant_id=self.credentials.tenant_id, # type: ignore
+                client_id=self.credentials.client_id,  # type: ignore
+                client_secret=self.credentials.client_secret,  # type: ignore
+                tenant_id=self.credentials.tenant_id,  # type: ignore
             )
         elif self.credentials.authentication.lower() == "activedirectorydefault":
             credential = DefaultAzureCredential()
