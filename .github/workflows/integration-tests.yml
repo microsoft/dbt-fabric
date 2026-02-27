@@ -7,11 +7,9 @@ on:
   pull_request:
     branches:
       - forked-version
-      - with-spark
   push:
     branches:
       - forked-version
-      - with-spark
 
 permissions:
   contents: read

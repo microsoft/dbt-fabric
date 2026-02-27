@@ -6,11 +6,9 @@ on:
   push:
     branches:
       - forked-version
-      - with-spark
   pull_request:
     branches:
       - forked-version
-      - with-spark
 
 jobs:
   lint-format:
