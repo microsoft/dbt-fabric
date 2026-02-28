@@ -165,6 +165,7 @@ class TestTableMaterializationSpark(BaseTableMaterialization):
     pass
 
 
+@pytest.mark.skip(reason="Capability not implemented in FabricSpark.")
 class TestGetCatalogForSingleRelationSpark(BaseGetCatalogForSingleRelation):
     pass
 
