@@ -1,8 +1,10 @@
-from typing import Callable, Tuple, TypeAlias
+from typing import Callable, FrozenSet, Iterable, Tuple, TypeAlias
 
 from dbt_common.exceptions import DbtRuntimeError
 
-from dbt.adapters.base.relation import BaseRelation
+from dbt.adapters.base.impl import BaseAdapter
+from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
+from dbt.adapters.contracts.relation import RelationConfig
 from dbt.adapters.fabric.base_fabric_adapter import BaseFabricAdapter
 from dbt.adapters.fabricspark.fabricspark_connection_manager import FabricSparkConnectionManager
 from dbt.adapters.fabricspark.fabricspark_relation import (
@@ -17,6 +19,13 @@ class FabricSparkAdapter(BaseFabricAdapter, SparkAdapter):
     connections: FabricSparkConnectionManager  # type: ignore
     Relation: TypeAlias = FabricSparkRelation  # type: ignore
     RelationInfo = Tuple[str, str, str]
+
+    _capabilities: CapabilityDict = CapabilityDict(
+        {
+            Capability.SchemaMetadataByRelations: CapabilitySupport(support=Support.Full),
+            Capability.TableLastModifiedMetadata: CapabilitySupport(support=Support.Full),
+        }
+    )
 
     def _namespace_to_parts(self, namespace: str) -> Tuple[str, str, str]:
         """Convert a namespace string into its components."""
@@ -70,3 +79,10 @@ class FabricSparkAdapter(BaseFabricAdapter, SparkAdapter):
             relations.append(relation)
 
         return relations
+
+    def get_catalog(
+        self,
+        relation_configs: Iterable[RelationConfig],
+        used_schemas: FrozenSet[Tuple[str, str]],
+    ) -> Tuple["agate.Table", list[Exception]]:
+        return BaseAdapter.get_catalog(self, relation_configs, used_schemas)
