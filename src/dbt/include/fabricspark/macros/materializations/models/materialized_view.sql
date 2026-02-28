@@ -31,31 +31,27 @@
         {% set build_sql = refresh_materialized_view(target_relation) %}
         {% set needs_swap = false %}
     {% endif %}
+    
+    {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
-    {% if build_sql == '' %}
-        {{ materialized_view_execute_no_op(target_relation) }}
-    {% else %}
-        {{ run_hooks(pre_hooks, inside_transaction=True) }}
+    {% set grant_config = config.get('grants') %}
 
-        {% set grant_config = config.get('grants') %}
+    {% call statement(name="main") %}
+        {{ build_sql }}
+    {% endcall %}
 
-        {% call statement(name="main") %}
-            {{ build_sql }}
-        {% endcall %}
-
-        {# Atomic swap: rename existing → backup, intermediate → target #}
-        {% if needs_swap %}
-            {% if backup_relation is not none %}
-                {{ adapter.rename_relation(existing_relation, backup_relation) }}
-            {% endif %}
-            {{ adapter.rename_relation(intermediate_relation, target_relation) }}
+    {# Atomic swap: rename existing → backup, intermediate → target #}
+    {% if needs_swap %}
+        {% if backup_relation is not none %}
+            {{ adapter.rename_relation(existing_relation, backup_relation) }}
         {% endif %}
-
-        {% set should_revoke = should_revoke(existing_relation, full_refresh_mode=True) %}
-        {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
-
-        {{ run_hooks(post_hooks, inside_transaction=True) }}
+        {{ adapter.rename_relation(intermediate_relation, target_relation) }}
     {% endif %}
+
+    {% set should_revoke = should_revoke(existing_relation, full_refresh_mode=True) %}
+    {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
+
+    {{ run_hooks(post_hooks, inside_transaction=True) }}
 
     {{ drop_relation_if_exists(backup_relation) }}
     {{ drop_relation_if_exists(intermediate_relation) }}
