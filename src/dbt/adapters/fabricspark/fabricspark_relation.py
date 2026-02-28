@@ -30,6 +30,18 @@ class FabricSparkRelation(BaseRelation):
     information: str | None = None
     type: FabricSparkRelationType | None = None  # type: ignore
 
+    @classmethod
+    def try_translate_type(cls, relation_type: str | None) -> FabricSparkRelationType | None:
+        if relation_type is None:
+            return None
+        match relation_type.lower():
+            case "materialized_lake_view":
+                return FabricSparkRelationType.MaterializedView
+            case "managed":
+                return FabricSparkRelationType.Table
+            case _:
+                return None
+
     @classproperty
     def get_relation_type(cls) -> Type[FabricSparkRelationType]:
         return FabricSparkRelationType

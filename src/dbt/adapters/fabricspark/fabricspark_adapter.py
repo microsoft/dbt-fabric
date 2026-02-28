@@ -7,8 +7,7 @@ from dbt_common.exceptions import DbtRuntimeError
 from dbt_common.utils.dict import AttrDict
 from dbt_common.utils.executor import executor
 
-from dbt.adapters.base.impl import BaseAdapter, _expect_row_value
-from dbt.adapters.base.relation import BaseRelation
+from dbt.adapters.base.impl import BaseAdapter
 from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
 from dbt.adapters.contracts.relation import RelationConfig
 from dbt.adapters.events.logging import AdapterLogger
@@ -22,7 +21,7 @@ from dbt.adapters.fabricspark.fabricspark_relation import (
     FabricSparkRelation,
     FabricSparkRelationType,
 )
-from dbt.adapters.spark.impl import KEY_TABLE_OWNER, SparkAdapter
+from dbt.adapters.spark.impl import SparkAdapter
 from dbt.adapters.sql.impl import LIST_SCHEMAS_MACRO_NAME
 
 if TYPE_CHECKING:
@@ -40,7 +39,7 @@ class FabricSparkAdapter(BaseFabricAdapter, SparkAdapter):
     _capabilities: CapabilityDict = CapabilityDict(
         {
             Capability.TableLastModifiedMetadata: CapabilitySupport(support=Support.Full),
-            Capability.GetCatalogForSingleRelation: CapabilitySupport(support=Support.Full),
+            Capability.SchemaMetadataByRelations: CapabilitySupport(support=Support.Full),
         }
     )
 
@@ -121,8 +120,8 @@ class FabricSparkAdapter(BaseFabricAdapter, SparkAdapter):
                 table_database=relation.database,
                 table_schema=relation.schema,
                 table_name=relation.name,
-                table_type=relation.type,
-                table_owner=str(metadata.get(KEY_TABLE_OWNER)),
+                table_type=FabricSparkRelation.try_translate_type(metadata.get("Type"))
+                or relation.type,
                 column=column["col_name"],
                 column_index=idx,
                 dtype=column["data_type"],
@@ -153,7 +152,6 @@ class FabricSparkAdapter(BaseFabricAdapter, SparkAdapter):
 
         # Second, we gather all relations in in every namespace in parallel
         all_relations: set[FabricSparkRelation] = set()
-        all_columns: list[FabricSparkColumn] = list()
         exceptions: list[Exception] = []
 
         with executor(self.config) as tpe:
@@ -182,10 +180,19 @@ class FabricSparkAdapter(BaseFabricAdapter, SparkAdapter):
                     # exc is not None, derives from Exception, and isn't ctrl+c
                     exceptions.append(exc)
 
-        # Third, we gather all columns for every relation in parallel
+        catalogs, c_exceptions = self.get_catalog_by_relations(used_schemas, all_relations)
+        exceptions.extend(c_exceptions)
+        return catalogs, exceptions
+
+    def get_catalog_by_relations(
+        self, used_schemas: FrozenSet[Tuple[str, str]], relations: set[FabricSparkRelation]
+    ) -> Tuple["agate.Table", list[Exception]]:
+        exceptions: list[Exception] = []
+        all_columns: list[FabricSparkColumn] = list()
+
         with executor(self.config) as tpe:
             columns_futures: list[Future[list[FabricSparkColumn]]] = []
-            for relation in all_relations:
+            for relation in relations:
                 columns_futures.append(
                     tpe.submit_connected(
                         self,
