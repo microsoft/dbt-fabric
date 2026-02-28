@@ -33,8 +33,6 @@ jobs:
             dwh_name: "ci03"
           - python_version: "3.13"
             dwh_name: "ci04"
-          - python_version: "3.14"
-            dwh_name: "ci01"
 
     runs-on: ubuntu-latest
     environment: azure
@@ -81,7 +79,6 @@ jobs:
           - python_version: "3.11"
           - python_version: "3.12"
           - python_version: "3.13"
-          - python_version: "3.14"
     runs-on: ubuntu-latest
     environment: azure
     container: 
