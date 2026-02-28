@@ -26,6 +26,8 @@ class FabricSparkRelation(BaseRelation):
     include_policy: Policy = field(default_factory=lambda: SparkIncludePolicy())
     quote_character: str = "`"
     require_alias: bool = False
+    information: str | None = None
+    workspace: str | None = None
     type: FabricSparkRelationType | None = None  # type: ignore
 
     @classproperty
