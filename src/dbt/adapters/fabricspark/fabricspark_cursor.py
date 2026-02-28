@@ -119,7 +119,10 @@ class FabricSparkCursor:
             sql = sql % tuple(self._format_param(p) for p in params)
 
         statement_id = self.get_livy_session().run_statement(sql, "sql", wait_for_result=False)
-        assert isinstance(statement_id, int), "Expected statement_id to be an int"
+        if isinstance(statement_id, LivySessionResult):
+            self._result = statement_id
+            raise DbtDatabaseError(f"Error executing SQL statement: {self._result.error_message}")
+
         self._statement_id = statement_id
 
         self._result = self.get_livy_session().wait_and_get_statement_result(statement_id)
