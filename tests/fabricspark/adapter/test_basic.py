@@ -82,7 +82,7 @@ class TestSimpleMaterializationsSpark(BaseSimpleMaterializations):
         assert len(catalog.sources) == 1
 
         results = run_dbt(
-            ["run", "-m", "swappable", "--vars", "materialized_var: materialized_view"]
+            ["run", "-s", "swappable", "--vars", "materialized_var: materialized_view"]
         )
         assert len(results) == 1
 
@@ -96,7 +96,7 @@ class TestSimpleMaterializationsSpark(BaseSimpleMaterializations):
         check_relation_types(project.adapter, expected)
 
         # run_dbt changing materialized_var to incremental
-        results = run_dbt(["run", "-m", "swappable", "--vars", "materialized_var: incremental"])
+        results = run_dbt(["run", "-s", "swappable", "--vars", "materialized_var: incremental"])
         assert len(results) == 1
 
         # check relation types, swappable is table

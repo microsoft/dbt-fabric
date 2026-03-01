@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Type
+from typing import FrozenSet, Type
 
 from dbt_common.dataclass_schema import StrEnum
-from dbt_common.exceptions import DbtRuntimeError
 
 from dbt.adapters.base.relation import BaseRelation, InformationSchema
 from dbt.adapters.contracts.relation import Policy
@@ -28,6 +27,21 @@ class FabricSparkRelation(BaseRelation):
     quote_character: str = "`"
     require_alias: bool = False
     information: str | None = None
+    replaceable_relations: FrozenSet[FabricSparkRelationType] = field(
+        default_factory=lambda: frozenset(
+            {
+                FabricSparkRelationType.MaterializedView,
+            }
+        )
+    )
+    renameable_relations: FrozenSet[FabricSparkRelationType] = field(
+        default_factory=lambda: frozenset(
+            {
+                FabricSparkRelationType.MaterializedView,
+                FabricSparkRelationType.Table,
+            }
+        )
+    )
     type: FabricSparkRelationType | None = None  # type: ignore
 
     @classmethod
