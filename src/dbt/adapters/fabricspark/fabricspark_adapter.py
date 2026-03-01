@@ -61,6 +61,9 @@ class FabricSparkAdapter(BaseFabricAdapter, SparkAdapter):
         relations = []
         for row in row_list:
             _namespace, name, information = relation_info_func(row)
+            if _namespace is None or _namespace == "":
+                continue # temporary view
+
             _workspace, _database, _schema = self._namespace_to_parts(_namespace)
 
             # Example information string:
