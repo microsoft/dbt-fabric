@@ -527,7 +527,7 @@ wheels = [
 
 [[package]]
 name = "dbt-tests-adapter"
-version = "1.19.6"
+version = "1.19.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dbt-adapters" },
@@ -536,9 +536,9 @@ dependencies = [
     { name = "freezegun" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/34/77/109c993b74c46424c2cecbd988e4179ef4d098447d6cb503011664af7748/dbt_tests_adapter-1.19.6.tar.gz", hash = "sha256:84f56c0a3e32f9bbc038f69215433863d44378c85e14f82e85372b9e075c9906", size = 170020, upload-time = "2025-12-17T21:51:43.081Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/84/308803bda5fea9f9ee914d4bdd5016bb01b716254ec8d01a4cf61f1b76ed/dbt_tests_adapter-1.19.7.tar.gz", hash = "sha256:d8c80d0fba32a7c86396a4a34f4b0cef676c742f92628fe6b347859308a523b4", size = 170716, upload-time = "2026-03-03T17:25:08.17Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/21/7e/5d156edbcb2e14799543b44dd580d43b9c26b3e406fa18e8613229db327b/dbt_tests_adapter-1.19.6-py3-none-any.whl", hash = "sha256:e9ae709e7ed5a33635df9c6fcbf0f3a7766d488716f3f76c4b2224567a8b70e7", size = 243754, upload-time = "2025-12-17T21:51:41.407Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/06/fe0a1d46e2bee6ca463abc483ce6a39112eea4eb0ff0a3243c3a3f973971/dbt_tests_adapter-1.19.7-py3-none-any.whl", hash = "sha256:5220e3545bbc0136e00fe8e1a70d85b7c0311547d763737d7ce38641efc7bac1", size = 244411, upload-time = "2026-03-03T17:25:06.335Z" },
 ]
 
 [[package]]
