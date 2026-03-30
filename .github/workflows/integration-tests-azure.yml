@@ -27,7 +27,7 @@ jobs:
     steps:
       # Azure login using federated credentials
       - name: Azure login with OIDC
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.DBT_AZURE_SP_NAME }}
           tenant-id: ${{ secrets.DBT_AZURE_TENANT }}
