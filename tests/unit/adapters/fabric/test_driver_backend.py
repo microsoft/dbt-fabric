@@ -11,7 +11,9 @@ class TestConvertBytesToMswindowsByteString:
 
     def test_converts_bytes_correctly(self):
         """Verify bytes are converted to MS Windows byte string format."""
-        from dbt.adapters.fabric.driver_backend import convert_bytes_to_mswindows_byte_string
+        from dbt.adapters.fabric.driver_backend import (
+            convert_bytes_to_mswindows_byte_string,
+        )
 
         result = convert_bytes_to_mswindows_byte_string(b"test")
 
@@ -21,7 +23,9 @@ class TestConvertBytesToMswindowsByteString:
 
     def test_empty_bytes(self):
         """Empty bytes should produce length prefix only."""
-        from dbt.adapters.fabric.driver_backend import convert_bytes_to_mswindows_byte_string
+        from dbt.adapters.fabric.driver_backend import (
+            convert_bytes_to_mswindows_byte_string,
+        )
 
         result = convert_bytes_to_mswindows_byte_string(b"")
         # 4 bytes for length (0) prefix
@@ -29,7 +33,9 @@ class TestConvertBytesToMswindowsByteString:
 
     def test_unicode_string_bytes(self):
         """Unicode string bytes should be properly converted."""
-        from dbt.adapters.fabric.driver_backend import convert_bytes_to_mswindows_byte_string
+        from dbt.adapters.fabric.driver_backend import (
+            convert_bytes_to_mswindows_byte_string,
+        )
 
         # UTF-8 encoded "hello"
         result = convert_bytes_to_mswindows_byte_string(b"hello")
@@ -38,7 +44,9 @@ class TestConvertBytesToMswindowsByteString:
 
     def test_long_token_bytes(self):
         """Long token-like bytes should be properly converted."""
-        from dbt.adapters.fabric.driver_backend import convert_bytes_to_mswindows_byte_string
+        from dbt.adapters.fabric.driver_backend import (
+            convert_bytes_to_mswindows_byte_string,
+        )
 
         # Simulate a token-like string
         token = b"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Ik1uQ19"
@@ -67,7 +75,10 @@ class TestGetDriverBackend:
 
     def test_auto_falls_back_to_pyodbc_when_mssql_python_unavailable(self):
         """Auto mode should return PyodbcBackend when mssql_python import fails."""
-        from dbt.adapters.fabric.driver_backend import get_driver_backend, _active_backend
+        from dbt.adapters.fabric.driver_backend import (
+            get_driver_backend,
+            _active_backend,
+        )
         import dbt.adapters.fabric.driver_backend as db_module
 
         # Reset cached backend
@@ -99,7 +110,10 @@ class TestGetDriverBackend:
 
     def test_explicit_mssql_python_raises_when_unavailable(self):
         """Explicit mssql-python should raise ImportError, not fall back."""
-        from dbt.adapters.fabric.driver_backend import get_driver_backend, MssqlPythonBackend
+        from dbt.adapters.fabric.driver_backend import (
+            get_driver_backend,
+            MssqlPythonBackend,
+        )
         import dbt.adapters.fabric.driver_backend as db_module
 
         # Reset cached backend
@@ -151,6 +165,7 @@ class TestGetEffectiveDriverBackend:
         with patch.dict("os.environ", {}, clear=True):
             # Ensure DBT_FABRIC_DRIVER_BACKEND is not set
             import os
+
             os.environ.pop("DBT_FABRIC_DRIVER_BACKEND", None)
 
             result = get_effective_driver_backend("pyodbc")
@@ -162,6 +177,7 @@ class TestGetEffectiveDriverBackend:
 
         with patch.dict("os.environ", {}, clear=True):
             import os
+
             os.environ.pop("DBT_FABRIC_DRIVER_BACKEND", None)
 
             result = get_effective_driver_backend(None)
@@ -198,11 +214,11 @@ class TestMssqlPythonBackend:
             mock_conn = MagicMock()
             mock_mssql_python.connect.return_value = mock_conn
 
-            result = backend.connect(
-                "SERVER=test;", timeout=30, autocommit=True)
+            result = backend.connect("SERVER=test;", timeout=30, autocommit=True)
 
             mock_mssql_python.connect.assert_called_once_with(
-                "SERVER=test;", timeout=30)
+                "SERVER=test;", timeout=30, attrs_before={}
+            )
             mock_conn.setautocommit.assert_called_once_with(True)
 
     def test_connect_with_autocommit_false(self, mock_mssql_python):
@@ -218,8 +234,8 @@ class TestMssqlPythonBackend:
 
             mock_conn.setautocommit.assert_called_once_with(False)
 
-    def test_connect_ignores_attrs_before(self, mock_mssql_python):
-        """Verify connect() ignores attrs_before (mssql-python doesn't use it)."""
+    def test_connect_passes_attrs_before(self, mock_mssql_python):
+        """Verify connect() passes attrs_before to mssql_python.connect()."""
         with patch.dict(sys.modules, {"mssql_python": mock_mssql_python}):
             from dbt.adapters.fabric.driver_backend import MssqlPythonBackend
 
@@ -227,16 +243,17 @@ class TestMssqlPythonBackend:
             mock_conn = MagicMock()
             mock_mssql_python.connect.return_value = mock_conn
 
+            attrs = {1256: b"token_bytes"}
             backend.connect(
                 "SERVER=test;",
                 timeout=30,
                 autocommit=True,
-                attrs_before={1256: b"token"}  # Should be ignored
+                attrs_before=attrs,
             )
 
-            # attrs_before should not be passed to connect
             mock_mssql_python.connect.assert_called_once_with(
-                "SERVER=test;", timeout=30)
+                "SERVER=test;", timeout=30, attrs_before=attrs
+            )
 
     def test_connection_string_has_no_driver_prefix(self, mock_mssql_python):
         """Verify connection string does NOT include DRIVER=."""
@@ -324,6 +341,46 @@ class TestMssqlPythonBackend:
             assert "ConnectRetryCount=3" in conn_str
             assert "ConnectRetryInterval=10" in conn_str
 
+    def test_connection_string_uid_pwd_wrapped_in_braces(self, mock_mssql_python):
+        """Verify UID/PWD are wrapped in braces to handle special characters."""
+        with patch.dict(sys.modules, {"mssql_python": mock_mssql_python}):
+            from dbt.adapters.fabric.driver_backend import MssqlPythonBackend
+
+            backend = MssqlPythonBackend()
+            conn_str = backend.build_connection_string(
+                host="test.database.fabric.microsoft.com",
+                database="testdb",
+                authentication="ActiveDirectoryServicePrincipal",
+                encrypt=True,
+                trust_cert=False,
+                application_name="dbt-fabric/1.0",
+                uid="client-id-with;semicolon",
+                pwd="secret=with;special",
+            )
+
+            assert "UID={client-id-with;semicolon}" in conn_str
+            assert "PWD={secret=with;special}" in conn_str
+
+    def test_connection_string_interactive_excludes_pwd(self, mock_mssql_python):
+        """Verify ActiveDirectoryInteractive includes UID but excludes PWD."""
+        with patch.dict(sys.modules, {"mssql_python": mock_mssql_python}):
+            from dbt.adapters.fabric.driver_backend import MssqlPythonBackend
+
+            backend = MssqlPythonBackend()
+            conn_str = backend.build_connection_string(
+                host="test.database.fabric.microsoft.com",
+                database="testdb",
+                authentication="ActiveDirectoryInteractive",
+                encrypt=True,
+                trust_cert=False,
+                application_name="dbt-fabric/1.0",
+                uid="user@domain.com",
+                pwd="should-be-ignored",
+            )
+
+            assert "UID={user@domain.com}" in conn_str
+            assert "PWD" not in conn_str
+
     def test_sql_auth_raises_database_error(self, mock_mssql_python):
         """SQL Authentication should raise DatabaseError for Fabric."""
         mock_mssql_python.DatabaseError = ValueError  # Use a testable exception
@@ -343,13 +400,13 @@ class TestMssqlPythonBackend:
                     application_name="dbt-fabric/1.0",
                 )
 
-    def test_requires_token_bytes_returns_false(self, mock_mssql_python):
-        """mssql-python should not require token byte conversion."""
+    def test_requires_token_bytes_returns_true(self, mock_mssql_python):
+        """mssql-python supports token bytes via attrs_before."""
         with patch.dict(sys.modules, {"mssql_python": mock_mssql_python}):
             from dbt.adapters.fabric.driver_backend import MssqlPythonBackend
 
             backend = MssqlPythonBackend()
-            assert backend.requires_token_bytes() is False
+            assert backend.requires_token_bytes() is True
 
     def test_set_pooling_enabled(self, mock_mssql_python):
         """Verify set_pooling calls mssql_python.pooling when enabled."""
@@ -382,8 +439,7 @@ class TestMssqlPythonBackend:
 
             backend.add_output_converter(mock_conn, 123, mock_func)
 
-            mock_conn.add_output_converter.assert_called_once_with(
-                123, mock_func)
+            mock_conn.add_output_converter.assert_called_once_with(123, mock_func)
 
     def test_get_error_types(self, mock_mssql_python):
         """Verify get_error_types returns correct tuple."""
@@ -561,8 +617,8 @@ class TestPyodbcBackend:
 
             assert "trusted_connection=Yes" in conn_str
 
-    def test_connection_string_pooling(self, mock_pyodbc):
-        """Verify pooling is enabled in connection string."""
+    def test_connection_string_no_pooling(self, mock_pyodbc):
+        """Verify connection string does NOT include Pooling (dbt manages connections)."""
         with patch.dict(sys.modules, {"pyodbc": mock_pyodbc}):
             from dbt.adapters.fabric.driver_backend import PyodbcBackend
 
@@ -576,7 +632,7 @@ class TestPyodbcBackend:
                 application_name="dbt-fabric/1.0",
             )
 
-            assert "Pooling=true" in conn_str
+            assert "Pooling" not in conn_str
 
     def test_sql_auth_raises_database_error(self, mock_pyodbc):
         """SQL Authentication should raise DatabaseError for Fabric."""
@@ -629,8 +685,7 @@ class TestPyodbcBackend:
 
             backend.add_output_converter(mock_conn, 456, mock_func)
 
-            mock_conn.add_output_converter.assert_called_once_with(
-                456, mock_func)
+            mock_conn.add_output_converter.assert_called_once_with(456, mock_func)
 
     def test_get_error_types(self, mock_pyodbc):
         """Verify get_error_types returns correct tuple."""
@@ -650,7 +705,8 @@ class TestPyodbcBackend:
             backend = PyodbcBackend()
             exceptions = backend.get_retryable_exceptions()
 
-            assert len(exceptions) == 3  # InternalError, OperationalError, InterfaceError
+            # InternalError, OperationalError, InterfaceError
+            assert len(exceptions) == 3
 
     def test_get_database_error(self, mock_pyodbc):
         """Verify get_database_error returns correct exception type."""
@@ -707,7 +763,9 @@ class TestConvertBytesToMswindowsByteString:
 
     def test_converts_bytes_correctly(self):
         """Verify bytes are converted to MS Windows byte string format."""
-        from dbt.adapters.fabric.driver_backend import convert_bytes_to_mswindows_byte_string
+        from dbt.adapters.fabric.driver_backend import (
+            convert_bytes_to_mswindows_byte_string,
+        )
 
         result = convert_bytes_to_mswindows_byte_string(b"test")
 
@@ -739,11 +797,14 @@ class TestBackendAuthentication:
         mock_module.pooling = True
         return mock_module
 
-    @pytest.mark.parametrize("auth_type", [
-        "ActiveDirectoryServicePrincipal",
-        "ActiveDirectoryPassword",
-        "ActiveDirectoryInteractive",
-    ])
+    @pytest.mark.parametrize(
+        "auth_type",
+        [
+            "ActiveDirectoryServicePrincipal",
+            "ActiveDirectoryPassword",
+            "ActiveDirectoryInteractive",
+        ],
+    )
     def test_active_directory_auth_in_connection_string_mssql_python(
         self, mock_mssql_python, auth_type
     ):
@@ -765,11 +826,14 @@ class TestBackendAuthentication:
 
             assert f"Authentication={auth_type}" in conn_str
 
-    @pytest.mark.parametrize("auth_type", [
-        "ActiveDirectoryServicePrincipal",
-        "ActiveDirectoryPassword",
-        "ActiveDirectoryInteractive",
-    ])
+    @pytest.mark.parametrize(
+        "auth_type",
+        [
+            "ActiveDirectoryServicePrincipal",
+            "ActiveDirectoryPassword",
+            "ActiveDirectoryInteractive",
+        ],
+    )
     def test_active_directory_auth_in_connection_string_pyodbc(
         self, mock_pyodbc, auth_type
     ):
@@ -828,7 +892,9 @@ class TestCachedDriverBackend:
         # Reset cache
         db_module._active_backend = None
 
-        with patch.dict(sys.modules, {"pyodbc": mock_pyodbc, "mssql_python": mock_mssql}):
+        with patch.dict(
+            sys.modules, {"pyodbc": mock_pyodbc, "mssql_python": mock_mssql}
+        ):
             backend1 = db_module.get_cached_driver_backend("pyodbc")
             assert backend1.name == "pyodbc"
 

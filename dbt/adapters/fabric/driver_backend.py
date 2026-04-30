@@ -8,6 +8,7 @@ mssql-python (preferred) or pyodbc (fallback).
 import os
 import struct
 import sys
+import threading
 from abc import ABC, abstractmethod
 from itertools import chain, repeat
 from typing import Any, Callable, Dict, Optional, Tuple, Type
@@ -123,8 +124,9 @@ class MssqlPythonBackend(DriverBackend):
         autocommit: bool,
         attrs_before: Optional[Dict] = None,
     ) -> Any:
-        # mssql-python doesn't use attrs_before - auth is in connection string
-        conn = self._driver.connect(connection_string, timeout=timeout)
+        conn = self._driver.connect(
+            connection_string, timeout=timeout, attrs_before=attrs_before or {}
+        )
         conn.setautocommit(autocommit)
         return conn
 
@@ -175,6 +177,13 @@ class MssqlPythonBackend(DriverBackend):
         con_str.append(f"SERVER={host}")
         con_str.append(f"Database={database}")
 
+        # trace_flag is not supported by mssql-python (ODBC-specific)
+        if trace_flag:
+            logger.warning(
+                "trace_flag is not supported by the mssql-python backend. "
+                "Use driver_backend: pyodbc for ODBC tracing."
+            )
+
         # Authentication
         if windows_login:
             con_str.append("Trusted_Connection=Yes")
@@ -182,17 +191,25 @@ class MssqlPythonBackend(DriverBackend):
             raise self._driver.DatabaseError(
                 "SQL Authentication is not supported by Microsoft Fabric"
             )
-        elif "ActiveDirectory" in authentication and authentication != "ActiveDirectoryAccessToken":
+        elif (
+            "ActiveDirectory" in authentication
+            and authentication != "ActiveDirectoryAccessToken"
+        ):
             con_str.append(f"Authentication={authentication}")
-            if uid:
-                con_str.append(f"UID={uid}")
-            if pwd:
-                con_str.append(f"PWD={pwd}")
+            # UID/PWD handling for AD auth types
+            if authentication in (
+                "ActiveDirectoryPassword",
+                "ActiveDirectoryServicePrincipal",
+                "ActiveDirectoryInteractive",
+            ):
+                if uid:
+                    con_str.append(f"UID={{{uid}}}")
+                if pwd and authentication != "ActiveDirectoryInteractive":
+                    con_str.append(f"PWD={{{pwd}}}")
 
         # Encryption settings
         con_str.append(f"Encrypt={'Yes' if encrypt else 'No'}")
-        con_str.append(
-            f"TrustServerCertificate={'Yes' if trust_cert else 'No'}")
+        con_str.append(f"TrustServerCertificate={'Yes' if trust_cert else 'No'}")
 
         # Application name
         con_str.append(f"APP={application_name}")
@@ -204,7 +221,7 @@ class MssqlPythonBackend(DriverBackend):
         return ";".join(con_str)
 
     def requires_token_bytes(self) -> bool:
-        return False
+        return True
 
 
 class PyodbcBackend(DriverBackend):
@@ -279,7 +296,6 @@ class PyodbcBackend(DriverBackend):
 
         con_str.append(f"SERVER={host}")
         con_str.append(f"Database={database}")
-        con_str.append("Pooling=true")
 
         # Trace flag
         if trace_flag:
@@ -294,10 +310,17 @@ class PyodbcBackend(DriverBackend):
             raise self._driver.DatabaseError(
                 "SQL Authentication is not supported by Microsoft Fabric"
             )
-        elif "ActiveDirectory" in authentication and authentication != "ActiveDirectoryAccessToken":
+        elif (
+            "ActiveDirectory" in authentication
+            and authentication != "ActiveDirectoryAccessToken"
+        ):
             con_str.append(f"Authentication={authentication}")
             # UID/PWD handling for AD auth types
-            if authentication in ("ActiveDirectoryPassword", "ActiveDirectoryServicePrincipal", "ActiveDirectoryInteractive"):
+            if authentication in (
+                "ActiveDirectoryPassword",
+                "ActiveDirectoryServicePrincipal",
+                "ActiveDirectoryInteractive",
+            ):
                 if uid:
                     con_str.append(f"UID={{{uid}}}")
                 if pwd and authentication != "ActiveDirectoryInteractive":
@@ -305,8 +328,7 @@ class PyodbcBackend(DriverBackend):
 
         # Encryption settings
         con_str.append(f"encrypt={'Yes' if encrypt else 'No'}")
-        con_str.append(
-            f"TrustServerCertificate={'Yes' if trust_cert else 'No'}")
+        con_str.append(f"TrustServerCertificate={'Yes' if trust_cert else 'No'}")
 
         # Application name
         con_str.append(f"APP={application_name}")
@@ -409,6 +431,7 @@ def get_driver_backend(preferred: str = DEFAULT_BACKEND) -> DriverBackend:
 # Cache for the active backend instance
 _active_backend: Optional[DriverBackend] = None
 _active_backend_preference: Optional[str] = None
+_backend_cache_lock = threading.Lock()
 
 
 def get_cached_driver_backend(preferred: str = DEFAULT_BACKEND) -> DriverBackend:
@@ -420,7 +443,8 @@ def get_cached_driver_backend(preferred: str = DEFAULT_BACKEND) -> DriverBackend
     not the resolved backend name.
     """
     global _active_backend, _active_backend_preference
-    if _active_backend is None or _active_backend_preference != preferred:
-        _active_backend = get_driver_backend(preferred)
-        _active_backend_preference = preferred
-    return _active_backend
+    with _backend_cache_lock:
+        if _active_backend is None or _active_backend_preference != preferred:
+            _active_backend = get_driver_backend(preferred)
+            _active_backend_preference = preferred
+        return _active_backend

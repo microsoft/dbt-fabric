@@ -27,7 +27,6 @@ from dbt.adapters.fabric.fabric_connection_manager import (
 )
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
-
 CHECK_OUTPUT = AzureCliCredential.__module__ + ".subprocess.check_output"
 
 
@@ -75,17 +74,30 @@ class TestByteArrayToDatetime:
     def test_converts_datetimeoffset_bytes(self):
         """Verify DATETIMEOFFSET bytes convert to datetime."""
         # SQL_SS_TIMESTAMPOFFSET_STRUCT for 2022-12-17 17:52:18.123456 -02:30
-        value = bytes([
-            0xE6, 0x07,  # 2022 year
-            0x0C, 0x00,  # 12 month
-            0x11, 0x00,  # 17 day
-            0x11, 0x00,  # 17 hour
-            0x34, 0x00,  # 52 minute
-            0x12, 0x00,  # 18 second
-            0xBC, 0xCC, 0x5B, 0x07,  # 123456700 nanoseconds
-            0xFE, 0xFF,  # -2 offset hour
-            0xE2, 0xFF,  # -30 offset minute
-        ])
+        value = bytes(
+            [
+                0xE6,
+                0x07,  # 2022 year
+                0x0C,
+                0x00,  # 12 month
+                0x11,
+                0x00,  # 17 day
+                0x11,
+                0x00,  # 17 hour
+                0x34,
+                0x00,  # 52 minute
+                0x12,
+                0x00,  # 18 second
+                0xBC,
+                0xCC,
+                0x5B,
+                0x07,  # 123456700 nanoseconds
+                0xFE,
+                0xFF,  # -2 offset hour
+                0xE2,
+                0xFF,  # -30 offset minute
+            ]
+        )
 
         result = byte_array_to_datetime(value)
 
@@ -101,17 +113,30 @@ class TestByteArrayToDatetime:
     def test_converts_positive_offset(self):
         """Verify positive timezone offset is handled."""
         # SQL_SS_TIMESTAMPOFFSET_STRUCT for 2023-06-15 10:30:00.000000 +05:30
-        value = bytes([
-            0xE7, 0x07,  # 2023 year
-            0x06, 0x00,  # 6 month
-            0x0F, 0x00,  # 15 day
-            0x0A, 0x00,  # 10 hour
-            0x1E, 0x00,  # 30 minute
-            0x00, 0x00,  # 0 second
-            0x00, 0x00, 0x00, 0x00,  # 0 nanoseconds
-            0x05, 0x00,  # +5 offset hour
-            0x1E, 0x00,  # +30 offset minute
-        ])
+        value = bytes(
+            [
+                0xE7,
+                0x07,  # 2023 year
+                0x06,
+                0x00,  # 6 month
+                0x0F,
+                0x00,  # 15 day
+                0x0A,
+                0x00,  # 10 hour
+                0x1E,
+                0x00,  # 30 minute
+                0x00,
+                0x00,  # 0 second
+                0x00,
+                0x00,
+                0x00,
+                0x00,  # 0 nanoseconds
+                0x05,
+                0x00,  # +5 offset hour
+                0x1E,
+                0x00,  # +30 offset minute
+            ]
+        )
 
         result = byte_array_to_datetime(value)
 
@@ -137,12 +162,12 @@ class TestGetTokenAttrsBefore:
     def mock_mssql_python_backend(self):
         """Create a mock mssql-python backend."""
         mock_backend = MagicMock()
-        mock_backend.requires_token_bytes.return_value = False
+        mock_backend.requires_token_bytes.return_value = True
         mock_backend.name = "mssql-python"
         return mock_backend
 
-    def test_returns_empty_dict_for_mssql_python(self, mock_mssql_python_backend):
-        """mssql-python backend should return empty dict."""
+    def test_returns_token_for_cli_auth_mssql_python(self, mock_mssql_python_backend):
+        """mssql-python backend should return token bytes for CLI auth."""
         creds = FabricCredentials(
             host="test.database.fabric.microsoft.com",
             database="testdb",
@@ -150,9 +175,16 @@ class TestGetTokenAttrsBefore:
             authentication="cli",
         )
 
-        result = get_token_attrs_before(creds, mock_mssql_python_backend)
+        mock_token = AccessToken(token="test_token", expires_on=int(time.time()) + 3600)
 
-        assert result == {}
+        with patch.dict(
+            "dbt.adapters.fabric.fabric_connection_manager.AZURE_AUTH_FUNCTIONS",
+            {"cli": lambda c, s: mock_token},
+        ):
+            result = get_token_attrs_before(creds, mock_mssql_python_backend)
+
+        assert 1256 in result
+        assert isinstance(result[1256], bytes)
 
     def test_returns_empty_dict_for_service_principal(self, mock_pyodbc_backend):
         """Service principal auth should return empty dict (token in connection string)."""
@@ -176,11 +208,12 @@ class TestGetTokenAttrsBefore:
             authentication="cli",
         )
 
-        mock_token = AccessToken(
-            token="test_token", expires_on=int(time.time()) + 3600)
+        mock_token = AccessToken(token="test_token", expires_on=int(time.time()) + 3600)
 
-        with patch.dict("dbt.adapters.fabric.fabric_connection_manager.AZURE_AUTH_FUNCTIONS",
-                        {"cli": lambda c, s: mock_token}):
+        with patch.dict(
+            "dbt.adapters.fabric.fabric_connection_manager.AZURE_AUTH_FUNCTIONS",
+            {"cli": lambda c, s: mock_token},
+        ):
             result = get_token_attrs_before(creds, mock_pyodbc_backend)
 
         assert 1256 in result
@@ -213,7 +246,9 @@ class TestGetTokenAttrsBefore:
             access_token_expires_on=None,
         )
 
-        with pytest.raises(ValueError, match="Access token and access token expiry are required"):
+        with pytest.raises(
+            ValueError, match="Access token and access token expiry are required"
+        ):
             get_token_attrs_before(creds, mock_pyodbc_backend)
 
 
@@ -348,7 +383,9 @@ class TestGetDbtRunStatus:
         }
 
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("builtins.open", mock.mock_open(read_data=json.dumps(mock_results))):
+            with patch(
+                "builtins.open", mock.mock_open(read_data=json.dumps(mock_results))
+            ):
                 result = get_dbt_run_status()
 
         assert result == "success"
@@ -363,7 +400,9 @@ class TestGetDbtRunStatus:
         }
 
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("builtins.open", mock.mock_open(read_data=json.dumps(mock_results))):
+            with patch(
+                "builtins.open", mock.mock_open(read_data=json.dumps(mock_results))
+            ):
                 result = get_dbt_run_status()
 
         assert result == "error"
@@ -373,7 +412,9 @@ class TestGetDbtRunStatus:
         mock_results = {"results": []}
 
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("builtins.open", mock.mock_open(read_data=json.dumps(mock_results))):
+            with patch(
+                "builtins.open", mock.mock_open(read_data=json.dumps(mock_results))
+            ):
                 result = get_dbt_run_status()
 
         assert result == "unknown"
@@ -395,12 +436,18 @@ class TestAzureCredentialScopes:
 
     def test_power_bi_scope_import(self):
         """Verify Power BI scope can be imported."""
-        from dbt.adapters.fabric.fabric_connection_manager import POWER_BI_CREDENTIAL_SCOPE
+        from dbt.adapters.fabric.fabric_connection_manager import (
+            POWER_BI_CREDENTIAL_SCOPE,
+        )
+
         assert POWER_BI_CREDENTIAL_SCOPE == "https://api.fabric.microsoft.com/.default"
 
     def test_fabric_notebook_scope_import(self):
         """Verify Fabric Notebook scope can be imported."""
-        from dbt.adapters.fabric.fabric_connection_manager import FABRIC_NOTEBOOK_CREDENTIAL_SCOPE
+        from dbt.adapters.fabric.fabric_connection_manager import (
+            FABRIC_NOTEBOOK_CREDENTIAL_SCOPE,
+        )
+
         assert FABRIC_NOTEBOOK_CREDENTIAL_SCOPE == "https://database.windows.net/"
 
 

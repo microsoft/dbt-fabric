@@ -38,20 +38,21 @@ jobs:
       - name: Test Connection To Fabric Data Warehouse
         id: fetch_token
         run: |
-          pip install azure-identity pyodbc azure-core
+          pip install azure-identity azure-core
 
           python - <<EOF
-          from azure.core.credentials import AccessToken
+          import os
           from azure.identity import DefaultAzureCredential
-          import pyodbc
           import logging
-          import struct
           try:
             credential = DefaultAzureCredential()
             token = credential.get_token("https://database.windows.net/.default")
-            print(f"::set-output name=access_token::{token.token}")
-          except pyodbc.Error as e:
+            print(f"::add-mask::{token.token}")
+            with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"access_token={token.token}\n")
+          except Exception as e:
             logging.error("Error occurred while connecting to the database.", exc_info=True)
+            raise
           EOF
 
       - uses: actions/checkout@v4

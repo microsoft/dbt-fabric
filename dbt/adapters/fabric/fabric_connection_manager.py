@@ -10,10 +10,23 @@ from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type
 import agate
 import dbt_common.exceptions
 from azure.core.credentials import AccessToken
-from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
-from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
+from azure.identity import (
+    AzureCliCredential,
+    DefaultAzureCredential,
+    EnvironmentCredential,
+)
+from dbt.adapters.contracts.connection import (
+    AdapterResponse,
+    Connection,
+    ConnectionState,
+)
 from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.events.types import AdapterEventDebug, ConnectionUsed, SQLQuery, SQLQueryStatus
+from dbt.adapters.events.types import (
+    AdapterEventDebug,
+    ConnectionUsed,
+    SQLQuery,
+    SQLQueryStatus,
+)
 from dbt.adapters.sql import SQLConnectionManager
 from dbt_common.clients.agate_helper import empty_table
 from dbt_common.events.contextvars import get_node_info
@@ -28,7 +41,9 @@ from dbt.adapters.fabric.driver_backend import (
     get_effective_driver_backend,
 )
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
-from dbt.adapters.fabric.warehouse_snapshots import WarehouseSnapshotManager as wh_snapshot_manager
+from dbt.adapters.fabric.warehouse_snapshots import (
+    WarehouseSnapshotManager as wh_snapshot_manager,
+)
 
 _init_done = False
 _init_lock = threading.Lock()
@@ -43,8 +58,8 @@ POWER_BI_CREDENTIAL_SCOPE = "https://api.fabric.microsoft.com/.default"
 FABRIC_NOTEBOOK_CREDENTIAL_SCOPE = "https://database.windows.net/"
 SYNAPSE_SPARK_CREDENTIAL_SCOPE = "DW"
 _TOKEN: Optional[AccessToken] = None
-AZURE_AUTH_FUNCTION_TYPE = Callable[[
-    FabricCredentials, Optional[str]], AccessToken]
+_TOKEN_LOCK = threading.Lock()
+AZURE_AUTH_FUNCTION_TYPE = Callable[[FabricCredentials, Optional[str]], AccessToken]
 
 logger = AdapterLogger("fabric")
 
@@ -90,7 +105,8 @@ def convert_access_token_to_mswindows_byte_string(token: AccessToken) -> bytes:
 
 
 def get_synapse_spark_access_token(
-    credentials: FabricCredentials, scope: Optional[str] = SYNAPSE_SPARK_CREDENTIAL_SCOPE
+    credentials: FabricCredentials,
+    scope: Optional[str] = SYNAPSE_SPARK_CREDENTIAL_SCOPE,
 ) -> AccessToken:
     """
     Get an Azure access token by using mspsarkutils
@@ -115,7 +131,8 @@ def get_synapse_spark_access_token(
 
 
 def get_fabric_notebook_access_token(
-    credentials: FabricCredentials, scope: Optional[str] = FABRIC_NOTEBOOK_CREDENTIAL_SCOPE
+    credentials: FabricCredentials,
+    scope: Optional[str] = FABRIC_NOTEBOOK_CREDENTIAL_SCOPE,
 ) -> AccessToken:
     """
     Get an Azure access token by using notebookutils. Works in both Fabric pyspark and python notebooks.
@@ -130,8 +147,7 @@ def get_fabric_notebook_access_token(
     """
     import notebookutils
 
-    aad_token = notebookutils.credentials.getToken(
-        FABRIC_NOTEBOOK_CREDENTIAL_SCOPE)
+    aad_token = notebookutils.credentials.getToken(FABRIC_NOTEBOOK_CREDENTIAL_SCOPE)
     expires_on = int(time.time() + 4500.0)
     token = AccessToken(
         token=aad_token,
@@ -222,13 +238,14 @@ AZURE_AUTH_FUNCTIONS: Mapping[str, AZURE_AUTH_FUNCTION_TYPE] = {
 }
 
 
-def get_token_attrs_before(credentials: FabricCredentials, backend: DriverBackend) -> Dict:
+def get_token_attrs_before(
+    credentials: FabricCredentials, backend: DriverBackend
+) -> Dict:
     """
-    Get the authentication attributes for pyodbc backend.
+    Get the token attrs_before dict for token-based authentication.
 
-    This function is only used when the backend requires token byte conversion
-    (i.e., pyodbc). For mssql-python, authentication is handled in the
-    connection string.
+    Both pyodbc and mssql-python accept access tokens via attrs_before using
+    the SQL_COPT_SS_ACCESS_TOKEN constant.
 
     Parameters
     ----------
@@ -240,9 +257,8 @@ def get_token_attrs_before(credentials: FabricCredentials, backend: DriverBacken
     Returns
     -------
     Dict
-        The pyodbc attributes for authentication, or empty dict for mssql-python.
+        The attrs_before dict with token bytes, or empty dict if not applicable.
     """
-    # mssql-python handles auth in connection string, no attrs_before needed
     if not backend.requires_token_bytes():
         return {}
 
@@ -250,27 +266,39 @@ def get_token_attrs_before(credentials: FabricCredentials, backend: DriverBacken
     sql_copt_ss_access_token = 1256  # ODBC constant for access token
     MAX_REMAINING_TIME = 300
 
-    if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
-        if not _TOKEN or (_TOKEN.expires_on - time.time() < MAX_REMAINING_TIME):
-            _TOKEN = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](
-                credentials, AZURE_CREDENTIAL_SCOPE
-            )
-        return {sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(_TOKEN)}
+    with _TOKEN_LOCK:
+        if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
+            if not _TOKEN or (_TOKEN.expires_on - time.time() < MAX_REMAINING_TIME):
+                _TOKEN = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](
+                    credentials, AZURE_CREDENTIAL_SCOPE
+                )
+            return {
+                sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(
+                    _TOKEN
+                )
+            }
 
-    if credentials.authentication.lower() == "activedirectoryaccesstoken":
-        if credentials.access_token is None or credentials.access_token_expires_on is None:
-            raise ValueError(
-                "Access token and access token expiry are required for ActiveDirectoryAccessToken authentication."
+        if credentials.authentication.lower() == "activedirectoryaccesstoken":
+            if (
+                credentials.access_token is None
+                or credentials.access_token_expires_on is None
+            ):
+                raise ValueError(
+                    "Access token and access token expiry are required for ActiveDirectoryAccessToken authentication."
+                )
+            _TOKEN = AccessToken(
+                token=credentials.access_token,
+                expires_on=int(
+                    time.time() + 4500.0
+                    if credentials.access_token_expires_on == 0
+                    else credentials.access_token_expires_on
+                ),
             )
-        _TOKEN = AccessToken(
-            token=credentials.access_token,
-            expires_on=int(
-                time.time() + 4500.0
-                if credentials.access_token_expires_on == 0
-                else credentials.access_token_expires_on
-            ),
-        )
-        return {sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(_TOKEN)}
+            return {
+                sql_copt_ss_access_token: convert_access_token_to_mswindows_byte_string(
+                    _TOKEN
+                )
+            }
 
     return {}
 
@@ -293,13 +321,19 @@ def get_pyodbc_attrs_before_credentials(credentials: FabricCredentials) -> Dict:
     Dict
         The pyodbc attributes for authentication.
     """
-    # For backwards compatibility, create a simple mock that behaves like PyodbcBackend
-    # without actually importing pyodbc (which may not be installed)
-    class _PyodbcBackendStub:
-        def requires_token_bytes(self) -> bool:
-            return True
+    from dbt.adapters.fabric.driver_backend import PyodbcBackend
 
-    return get_token_attrs_before(credentials, _PyodbcBackendStub())
+    try:
+        backend = PyodbcBackend()
+    except ImportError:
+        # pyodbc not installed; use a minimal stand-in that signals token bytes needed
+        class _TokenBytesBackend:
+            def requires_token_bytes(self) -> bool:
+                return True
+
+        backend = _TokenBytesBackend()
+
+    return get_token_attrs_before(credentials, backend)
 
 
 def bool_to_connection_string_arg(key: str, value: bool) -> str:
@@ -373,15 +407,15 @@ def _run_start_action(credentials: FabricCredentials) -> Dict[str, Any]:
         # Get credentials from dbt context
         workspace_id = credentials.workspace_id
         if workspace_id is None:
-            logger.warning(
-                "No workspace_id provided; skipping snapshot management.")
+            logger.warning("No workspace_id provided; skipping snapshot management.")
             return {}
 
         access_token = AZURE_AUTH_FUNCTIONS[credentials.authentication.lower()](
             credentials, POWER_BI_CREDENTIAL_SCOPE
         ).token
         _snapshot_manager = wh_snapshot_manager(
-            workspace_id, access_token, credentials.api_url)
+            workspace_id, access_token, credentials.api_url
+        )
 
         if credentials.warehouse_snapshot_name is None:
             logger.info(
@@ -448,7 +482,8 @@ def _run_end_action(snapshot_result: Optional[Dict[str, Any]] = None):
                 snapshot_result["snapshot_id"],
             )
             _snapshot_manager.update_warehouse_snapshot(
-                snapshot_id=snapshot_result["snapshot_id"])
+                snapshot_id=snapshot_result["snapshot_id"]
+            )
     except Exception as e:
         logger.error(f"Post-run action failed: {e}")
 
@@ -464,8 +499,12 @@ class FabricConnectionManager(SQLConnectionManager):
         with cls._backend_lock:
             if cls._backend is None:
                 effective_backend = get_effective_driver_backend(
-                    credentials.driver_backend)
+                    credentials.driver_backend
+                )
                 cls._backend = get_cached_driver_backend(effective_backend)
+
+                # Disable driver-level pooling; dbt manages its own connections
+                cls._backend.set_pooling(enabled=False)
 
                 # Emit deprecation warning if driver field is set but using mssql-python
                 if credentials.driver and cls._backend.name == "mssql-python":
@@ -478,8 +517,7 @@ class FabricConnectionManager(SQLConnectionManager):
     @contextmanager
     def exception_handler(self, sql):
         # Get backend error types dynamically
-        credentials = self.profile.credentials if hasattr(
-            self, 'profile') else None
+        credentials = self.profile.credentials if hasattr(self, "profile") else None
         if credentials:
             backend = self.get_backend(credentials)
             database_error = backend.get_database_error()
@@ -502,8 +540,7 @@ class FabricConnectionManager(SQLConnectionManager):
                 except Exception:
                     logger.debug("Failed to release connection!")
 
-                raise dbt_common.exceptions.DbtDatabaseError(
-                    str(e).strip()) from e
+                raise dbt_common.exceptions.DbtDatabaseError(str(e).strip()) from e
             raise
 
         except Exception as e:
@@ -563,7 +600,7 @@ class FabricConnectionManager(SQLConnectionManager):
         # Build display string (mask password)
         con_str_display = con_str_concat
         if pwd:
-            con_str_display = con_str_concat.replace(pwd, "***")
+            con_str_display = con_str_concat.replace(f"PWD={{{pwd}}}", "PWD={***}")
 
         # Get retryable exceptions from backend
         # InterfaceError is already included by both backends for AAD auth scenarios
@@ -652,8 +689,11 @@ class FabricConnectionManager(SQLConnectionManager):
                     cursor.execute(sql)
                 else:
                     bindings = [
-                        binding if not isinstance(
-                            binding, dt.datetime) else binding.isoformat()
+                        (
+                            binding
+                            if not isinstance(binding, dt.datetime)
+                            else binding.isoformat()
+                        )
                         for binding in bindings
                     ]
                     cursor.execute(sql, bindings)
@@ -699,7 +739,9 @@ class FabricConnectionManager(SQLConnectionManager):
 
             fire_event(
                 SQLQuery(
-                    conn_name=cast_to_str(connection.name), sql=log_sql, node_info=get_node_info()
+                    conn_name=cast_to_str(connection.name),
+                    sql=log_sql,
+                    node_info=get_node_info(),
                 )
             )
 
@@ -713,7 +755,9 @@ class FabricConnectionManager(SQLConnectionManager):
                 sql=sql,
                 bindings=bindings,
                 retryable_exceptions=retryable_exceptions,
-                retry_limit=credentials.retries if credentials.retries > 3 else retry_limit,
+                retry_limit=(
+                    credentials.retries if credentials.retries > 3 else retry_limit
+                ),
                 attempt=1,
             )
 
@@ -721,7 +765,8 @@ class FabricConnectionManager(SQLConnectionManager):
             # https://github.com/mkleehammer/pyodbc/issues/134#issuecomment-281739794
             backend = self.get_backend(credentials)
             backend.add_output_converter(
-                connection.handle, -155, byte_array_to_datetime)
+                connection.handle, -155, byte_array_to_datetime
+            )
 
             fire_event(
                 SQLQueryStatus(
@@ -761,7 +806,11 @@ class FabricConnectionManager(SQLConnectionManager):
         return datatypes[data_type]
 
     def execute(
-        self, sql: str, auto_begin: bool = True, fetch: bool = False, limit: Optional[int] = None
+        self,
+        sql: str,
+        auto_begin: bool = True,
+        fetch: bool = False,
+        limit: Optional[int] = None,
     ) -> Tuple[AdapterResponse, agate.Table]:
         sql = self._add_query_comment(sql)
         _, cursor = self.add_query(sql, auto_begin)

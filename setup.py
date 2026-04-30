@@ -19,7 +19,8 @@ with open(os.path.join(this_directory, "README.md")) as f:
 # get this from a separate file
 def _dbt_fabric_version():
     _version_path = os.path.join(
-        this_directory, "dbt", "adapters", "fabric", "__version__.py")
+        this_directory, "dbt", "adapters", "fabric", "__version__.py"
+    )
     _version_pattern = r"""version\s*=\s*["'](.+)["']"""
     with open(_version_path) as f:
         match = re.search(_version_pattern, f.read().strip())
@@ -88,7 +89,6 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",

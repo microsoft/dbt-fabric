@@ -3,6 +3,8 @@ from typing import Optional
 
 from dbt.adapters.contracts.connection import Credentials
 
+from dbt.adapters.fabric.driver_backend import VALID_BACKENDS as VALID_DRIVER_BACKENDS
+
 
 @dataclass
 class FabricCredentials(Credentials):
@@ -72,6 +74,13 @@ class FabricCredentials(Credentials):
     @property
     def type(self):
         return "fabric"
+
+    def __post_init__(self):
+        if self.driver_backend not in VALID_DRIVER_BACKENDS:
+            raise ValueError(
+                f"Invalid driver_backend='{self.driver_backend}'. "
+                f"Valid values: {', '.join(VALID_DRIVER_BACKENDS)}"
+            )
 
     def validate_snapshot_properties(self):
         workspace_provided = self.workspace_id is not None
