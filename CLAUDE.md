@@ -20,7 +20,21 @@ uv run ruff format --check .         # Check formatting
 uv run ruff format .                 # Auto-format
 uv run ruff check .                  # Lint
 uv run ruff check --fix .            # Lint with auto-fix
+uv run mkdocs serve                  # Local docs preview at http://127.0.0.1:8000
+uv run mkdocs build --strict        # Build docs and fail on warnings
 ```
+
+## Documentation website
+
+The project has a documentation website at https://dbt-fabric.debruyn.dev, built with mkdocs-material. Source files live in `docs/`, configuration in `mkdocs.yml`, and theme overrides in `overrides/`.
+
+The docs cover everything that is specific to this dbt adapter compared to other dbt adapters: installation, configuration, authentication, feature guides (Python models, warehouse snapshots), and a comparison with Microsoft's upstream `dbt-fabric`. When adding or changing adapter-specific behavior, update the relevant docs page. If a new feature has no existing page, add one under the appropriate nav section in `mkdocs.yml`.
+
+Current nav structure:
+
+- **Home** — Overview, comparison with upstream dbt-fabric, contributing, license
+- **Installation & configuration** — Installing the adapter, compatibility matrix, configuration options
+- **Feature guides** — Authentication, Python models, warehouse snapshots
 
 ## Architecture
 
@@ -202,10 +216,7 @@ During the TDD loop, pay attention to recurring failure patterns. When the same 
 
 Update this section by adding entries as patterns emerge. Format: short description of the pattern, what causes it, and the standard fix.
 
-<!-- Add recurring patterns here as they are discovered during development. Example:
-- **T-SQL has no LIMIT** — Base test SQL uses `LIMIT N`. Fix: override the fixture to use `TOP N`.
-- **VARCHAR needs explicit length** — Fabric rejects bare `VARCHAR`. Fix: use `VARCHAR(MAX)` or a specific length.
--->
+- **FabricSpark: `'view' is not a valid FabricSparkRelationType`** — dbt's default materialization is `view`, but Fabric Lakehouse with schemas doesn't support Spark SQL views. This will come up in almost every FabricSpark test class. Fix: override the test's `models` or `project_config_update` fixture to replace `view` with `materialized_view` or `table` depending on what the test is validating. Use `materialized_view` when the test is about read-only derived data (closest equivalent to a view), and `table` when the test needs DML or other table-specific behavior. The `conftest.py` sets `+materialized: materialized_view` as default, but this gets overwritten when a test provides its own `models` key in `project_config_update` (shallow dict merge).
 
 ## Multi-agent development
 
@@ -411,7 +422,15 @@ Fabric (T-SQL) and FabricSpark (Spark SQL) use fundamentally different SQL diale
 | Connection | mssql-python (TDS) | Livy sessions (HTTP/REST) |
 | Catalog queries | `sys.tables`, `sys.views`, `sys.columns` | `SHOW TABLES`, `SHOW COLUMNS`, `DESCRIBE` |
 
-### Materialized views in FabricSpark
+### No Spark SQL views in Fabric Lakehouse
+
+Microsoft Fabric Lakehouse with schemas enabled does not support Spark SQL views — only tables and materialized lake views. This means:
+- `FabricSparkRelationType` has no `View` variant — only `Table`, `MaterializedView`, `CTE`, `Ephemeral`, etc.
+- FabricSpark's default materialization is `materialized_view` (set in `dbt_project.yml` and `conftest.py`)
+- dbt's default materialization is `view`, which will fail on FabricSpark — every test that uses the default must be configured to use `materialized_view` or `table` instead
+- The `conftest.py` fixture `dbt_project_yml` sets `+materialized: materialized_view` for FabricSpark, but this can be lost if a test's `project_config_update` replaces the `models` key (shallow merge)
+
+### Materialized lake views in FabricSpark
 
 FabricSpark's default materialization is `materialized_view`, which creates Fabric "lake views". These support:
 - `PARTITIONED BY` clauses
