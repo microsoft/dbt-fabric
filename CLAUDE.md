@@ -273,10 +273,9 @@ Instructions:
 1. Read CLAUDE.md to understand the project and workflow.
 2. Read the failing test classes and their base classes to understand what they expect.
 3. Implement the fix in the target files.
-4. Run the affected tests: uv run pytest -k "Test1 or Test2 or Test3" --dw -v
-5. If tests pass, run the full adapter suite for regression: uv run pytest --dw -v
-6. If you discover a recurring pattern, add it to the "Lessons learned" section of CLAUDE.md.
-7. Report back: what you changed, which tests pass/fail, any lessons learned.
+4. Run ONLY the specific failing test: uv run pytest -k "TestClassName" --dw -v (or --de)
+5. If you discover a recurring pattern, add it to the "Lessons learned" section of CLAUDE.md.
+6. Report back: what you changed, which tests pass/fail, any lessons learned.
 ```
 
 Spawn agents for independent work packages in parallel (single message, multiple Agent tool calls). Keep dependent work packages sequential.
@@ -298,15 +297,17 @@ After workers complete:
 - **Don't do the fixing yourself** — your job is to analyze, distribute, and validate. Workers do the implementation.
 - **Be specific in prompts** — include file paths, error messages, and the exact test class names. Workers start without context.
 - **Start broad, narrow down** — in the first round, tackle the root causes that affect the most tests. Later rounds handle stragglers.
-- **Cap workers at 3-4 per round** — more creates merge complexity and potential test infrastructure contention.
+- **Cap workers at 3-4 per round** — more creates merge complexity and potential test infrastructure contention due to Fabric API rate limiting.
 - **Track progress** — after each round, note which tests went from failing to passing. If a worker's fix introduces new failures, revert and reassign.
+- **Regression checks are the coordinator's job** — after merging worker changes, the coordinator runs the full suite. Workers only run their own specific tests.
 
 ### Guidelines for workers
 
 - **Read CLAUDE.md first** — it contains everything you need about the project, architecture, and patterns.
 - **Read the base test class** — understand what the test expects before fixing. The fix often becomes obvious from reading the base class SQL.
 - **Minimal fixes only** — fix the root cause, don't refactor. If a macro works, don't also clean up unrelated macros.
-- **Run your own regression check** — don't rely on the coordinator to catch regressions. Run `uv run pytest --dw -v` (or `--de`) before reporting back.
+- **Only run your own specific tests** — never run the full test suite. Fabric infrastructure is slow (Livy sessions, rate-limited APIs). Run only the test class you are fixing: `uv run pytest -k "TestClassName" --dw -v` (or `--de`). The coordinator handles regression checks after merging.
+- **Validate and commit before finishing** — after your fix works, run `uv run ruff format .` and `uv run ruff check --fix .`, then commit only your own changes (not unrelated changes in the repo). Use a descriptive commit message.
 - **Report clearly** — list: files changed, tests that now pass, tests that still fail (if any), and any lessons learned.
 - **Update CLAUDE.md** — if you find a pattern that will help future work, add it to "Lessons learned". This is part of your job, not optional.
 
@@ -405,6 +406,7 @@ CI authenticates to Azure via OIDC (federated credentials, no secrets stored). T
 - **Quote style**: double quotes
 - **Lint rules**: isort (`I`) + no commented-out code (`ERA`)
 - **No comments in code** unless the _why_ is non-obvious
+- **Always run ruff before committing**: `uv run ruff format .` and `uv run ruff check --fix .` must pass before every commit
 
 ## Key concepts for working on this adapter
 
