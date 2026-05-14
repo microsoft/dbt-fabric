@@ -69,6 +69,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--dw", action="store_true", default=False, help="run only Fabric T-SQL tests"
     )
+    parser.addoption(
+        "--isolated",
+        action="store_true",
+        default=False,
+        help="create a temporary DW/Lakehouse for this test run (for multi-agent parallelism)",
+    )
 
 
 def pytest_configure(config):
@@ -177,6 +183,64 @@ def fabric_api_client(
     return FabricApiClient.create(credentials, fabric_token_provider)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def isolated_fabric_items(request):
+    if not request.config.getoption("--isolated"):
+        yield
+        return
+
+    from tests.isolated_items import FabricTestItemManager
+
+    workspace_name = os.getenv("FABRIC_TEST_WORKSPACE_NAME")
+    if not workspace_name:
+        raise ValueError("FABRIC_TEST_WORKSPACE_NAME must be set for --isolated mode")
+
+    manager = FabricTestItemManager(workspace_name)
+    suffix = manager.generate_suffix()
+
+    run_dw = request.config.getoption("--dw") or not request.config.getoption("--de")
+    run_de = request.config.getoption("--de") or not request.config.getoption("--dw")
+
+    dw_name = f"dbt-test-dw-{suffix}" if run_dw else None
+    lh_name = f"dbt-test-lh-{suffix}" if run_de else None
+
+    try:
+        if dw_name:
+            print(f"\n=== Creating isolated Data Warehouse: {dw_name}")
+            manager.create_warehouse(dw_name)
+
+        if lh_name:
+            print(f"\n=== Creating isolated Lakehouse: {lh_name}")
+            manager.create_lakehouse(lh_name)
+
+        print("\n=== Waiting for Fabric items to provision...")
+        manager.wait_for_all()
+
+        if dw_name:
+            os.environ["FABRIC_TEST_DWH_NAME"] = dw_name
+            print(f"=== Data Warehouse ready: {dw_name}")
+
+        if lh_name:
+            os.environ["FABRIC_TEST_LAKEHOUSE_NAME"] = lh_name
+            print(f"=== Lakehouse ready: {lh_name}")
+
+        yield
+    finally:
+        print("\n=== Cleaning up isolated Fabric items...")
+        manager.delete_all()
+        print("=== Cleanup complete")
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    """Deep merge override into base. Returns the merged dict (mutates base)."""
+    for key, value in override.items():
+        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
 @pytest.fixture(scope="class")
 def dbt_project_yml(project_root, project_config_update, adapter_type: str):
     project_config = {
@@ -189,10 +253,14 @@ def dbt_project_yml(project_root, project_config_update, adapter_type: str):
         project_config["models"] = {"+materialized": "materialized_view"}
 
     if project_config_update:
+        if isinstance(project_config_update, str):
+            project_config_update = yaml.safe_load(project_config_update)
         if isinstance(project_config_update, dict):
-            project_config.update(project_config_update)
-        elif isinstance(project_config_update, str):
-            updates = yaml.safe_load(project_config_update)
-            project_config.update(updates)
+            _deep_merge(project_config, project_config_update)
+        else:
+            raise TypeError(
+                f"project_config_update must be a dict or YAML string, "
+                f"got {type(project_config_update).__name__}: {project_config_update!r}"
+            )
     write_file(yaml.safe_dump(project_config), project_root, "dbt_project.yml")
     return project_config

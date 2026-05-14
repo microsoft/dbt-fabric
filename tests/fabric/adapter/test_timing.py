@@ -60,12 +60,8 @@ class TestModelTimingPopulated:
         assert "execute" in timing_names, "Missing 'execute' timing entry"
 
         for timing in model_result.timing:
-            assert timing.started_at is not None, (
-                f"Timing '{timing.name}' has no started_at"
-            )
-            assert timing.completed_at is not None, (
-                f"Timing '{timing.name}' has no completed_at"
-            )
+            assert timing.started_at is not None, f"Timing '{timing.name}' has no started_at"
+            assert timing.completed_at is not None, f"Timing '{timing.name}' has no completed_at"
             assert timing.completed_at >= timing.started_at, (
                 f"Timing '{timing.name}': completed_at before started_at"
             )
@@ -75,8 +71,7 @@ class TestModelTimingPopulated:
         assert run_results is not None
 
         model_results = [
-            r for r in run_results["results"]
-            if r["unique_id"] == "model.test.timing_model"
+            r for r in run_results["results"] if r["unique_id"] == "model.test.timing_model"
         ]
         assert len(model_results) == 1
         result = model_results[0]
@@ -95,9 +90,7 @@ class TestModelTimingPopulated:
         json_str = log_output.split("TIMING_JSON=")[1].split("\n")[0].strip()
         timing_data = json.loads(json_str)
 
-        model_entries = [
-            e for e in timing_data if e["unique_id"] == "model.test.timing_model"
-        ]
+        model_entries = [e for e in timing_data if e["unique_id"] == "model.test.timing_model"]
         assert len(model_entries) == 1
         entry = model_entries[0]
 

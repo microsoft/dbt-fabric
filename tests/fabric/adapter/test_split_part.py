@@ -35,7 +35,9 @@ class TestSplitPartInSelectClause:
         run_dbt(["run"])
 
         relation = relation_from_name(project.adapter, "split_part_model")
-        result = project.run_sql(f"select id, first_part, second_part from {relation} order by id", fetch="all")
+        result = project.run_sql(
+            f"select id, first_part, second_part from {relation} order by id", fetch="all"
+        )
 
         assert len(result) == 3
 
