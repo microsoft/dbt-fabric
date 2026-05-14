@@ -20,15 +20,15 @@ uv run ruff format --check .         # Check formatting
 uv run ruff format .                 # Auto-format
 uv run ruff check .                  # Lint
 uv run ruff check --fix .            # Lint with auto-fix
-uv run mkdocs serve                  # Local docs preview at http://127.0.0.1:8000
-uv run mkdocs build --strict        # Build docs and fail on warnings
+uv run zensical serve                 # Local docs preview at http://127.0.0.1:8000
+uv run zensical build --strict       # Build docs and fail on warnings
 ```
 
 ## Documentation website
 
-The project has a documentation website at https://dbt-fabric.debruyn.dev, built with mkdocs-material. Source files live in `docs/`, configuration in `mkdocs.yml`, and theme overrides in `overrides/`.
+The project has a documentation website at https://dbt-fabric.debruyn.dev, built with Zensical. Source files live in `docs/`, configuration in `zensical.toml`, and theme overrides in `overrides/`.
 
-The docs cover everything that is specific to this dbt adapter compared to other dbt adapters: installation, configuration, authentication, feature guides (Python models, warehouse snapshots), and a comparison with Microsoft's upstream `dbt-fabric`. When adding or changing adapter-specific behavior, update the relevant docs page. If a new feature has no existing page, add one under the appropriate nav section in `mkdocs.yml`.
+The docs cover everything that is specific to this dbt adapter compared to other dbt adapters: installation, configuration, authentication, feature guides (Python models, warehouse snapshots), and a comparison with Microsoft's upstream `dbt-fabric`. When adding or changing adapter-specific behavior, update the relevant docs page. If a new feature has no existing page, add one under the appropriate nav section in `zensical.toml`.
 
 Current nav structure:
 

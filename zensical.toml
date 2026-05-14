@@ -1,0 +1,135 @@
+[project]
+site_name = "dbt-fabric-samdebruyn"
+site_description = "Documentation for dbt-fabric-samdebruyn"
+site_url = "https://dbt-fabric.debruyn.dev"
+site_author = "Sam Debruyn"
+repo_url = "https://github.com/sdebruyn/dbt-fabric"
+repo_name = "sdebruyn/dbt-fabric"
+edit_uri = "edit/main/docs/"
+copyright = """
+dbt and dbt Core are trademarks of dbt Labs, Inc.
+Microsoft and Microsoft Fabric are trademarks of the Microsoft Corporation.
+This website is not affiliated with dbt Labs or Microsoft.
+"""
+
+watch = ["README.md"]
+
+nav = [
+  { "Home" = [
+    { "Overview" = "index.md" },
+    { "Comparison with dbt-fabric" = "feature-comparison.md" },
+    { "Contributing" = "contributing.md" },
+    { "License" = "license.md" },
+  ] },
+  { "Installation & configuration" = [
+    { "Installing the adapter" = "installation.md" },
+    { "Compatibility" = "compatibility.md" },
+    { "Configuration" = "configuration.md" },
+  ] },
+  { "Feature guides" = [
+    { "Authentication" = "authentication.md" },
+    { "Python models" = "python-models.md" },
+    { "Warehouse snapshots" = "warehouse-snapshots.md" },
+  ] },
+]
+
+[project.theme]
+custom_dir = "overrides"
+language = "en"
+features = [
+    "content.action.edit",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "content.tooltips",
+    "navigation.footer",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.instant.progress",
+    "navigation.path",
+    "navigation.sections",
+    "navigation.tabs",
+    "navigation.tabs.sticky",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+    "search.suggest",
+]
+
+[project.theme.icon]
+logo = "lucide/receipt"
+repo = "fontawesome/brands/github"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "teal"
+accent = "light green"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "teal"
+accent = "light green"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[project.extra.analytics]
+provider = "custom"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/sdebruyn/dbt-fabric"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/linkedin"
+link = "https://www.linkedin.com/in/samueldebruyn/"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/x-twitter"
+link = "https://x.com/s_debruyn"
+
+[[project.extra.social]]
+icon = "fontawesome/solid/globe"
+link = "https://debruyn.dev"
+
+[project.markdown_extensions.abbr]
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.def_list]
+[project.markdown_extensions.footnotes]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.toc]
+permalink = true
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true
+[project.markdown_extensions.pymdownx.betterem]
+[project.markdown_extensions.pymdownx.caret]
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.emoji]
+emoji_generator = "zensical.extensions.emoji.to_svg"
+emoji_index = "zensical.extensions.emoji.twemoji"
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+[project.markdown_extensions.pymdownx.inlinehilite]
+[project.markdown_extensions.pymdownx.keys]
+[project.markdown_extensions.pymdownx.magiclink]
+[project.markdown_extensions.pymdownx.mark]
+[project.markdown_extensions.pymdownx.smartsymbols]
+[project.markdown_extensions.pymdownx.snippets]
+check_paths = true
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
+]
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+combine_header_slug = true
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+[project.markdown_extensions.pymdownx.tilde]
