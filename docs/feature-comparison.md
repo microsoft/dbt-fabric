@@ -83,6 +83,19 @@ select * from source('my_source', 'my_table')
 {% endif %}
 ```
 
+## [CLUSTER BY](cluster-by.md) support
+
+Fabric Data Warehouse supports automatic data clustering via the `CLUSTER BY` clause, which organizes data physically on disk for better query performance. Microsoft's dbt-fabric adapter does not expose this feature. This adapter lets you configure clustering directly from your model config:
+
+```sql
+{{ config(
+    materialized='table',
+    cluster_by=['customer_id', 'order_date']
+) }}
+```
+
+This works with regular tables, incremental models, and models with contract enforcement.
+
 ## Better support for [warehouse snapshots](warehouse-snapshots.md)
 
 Both adapters support Fabric [warehouse snapshots](https://learn.microsoft.com/fabric/data-warehouse/warehouse-snapshot?WT.mc_id=MVP_310840), but Microsoft's implementation hijacks Python runtime components and does not respect the proper dbt lifecycle. This adapter exposes a macro you can call from `on-run-start`, `on-run-end`, `post-hook`, or any other Jinja context — giving you full control over when and how often snapshots are taken.
