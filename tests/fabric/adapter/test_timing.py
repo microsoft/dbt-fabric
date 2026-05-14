@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from dbt.tests.util import run_dbt, run_dbt_and_capture, get_run_results
+from dbt.tests.util import get_run_results, run_dbt, run_dbt_and_capture
 
 MODEL_SQL = """
 {{ config(materialized='table') }}
