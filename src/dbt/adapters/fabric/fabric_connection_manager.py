@@ -265,7 +265,6 @@ class FabricConnectionManager(BaseFabricConnectionManager):
     ) -> tuple[AdapterResponse, agate.Table]:
         sql = self._add_query_comment(sql)
         _, cursor = self.add_query(sql, auto_begin)
-        response = self.get_response(cursor)
         if fetch:
             # Get the result of the first non-empty result set (if any)
             while cursor.description is None:
@@ -279,6 +278,7 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         while cursor.nextset():
             logger.debug("Stepping through remaining result sets...")
             pass
+        response = self.get_response(cursor)
         return response, table
 
     def add_query(
