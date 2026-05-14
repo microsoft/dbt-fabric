@@ -29,6 +29,7 @@ from dbt.tests.adapter.basic.test_snapshot_check_cols import BaseSnapshotCheckCo
 from dbt.tests.adapter.basic.test_snapshot_timestamp import BaseSnapshotTimestamp
 from dbt.tests.adapter.basic.test_table_materialization import BaseTableMaterialization
 from dbt.tests.adapter.basic.test_validate_connection import BaseValidateConnection
+from dbt.tests.util import AnyInteger
 
 
 class TestSimpleMaterializations(BaseSimpleMaterializations):
@@ -100,6 +101,25 @@ class TestValidateConnectionFabric(BaseValidateConnection):
     pass
 
 
+def _row_count_stats():
+    return {
+        "has_stats": {
+            "id": "has_stats",
+            "label": "Has Stats?",
+            "value": True,
+            "description": "Indicates whether there are statistics for this table",
+            "include": False,
+        },
+        "row_count": {
+            "id": "row_count",
+            "label": "Row Count",
+            "value": AnyInteger(),
+            "description": "An approximate count of rows in this table",
+            "include": True,
+        },
+    }
+
+
 class TestDocsGenerateFabric(BaseDocsGenerate):
     @pytest.fixture(scope="class")
     def expected_catalog(self, project, profile_user):
@@ -112,6 +132,7 @@ class TestDocsGenerateFabric(BaseDocsGenerate):
             view_type="VIEW",
             table_type="BASE TABLE",
             model_stats=expected_catalog.no_stats(),
+            seed_stats=_row_count_stats(),
         )
 
 
@@ -127,7 +148,9 @@ class TestDocsGenReferencesFabric(BaseDocsGenReferences):
             bigint_type="int",
             view_type="VIEW",
             table_type="BASE TABLE",
-            model_stats=expected_catalog.no_stats(),
+            model_stats=_row_count_stats(),
+            seed_stats=_row_count_stats(),
+            view_summary_stats=expected_catalog.no_stats(),
         )
 
     @pytest.fixture(scope="class")

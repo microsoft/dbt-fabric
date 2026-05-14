@@ -87,6 +87,10 @@ select * from source('my_source', 'my_table')
 
 Both adapters support Fabric [warehouse snapshots](https://learn.microsoft.com/fabric/data-warehouse/warehouse-snapshot?WT.mc_id=MVP_310840), but Microsoft's implementation hijacks Python runtime components and does not respect the proper dbt lifecycle. This adapter exposes a macro you can call from `on-run-start`, `on-run-end`, `post-hook`, or any other Jinja context — giving you full control over when and how often snapshots are taken.
 
+## [Catalog statistics](catalog-stats.md)
+
+When you run `dbt docs generate`, this adapter includes **approximate row counts** for every table in the catalog output. Microsoft's upstream adapter does not include any statistics — the dbt docs site shows no table size information. With this adapter, table sizes are visible out of the box, with no extra configuration.
+
 ## Better support for popular packages
 
 [dbt-utils](https://hub.getdbt.com/dbt-labs/dbt_utils/latest/) is already fully supported and more packages are being tested and added.

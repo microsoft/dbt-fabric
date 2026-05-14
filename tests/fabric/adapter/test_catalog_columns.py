@@ -109,10 +109,30 @@ class TestCatalogColumnsPopulated:
                 f"Column '{col_name}': expected type containing '{expected_type}', got '{actual_type}'"
             )
 
+    def test_table_has_row_count_stat(self, catalog: CatalogArtifact):
+        node = catalog.nodes["model.test.catalog_columns_table"]
+        assert "row_count" in node.stats, "Table model should have row_count stat"
+        stat = node.stats["row_count"]
+        assert stat.label == "Row Count"
+        assert stat.include is True
+        assert isinstance(stat.value, (int, float))
+        assert stat.value >= 0
+
+    def test_seed_has_row_count_stat(self, catalog: CatalogArtifact):
+        node = catalog.nodes["seed.test.catalog_columns_seed"]
+        assert "row_count" in node.stats, "Seed should have row_count stat"
+        stat = node.stats["row_count"]
+        assert stat.include is True
+        assert isinstance(stat.value, (int, float))
+        assert stat.value >= 0
+
+    def test_view_has_no_row_count_stat(self, catalog: CatalogArtifact):
+        node = catalog.nodes["model.test.catalog_columns_view"]
+        if "row_count" in node.stats:
+            assert node.stats["row_count"].include is False
+
     def test_column_indexes_are_sequential(self, catalog: CatalogArtifact):
         node = catalog.nodes["model.test.catalog_columns_table"]
         indexes = sorted(col.index for col in node.columns.values())
         expected = list(range(indexes[0], indexes[0] + len(indexes)))
-        assert indexes == expected, (
-            f"Column indexes should be sequential, got {indexes}"
-        )
+        assert indexes == expected, f"Column indexes should be sequential, got {indexes}"

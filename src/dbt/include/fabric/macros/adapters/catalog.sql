@@ -110,7 +110,11 @@
             cols.column_name,
             cols.column_index,
             cols.column_type,
-            null as column_comment
+            null as column_comment,
+            'Row Count' as [stats:row_count:label],
+            cast(objectpropertyex(tv.object_id, 'Cardinality') as int) as [stats:row_count:value],
+            'An approximate count of rows in this table' as [stats:row_count:description],
+            cast(case when tv.table_type = 'BASE TABLE' then 1 else 0 end as bit) as [stats:row_count:include]
         from tables_and_views tv
         join cols on tv.object_id = cols.object_id
         where ({%- for schema in schemas -%}
@@ -241,7 +245,11 @@
                 cols.column_name,
                 cols.column_index,
                 cols.column_type,
-                null as column_comment
+                null as column_comment,
+                'Row Count' as [stats:row_count:label],
+                cast(objectpropertyex(tv.object_id, 'Cardinality') as int) as [stats:row_count:value],
+                'An approximate count of rows in this table' as [stats:row_count:description],
+                cast(case when tv.table_type = 'BASE TABLE' then 1 else 0 end as bit) as [stats:row_count:include]
             from tables_and_views tv
             join cols on tv.object_id = cols.object_id
             where (
