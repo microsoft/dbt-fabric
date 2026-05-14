@@ -1,4 +1,5 @@
 [project]
+site_dir = "docs_build/site"
 site_name = "dbt-fabric-samdebruyn"
 site_description = "Documentation for dbt-fabric-samdebruyn"
 site_url = "https://dbt-fabric.debruyn.dev"
