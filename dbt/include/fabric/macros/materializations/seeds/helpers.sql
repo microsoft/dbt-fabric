@@ -26,34 +26,36 @@
   {% set bindings = [] %}
   {% set statements = [] %}
 
-  {{ log("Inserting batches of " ~ batch_size ~ " records") }}
+  {% if not adapter.behavior.empty.no_warn %}
+    {{ log("Inserting batches of " ~ batch_size ~ " records") }}
 
-  {% for chunk in agate_table.rows | batch(batch_size) %}
-      {% set bindings = [] %}
+    {% for chunk in agate_table.rows | batch(batch_size) %}
+        {% set bindings = [] %}
 
-      {% for row in chunk %}
-          {% do bindings.extend(row) %}
-      {% endfor %}
+        {% for row in chunk %}
+            {% do bindings.extend(row) %}
+        {% endfor %}
 
-      {% set sql %}
-          insert into {{ this.render() }} ({{ cols_sql }}) values
-          {% for row in chunk -%}
-              ({%- for column in agate_table.column_names -%}
-                  {{ get_binding_char() }}
-                  {%- if not loop.last%},{%- endif %}
-              {%- endfor -%})
-              {%- if not loop.last%},{%- endif %}
-          {%- endfor %}
-          {{ apply_label()}}
-      {% endset %}
+        {% set sql %}
+            insert into {{ this.render() }} ({{ cols_sql }}) values
+            {% for row in chunk -%}
+                ({%- for column in agate_table.column_names -%}
+                    {{ get_binding_char() }}
+                    {%- if not loop.last%},{%- endif %}
+                {%- endfor -%})
+                {%- if not loop.last%},{%- endif %}
+            {%- endfor %}
+            {{ apply_label()}}
+        {% endset %}
 
-      {% do adapter.add_query(sql, bindings=bindings, abridge_sql_log=True) %}
+        {% do adapter.add_query(sql, bindings=bindings, abridge_sql_log=True) %}
 
-      {% if loop.index0 == 0 %}
-          {% do statements.append(sql) %}
-      {% endif %}
-  {% endfor %}
+        {% if loop.index0 == 0 %}
+            {% do statements.append(sql) %}
+        {% endif %}
+    {% endfor %}
 
-  {# Return SQL so we can render it out into the compiled files #}
-  {{ return(statements[0]) }}
+    {# Return SQL so we can render it out into the compiled files #}
+    {{ return(statements[0]) }}
+  {% endif %}
 {% endmacro %}

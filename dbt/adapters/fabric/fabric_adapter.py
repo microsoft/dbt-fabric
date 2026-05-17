@@ -13,6 +13,7 @@ from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.events.types import SchemaCreation
 from dbt.adapters.sql import SQLAdapter
 from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
+from dbt_common.behavior_flags import BehaviorFlag
 from dbt_common.contracts.constraints import (
     ColumnLevelConstraint,
     ConstraintType,
@@ -31,6 +32,11 @@ logger = AdapterLogger("fabric")
 class FabricAdapter(SQLAdapter):
     ConnectionManager = FabricConnectionManager
     Column = FabricColumn
+
+    @classmethod
+    def quote(cls, identifier):
+        return "[{}]".format(identifier)
+
     AdapterSpecificConfigs = FabricConfigs
     Relation = FabricRelation
 
@@ -72,6 +78,16 @@ class FabricAdapter(SQLAdapter):
                     )
                     time.sleep(wait)
         raise last_exc
+
+    @property
+    def _behavior_flags(self) -> List[BehaviorFlag]:
+        return [
+            {
+                "name": "empty",
+                "default": False,
+                "description": "When enabled, table and view materializations will be created as empty structures (no data).",
+            },
+        ]
 
     @available.parse(lambda *a, **k: [])
     def get_column_schema_from_query(self, sql: str) -> List[BaseColumn]:

@@ -15,7 +15,10 @@
                 row_number() over (partition by object_name(c.object_id) order by c.column_id) as ordinal_position,
                 c.name collate database_default as column_name,
                 t.name as data_type,
-                c.max_length as character_maximum_length,
+                case
+					when (t.name in ('nchar', 'nvarchar', 'sysname') and c.max_length <> -1) then c.max_length / 2
+					else c.max_length
+				end as character_maximum_length,
                 c.precision as numeric_precision,
                 c.scale as numeric_scale
             from sys.columns c {{ information_schema_hints() }}
@@ -66,7 +69,7 @@
         FROM
         (
             SELECT
-            CAST(c.COLUMN_NAME AS VARCHAR(128)) AS ColumnName
+            '"' + CAST(c.COLUMN_NAME AS VARCHAR(128)) + '"' AS ColumnName
             FROM INFORMATION_SCHEMA.TABLES t
             JOIN INFORMATION_SCHEMA.COLUMNS c
                 ON t.TABLE_SCHEMA = c.TABLE_SCHEMA
@@ -87,7 +90,7 @@
 
     {% set tempTable %}
         CREATE TABLE {{tempTableName}}
-        AS SELECT {{query_result_text}}, CAST({{ column_name }} AS {{new_column_type}}) AS {{column_name}} FROM {{ relation.schema }}.{{ relation.identifier }}
+        AS SELECT {{query_result_text}}, CAST([{{ column_name }}] AS {{new_column_type}}) AS [{{column_name}}] FROM {{ relation.schema }}.{{ relation.identifier }}
         {{ apply_label() }}
     {% endset %}
 
@@ -126,12 +129,12 @@
   {% call statement('add_drop_columns') -%}
     {% if add_columns %}
         alter {{ relation.type }} {{ relation }}
-        add {% for column in add_columns %}"{{ column.name }}" {{ column.data_type }}{{ ', ' if not loop.last }}{% endfor %};
+        add {% for column in add_columns %}[{{ column.name }}] {{ column.data_type }}{{ ', ' if not loop.last }}{% endfor %};
     {% endif %}
 
     {% if remove_columns %}
         alter {{ relation.type }} {{ relation }}
-        drop column {% for column in remove_columns %}"{{ column.name }}"{{ ',' if not loop.last }}{% endfor %};
+        drop column {% for column in remove_columns %}[{{ column.name }}]{{ ',' if not loop.last }}{% endfor %};
     {% endif %}
   {%- endcall -%}
 {% endmacro %}

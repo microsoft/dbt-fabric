@@ -11,7 +11,7 @@ class TestCurrentTimestampFabric(BaseCurrentTimestamps):
 
     @pytest.fixture(scope="class")
     def expected_schema(self):
-        return {"current_timestamp": "datetime2"}
+        return {"current_timestamp": "datetime2(6)"}
 
     @pytest.fixture(scope="class")
     def expected_sql(self):

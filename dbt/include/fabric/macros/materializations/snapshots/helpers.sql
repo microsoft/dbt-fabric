@@ -6,7 +6,7 @@
 {% macro fabric__create_columns(relation, columns) %}
   {% for column in columns %}
     {% call statement() %}
-      alter table {{ relation.render() }} add "{{ column.name }}" {{ column.data_type }} NULL;
+      alter table {{ relation.render() }} add [{{ column.name }}] {{ column.data_type }} NULL;
     {% endcall %}
   {% endfor %}
 {% endmacro %}
@@ -50,6 +50,9 @@
         {% else %}
             {{ columns.dbt_valid_to }} is null
         {% endif %}
+        {%- if strategy.hard_deletes == 'new_record' -%}
+            and {{ columns.dbt_is_deleted }} = 'False'
+        {% endif -%}
     ),
     insertions_source_data as (
         select *,
