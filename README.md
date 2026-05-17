@@ -30,11 +30,71 @@ sudo apt-get install -y unixodbc-dev
 </p>
 </details>
 
+<details><summary>macOS (Apple Silicon)</summary>
+<p>
+
+Install unixODBC and the ODBC driver via Homebrew:
+
+```shell
+brew install unixodbc msodbcsql18
+```
+
+Modern Homebrew (post-Sonoma) ships `libodbc.3.dylib`, but `pyodbc` wheels are often compiled against `libodbc.2.dylib`. This mismatch causes the following error at runtime:
+
+```
+Library not loaded: /opt/homebrew/opt/unixodbc/lib/libodbc.2.dylib
+```
+
+**Fix — recompile `pyodbc` against the installed unixODBC:**
+
+```shell
+export LDFLAGS="-L/opt/homebrew/opt/unixodbc/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/unixodbc/include"
+pip install --force-reinstall --no-binary :all: pyodbc
+```
+
+**Alternative — create a compatibility symlink:**
+
+```shell
+ln -s /opt/homebrew/opt/unixodbc/lib/libodbc.3.dylib \
+      /opt/homebrew/opt/unixodbc/lib/libodbc.2.dylib
+```
+
+</p>
+</details>
+
 Latest version: ![PyPI](https://img.shields.io/pypi/v/dbt-fabric?label=latest&logo=pypi)
 
 ```shell
 pip install -U dbt-fabric
 ```
+
+## Performance guidance for large projects
+
+Fabric Warehouse DDL operations (e.g. `CREATE TABLE`, `sp_rename`) hold catalog locks that can block `sys.tables`/`sys.views` reads from concurrent dbt sessions. With many models and high thread counts this causes `list_<schema>` steps to stall for minutes.
+
+**Strongly recommended for projects with 500+ models or concurrent dbt runs:**
+
+```yaml
+# profiles.yml
+my_fabric_project:
+  target: dev
+  outputs:
+    dev:
+      type: fabric
+      # ... connection settings ...
+      threads: 4          # keep low (4–8) to reduce catalog lock pressure
+      query_timeout: 30   # fail fast on blocked catalog reads (seconds)
+```
+
+In your `dbt_project.yml`:
+
+```yaml
+flags:
+  cache_selected_only: true  # only list schemas for models in the current run
+```
+
+Or pass `--no-populate-cache` on the CLI for a single run. This prevents dbt from listing every schema in the warehouse upfront, significantly reducing catalog read pressure during concurrent runs.
 
 ## Changelog
 

@@ -142,18 +142,18 @@ class TestSimpleSeedEnabledViaConfig__seed_with_disabled(BaseSimpleSeedEnabledVi
     def clear_test_schema(self, project):
         yield
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_enabled"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_enabled"
         )
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_disabled"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_disabled"
         )
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_tricky"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_tricky"
         )
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_enabled")
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_disabled")
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_tricky")
-        project.run_sql(f"drop schema if exists {project.test_schema}")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_enabled")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_disabled")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_tricky")
+        project.run_sql(f"drop schema if exists [{project.test_schema}]")
 
     def test_simple_seed_with_disabled(self, clear_test_schema, project):
         results = run_dbt(["seed"])
@@ -194,18 +194,18 @@ class TestSimpleSeedEnabledViaConfig__seed_selection(BaseSimpleSeedEnabledViaCon
     def clear_test_schema(self, project):
         yield
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_enabled"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_enabled"
         )
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_disabled"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_disabled"
         )
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_tricky"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_tricky"
         )
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_enabled")
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_disabled")
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_tricky")
-        project.run_sql(f"drop schema if exists {project.test_schema}")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_enabled")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_disabled")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_tricky")
+        project.run_sql(f"drop schema if exists [{project.test_schema}]")
 
     @pytest.mark.skip(
         reason="""
@@ -246,18 +246,18 @@ class TestSimpleSeedEnabledViaConfig__seed_exclude(BaseSimpleSeedEnabledViaConfi
     def clear_test_schema(self, project):
         yield
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_enabled"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_enabled"
         )
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_disabled"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_disabled"
         )
         project.run_sql(
-            f"drop table if exists {project.database}.{project.test_schema}.seed_tricky"
+            f"drop table if exists [{project.database}].[{project.test_schema}].seed_tricky"
         )
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_enabled")
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_disabled")
-        project.run_sql(f"drop view if exists {project.test_schema}.seed_tricky")
-        project.run_sql(f"drop schema if exists {project.test_schema}")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_enabled")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_disabled")
+        project.run_sql(f"drop view if exists [{project.test_schema}].seed_tricky")
+        project.run_sql(f"drop schema if exists [{project.test_schema}]")
 
     @pytest.mark.skip(
         reason="""

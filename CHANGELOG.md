@@ -1,5 +1,31 @@
 # Changelog
 
+### v1.9.5
+
+## Features
+
+* **Incremental merge: `delete_not_matched_by_source`** — adds `WHEN NOT MATCHED BY SOURCE THEN DELETE` to the T-SQL MERGE statement. Deletes rows in the target whose `unique_key` is absent from the source relation. Use when the incremental model returns the complete current dataset (not a delta). Set `delete_not_matched_by_source: true` in the model config alongside `incremental_strategy: merge`. Resolves [#361](https://github.com/microsoft/dbt-fabric/issues/361).
+
+* **Incremental merge: `delete_condition`** — issues a `DELETE … FROM … INNER JOIN … WHERE` statement after the MERGE, removing target rows that match the source on `unique_key` and satisfy a user-supplied SQL expression. Use for soft-delete patterns where the source carries a delete-flag column. Set `delete_condition: "DBT_INTERNAL_SOURCE.is_deleted = 1"` (or equivalent) in the model config alongside `incremental_strategy: merge`. Resolves [#361](https://github.com/microsoft/dbt-fabric/issues/361).
+
+## Bug Fixes
+
+* **`fabric__split_part` macro** — replaced invalid CTE-inside-SELECT-clause with a derived-table subquery, and fixed a double-comma syntax error in the CTE SELECT list. `split_part()` now works correctly as a scalar column expression. Resolves [#358](https://github.com/microsoft/dbt-fabric/issues/358).
+
+## Improvements
+
+* **Suppress spurious ROLLBACK on connection close** — overrides `close()` in `FabricConnectionManager` to set `transaction_open = False` before delegating to the parent. With `autocommit=True` there is nothing to roll back; the parent's ROLLBACK call was blocking for up to 11 minutes on Fabric Warehouse when concurrent DDL held catalog locks. Resolves [#362](https://github.com/microsoft/dbt-fabric/issues/362).
+
+* **Retry `list_relations_without_caching` on failure** — overrides `list_relations_without_caching` in `FabricAdapter` with exponential back-off retry (1 s, 2 s, 4 s … capped at 30 s), using the existing `retries` credential. When `query_timeout` is set and a blocked catalog read times out, the adapter retries rather than failing the run immediately. Resolves [#362](https://github.com/microsoft/dbt-fabric/issues/362).
+
+* **Configurable connection pooling** — adds a `pooling` credential (`true` by default, matching the previous hardcoded behaviour). Set `pooling: false` to disable pyodbc connection pooling, useful when routing through a proxy or when pool reuse contributes to catalog-lock contention. Resolves [#362](https://github.com/microsoft/dbt-fabric/issues/362).
+
+* **Performance guidance for large projects** — added a README section recommending `cache_selected_only: true`, low thread counts (4–8), and `query_timeout` for projects with 500+ models or concurrent dbt runs on the same warehouse. Resolves [#362](https://github.com/microsoft/dbt-fabric/issues/362).
+
+* **macOS Apple Silicon install guidance** — added a collapsible macOS (Apple Silicon) section to the README explaining the `libodbc.2.dylib` / `libodbc.3.dylib` version mismatch between `pyodbc` wheels and modern Homebrew unixODBC, with both the recompile fix and the symlink workaround. Resolves [#351](https://github.com/microsoft/dbt-fabric/issues/351).
+
+* **`pyodbc` import error message** — wrapped `import pyodbc` in a `try/except ImportError` that re-raises with a clear, actionable error message (including the fix commands) before dbt's error handling can obscure it. Resolves [#351](https://github.com/microsoft/dbt-fabric/issues/351).
+
 ### V1.8.7
 * Improving table materialization to minimize downtime #189
 * Handling temp tables in incremental models #188

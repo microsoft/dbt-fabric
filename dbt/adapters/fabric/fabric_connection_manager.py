@@ -7,7 +7,23 @@ from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type, Union
 
 import agate
 import dbt_common.exceptions
-import pyodbc
+
+try:
+    import pyodbc
+except ImportError as e:
+    raise ImportError(
+        f"Failed to import pyodbc: {e}\n\n"
+        "This is commonly caused by a mismatch between the pyodbc wheel and the installed "
+        "unixODBC library version on macOS Apple Silicon.\n"
+        "To fix, recompile pyodbc against your Homebrew unixODBC:\n\n"
+        '  export LDFLAGS="-L/opt/homebrew/opt/unixodbc/lib"\n'
+        '  export CPPFLAGS="-I/opt/homebrew/opt/unixodbc/include"\n'
+        "  pip install --force-reinstall --no-binary :all: pyodbc\n\n"
+        "Alternatively, create a compatibility symlink:\n\n"
+        "  ln -s /opt/homebrew/opt/unixodbc/lib/libodbc.3.dylib "
+        "/opt/homebrew/opt/unixodbc/lib/libodbc.2.dylib\n\n"
+        "See https://github.com/microsoft/dbt-fabric/issues/351 for details."
+    ) from e
 from azure.core.credentials import AccessToken
 from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
 from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
@@ -401,7 +417,7 @@ class FabricConnectionManager(SQLConnectionManager):
 
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
-            pyodbc.pooling = True
+            pyodbc.pooling = credentials.pooling if credentials.pooling is not None else True
 
             # pyodbc attributes includes the access token provided by the user if required.
             attrs_before = get_pyodbc_attrs_before_credentials(credentials)
@@ -423,6 +439,16 @@ class FabricConnectionManager(SQLConnectionManager):
             retry_limit=credentials.retries,
             retryable_exceptions=retryable_exceptions,
         )
+
+    @classmethod
+    def close(cls, connection: Connection) -> Connection:
+        # With autocommit=True there is genuinely nothing to roll back.
+        # Setting transaction_open=False here prevents the parent close() from
+        # issuing a spurious ROLLBACK, which can block for minutes on Fabric
+        # Warehouse when concurrent DDL sessions hold catalog locks.
+        # See https://github.com/microsoft/dbt-fabric/issues/362
+        connection.transaction_open = False
+        return super().close(connection)
 
     def cancel(self, connection: Connection):
         logger.debug("Cancel query")

@@ -27,6 +27,10 @@ class FabricCredentials(Credentials):
     schema_authorization: Optional[str] = None
     login_timeout: Optional[int] = 0
     query_timeout: Optional[int] = 0
+    # Set to False to disable pyodbc connection pooling (one pool per process).
+    # Useful when routing connections through a proxy or when catalog-lock
+    # contention makes it preferable to open a fresh connection each time.
+    pooling: Optional[bool] = True
 
     _ALIASES = {
         "user": "UID",
@@ -69,6 +73,7 @@ class FabricCredentials(Credentials):
             "login_timeout",
             "query_timeout",
             "trace_flag",
+            "pooling",
         )
 
     @property
