@@ -1,3 +1,4 @@
+import time
 from typing import List, Optional
 
 import agate
@@ -8,6 +9,7 @@ from dbt.adapters.base.meta import available
 from dbt.adapters.base.relation import BaseRelation
 from dbt.adapters.cache import _make_ref_key_dict
 from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
+from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.events.types import SchemaCreation
 from dbt.adapters.sql import SQLAdapter
 from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
@@ -24,10 +26,17 @@ from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
 from dbt.adapters.fabric.fabric_relation import FabricRelation
 
+logger = AdapterLogger("fabric")
+
 
 class FabricAdapter(SQLAdapter):
     ConnectionManager = FabricConnectionManager
     Column = FabricColumn
+
+    @classmethod
+    def quote(cls, identifier):
+        return "[{}]".format(identifier)
+
     AdapterSpecificConfigs = FabricConfigs
     Relation = FabricRelation
 
@@ -44,6 +53,31 @@ class FabricAdapter(SQLAdapter):
         ConstraintType.primary_key: ConstraintSupport.ENFORCED,
         ConstraintType.foreign_key: ConstraintSupport.ENFORCED,
     }
+
+    def list_relations_without_caching(self, schema_relation: BaseRelation) -> List[BaseRelation]:
+        """Override to add retry logic for catalog-lock contention on Fabric Warehouse.
+
+        Under concurrent DDL, sys.tables / sys.views reads can be blocked for
+        minutes. If query_timeout is set and a timeout fires, we retry up to
+        `retries` times with a short back-off before re-raising.
+        See https://github.com/microsoft/dbt-fabric/issues/362
+        """
+        retries = self.config.credentials.retries
+        last_exc: Exception
+        for attempt in range(1, retries + 2):  # +2: first attempt + retries
+            try:
+                return super().list_relations_without_caching(schema_relation)
+            except Exception as exc:
+                last_exc = exc
+                if attempt <= retries:
+                    wait = min(2 ** (attempt - 1), 30)  # 1s, 2s, 4s … capped at 30s
+                    logger.debug(
+                        f"list_relations_without_caching attempt {attempt} failed "
+                        f"({type(exc).__name__}: {exc}). "
+                        f"Retrying in {wait}s ({retries - attempt + 1} retries left)."
+                    )
+                    time.sleep(wait)
+        raise last_exc
 
     @property
     def _behavior_flags(self) -> List[BehaviorFlag]:
@@ -177,7 +211,7 @@ class FabricAdapter(SQLAdapter):
         """The set of standard builtin strategies which this adapter supports out-of-the-box.
         Not used to validate custom strategies defined by end users.
         """
-        return ["append", "delete+insert", "microbatch"]
+        return ["append", "delete+insert", "merge", "microbatch"]
 
     # This is for use in the test suite
     def run_sql_for_tests(self, sql, fetch, conn):

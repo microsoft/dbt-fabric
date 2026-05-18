@@ -72,9 +72,11 @@ repos:
       - id: flake8
         args:
           - '--max-line-length=1000'
+          - '--extend-ignore=E203'
       - id: flake8
         args:
           - '--max-line-length=1000'
+          - '--extend-ignore=E203'
         alias: flake8-check
         stages:
           - manual

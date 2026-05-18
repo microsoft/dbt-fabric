@@ -63,8 +63,36 @@
 
     {#-- Get the incremental_strategy, the macro to use for the strategy, and build the sql --#}
     {% set incremental_predicates = config.get('predicates', none) or config.get('incremental_predicates', none) %}
+    {%- set delete_condition = config.get('delete_condition', none) -%}
+    {%- set delete_not_matched_by_source = config.get('delete_not_matched_by_source', false) -%}
+
+    {#-- Validate delete configs are only used with merge strategy --#}
+    {% if delete_condition and incremental_strategy != 'merge' %}
+      {% do exceptions.raise_compiler_error(
+        "delete_condition requires incremental_strategy: merge, got '" ~ incremental_strategy ~ "'"
+      ) %}
+    {% endif %}
+    {% if delete_not_matched_by_source and incremental_strategy != 'merge' %}
+      {% do exceptions.raise_compiler_error(
+        "delete_not_matched_by_source requires incremental_strategy: merge, got '" ~ incremental_strategy ~ "'"
+      ) %}
+    {% endif %}
+    {% if delete_condition and delete_not_matched_by_source %}
+      {% do exceptions.raise_compiler_error(
+        "delete_condition and delete_not_matched_by_source are mutually exclusive — use one or the other"
+      ) %}
+    {% endif %}
+
     {% set strategy_sql_macro_func = adapter.get_incremental_strategy_macro(context, incremental_strategy) %}
-    {% set strategy_arg_dict = ({'target_relation': target_relation, 'temp_relation': temp_relation, 'unique_key': unique_key, 'dest_columns': dest_columns, 'incremental_predicates': incremental_predicates }) %}
+    {% set strategy_arg_dict = ({
+      'target_relation': target_relation,
+      'temp_relation': temp_relation,
+      'unique_key': unique_key,
+      'dest_columns': dest_columns,
+      'incremental_predicates': incremental_predicates,
+      'delete_condition': delete_condition,
+      'delete_not_matched_by_source': delete_not_matched_by_source
+    }) %}
     {%- call statement('main') -%}
       {{ strategy_sql_macro_func(strategy_arg_dict) }}
     {%- endcall -%}

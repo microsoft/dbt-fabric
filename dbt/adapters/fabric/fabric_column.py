@@ -5,6 +5,10 @@ from dbt_common.exceptions import DbtRuntimeError
 
 
 class FabricColumn(Column):
+    @property
+    def quoted(self) -> str:
+        return "[{}]".format(self.column)
+
     TYPE_LABELS: ClassVar[Dict[str, str]] = {
         "STRING": "VARCHAR(8000)",
         "VARCHAR": "VARCHAR(8000)",
