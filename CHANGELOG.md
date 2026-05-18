@@ -1,6 +1,6 @@
 # Changelog
 
-### v1.9.5
+### v1.9.10
 
 ## Features
 
@@ -12,6 +12,8 @@
 
 * **`fabric__split_part` macro** — replaced invalid CTE-inside-SELECT-clause with a derived-table subquery, and fixed a double-comma syntax error in the CTE SELECT list. `split_part()` now works correctly as a scalar column expression. Resolves [#358](https://github.com/microsoft/dbt-fabric/issues/358).
 
+* **Source freshness failures on Fabric Lakehouse** — `fabric__get_relation_last_modified` now emits `USE DATABASE` before the query (was missing, causing cross-database resolution failures) and casts `o.modify_date` to `datetime2(3)` explicitly. A new `fabric__collect_freshness` macro overrides dbt's default using `TRY_CAST(loaded_at_field AS datetime2(3))`, safely handling Lakehouse sources where datetime columns are stored as `VARCHAR` (e.g. Debezium CDC timestamps). Addresses [#364](https://github.com/microsoft/dbt-fabric/pull/364).
+
 ## Improvements
 
 * **Suppress spurious ROLLBACK on connection close** — overrides `close()` in `FabricConnectionManager` to set `transaction_open = False` before delegating to the parent. With `autocommit=True` there is nothing to roll back; the parent's ROLLBACK call was blocking for up to 11 minutes on Fabric Warehouse when concurrent DDL held catalog locks. Resolves [#362](https://github.com/microsoft/dbt-fabric/issues/362).
@@ -21,6 +23,8 @@
 * **Configurable connection pooling** — adds a `pooling` credential (`true` by default, matching the previous hardcoded behaviour). Set `pooling: false` to disable pyodbc connection pooling, useful when routing through a proxy or when pool reuse contributes to catalog-lock contention. Resolves [#362](https://github.com/microsoft/dbt-fabric/issues/362).
 
 * **Performance guidance for large projects** — added a README section recommending `cache_selected_only: true`, low thread counts (4–8), and `query_timeout` for projects with 500+ models or concurrent dbt runs on the same warehouse. Resolves [#362](https://github.com/microsoft/dbt-fabric/issues/362).
+
+* **Push schema filters into CTE source branches** — moved the `WHERE SCHEMA_NAME(...) like` predicate from the outer `select * from base` into each individual `sys.tables` and `sys.views` branch in `fabric__list_relations_without_caching` and `fabric__get_relation_without_caching`. Filtering at the source narrows catalog scans and reduces exposure to row-level lock contention from concurrent DDL. Addresses [#365](https://github.com/microsoft/dbt-fabric/pull/365).
 
 * **macOS Apple Silicon install guidance** — added a collapsible macOS (Apple Silicon) section to the README explaining the `libodbc.2.dylib` / `libodbc.3.dylib` version mismatch between `pyodbc` wheels and modern Homebrew unixODBC, with both the recompile fix and the symlink workaround. Resolves [#351](https://github.com/microsoft/dbt-fabric/issues/351).
 
