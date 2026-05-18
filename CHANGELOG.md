@@ -1,5 +1,17 @@
 # Changelog
 
+### v1.10.0
+
+## Features
+
+* **Sample mode (`--sample` flag)** — supported by virtue of the existing `microbatch` incremental strategy implementation. Developers can run `dbt run --sample="3 days"` (or a static date range) to build time-bounded slices of models, reducing dev/CI runtimes and warehouse cost. Set `event_time` on sampled models to the timestamp field used for windowing. Resolves [#313](https://github.com/microsoft/dbt-fabric/issues/313).
+
+## Dependencies
+
+* Bumped `dbt-core` requirement from `>=1.8.0` to `>=1.10.0`
+* Bumped `dbt-adapters` requirement from `>=1.1.1,<2.0` to `>=1.10.0,<2.0`
+* Added Python 3.12 classifier
+
 ### v1.9.10
 
 ## Features
