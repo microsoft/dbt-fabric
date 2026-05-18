@@ -6,7 +6,7 @@ dbt-tests-adapter>=1.15.5,<1.24
 pytest==8.0.1
 freezegun==1.5.5
 twine==5.1.1
-wheel==0.44.0
+wheel==0.46.2
 pre-commit==3.5.0;python_version<"3.9"
 pre-commit==3.8.0;python_version>="3.9"
 pytest-dotenv==0.5.2
