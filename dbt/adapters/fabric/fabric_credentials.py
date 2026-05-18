@@ -32,6 +32,10 @@ class FabricCredentials(Credentials):
     warehouse_snapshot_id: Optional[str] = None
     snapshot_timestamp: Optional[str] = None
     api_url: Optional[str] = "https://api.fabric.microsoft.com/v1"
+    # Set to False to disable pyodbc connection pooling (one pool per process).
+    # Useful when routing connections through a proxy or when catalog-lock
+    # contention makes it preferable to open a fresh connection each time.
+    pooling: Optional[bool] = True
 
     _ALIASES = {
         "user": "UID",
@@ -92,6 +96,7 @@ class FabricCredentials(Credentials):
             "encrypt",
             "trust_cert",
             "api_url",
+            "pooling",
         )
 
     @property

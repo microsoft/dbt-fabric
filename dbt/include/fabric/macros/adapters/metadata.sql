@@ -50,6 +50,7 @@
         SCHEMA_NAME(t.schema_id) as [schema],
         'table' as table_type
       from sys.tables as t {{ information_schema_hints() }}
+      where SCHEMA_NAME(t.schema_id) like '{{ schema_relation.schema }}'
       union all
       select
         DB_NAME() as [database],
@@ -57,9 +58,9 @@
         SCHEMA_NAME(v.schema_id) as [schema],
         'view' as table_type
       from sys.views as v {{ information_schema_hints() }}
+      where SCHEMA_NAME(v.schema_id) like '{{ schema_relation.schema }}'
     )
     select * from base
-    where [schema] like '{{ schema_relation.schema }}'
     {{ apply_label() }}
   {% endcall %}
   {{ return(load_result('list_relations_without_caching').table) }}
@@ -75,6 +76,8 @@
         SCHEMA_NAME(t.schema_id) as [schema],
         'table' as table_type
       from sys.tables as t {{ information_schema_hints() }}
+      where SCHEMA_NAME(t.schema_id) like '{{ schema_relation.schema }}'
+      and t.name like '{{ schema_relation.identifier }}'
       union all
       select
         DB_NAME() as [database],
@@ -82,10 +85,10 @@
         SCHEMA_NAME(v.schema_id) as [schema],
         'view' as table_type
       from sys.views as v {{ information_schema_hints() }}
+      where SCHEMA_NAME(v.schema_id) like '{{ schema_relation.schema }}'
+      and v.name like '{{ schema_relation.identifier }}'
     )
     select * from base
-    where [schema] like '{{ schema_relation.schema }}'
-    and [name] like '{{ schema_relation.identifier }}'
     {{ apply_label() }}
   {% endcall %}
   {{ return(load_result('get_relation_without_caching').table) }}
@@ -93,10 +96,11 @@
 
 {% macro fabric__get_relation_last_modified(information_schema, relations) -%}
   {%- call statement('last_modified', fetch_result=True) -%}
+        {{ get_use_database_sql(information_schema.database) }}
         select
             o.name as [identifier]
             , s.name as [schema]
-            , o.modify_date as last_modified
+            , CAST(o.modify_date AS datetime2(3)) as last_modified
             , current_timestamp as snapshotted_at
         from sys.objects o
         inner join sys.schemas s on o.schema_id = s.schema_id and [type] = 'U'
