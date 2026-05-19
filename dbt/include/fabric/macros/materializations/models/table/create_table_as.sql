@@ -26,11 +26,10 @@
         {% endif %}
 
     {%- else %}
-        {%- set query_label_option = query_label.replace("'", "''") -%}
         {% if adapter.behavior.empty.no_warn %}
-            EXEC('CREATE TABLE {{relation}} {{ cluster_by_clause }} AS SELECT * FROM {{tmp_vw_relation}} WHERE 0=1 {{ query_label_option }}');
+            CREATE TABLE {{relation}} {{ cluster_by_clause }} AS SELECT * FROM {{tmp_vw_relation}} WHERE 0=1 {{ query_label }}
         {% else %}
-            EXEC('CREATE TABLE {{relation}} {{ cluster_by_clause }} AS SELECT * FROM {{tmp_vw_relation}} {{ query_label_option }}');
+            CREATE TABLE {{relation}} {{ cluster_by_clause }} AS SELECT * FROM {{tmp_vw_relation}} {{ query_label }}
         {% endif %}
     {% endif %}
 
