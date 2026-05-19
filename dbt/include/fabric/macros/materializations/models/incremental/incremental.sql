@@ -24,18 +24,32 @@
 
   {% if existing_relation is none or full_refresh_mode or existing_relation.is_view %}
 
-    {% set tmp_vw_relation = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-    -- Dropping temp view relation if it exists
-    {{ adapter.drop_relation(tmp_vw_relation) }}
-    -- Dropping target relation if exists
-    {{ adapter.drop_relation(target_relation) }}
+    {%- set intermediate_relation = make_intermediate_relation(target_relation) -%}
+    {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
+    {% set tmp_vw_relation = intermediate_relation.incorporate(path={"identifier": intermediate_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
 
+    -- Dropping any leftover intermediate / backup / temp view relations from a previous failed run
+    {{ adapter.drop_relation(intermediate_relation) }}
+    {{ adapter.drop_relation(backup_relation) }}
+    {{ adapter.drop_relation(tmp_vw_relation) }}
+
+    -- Build into an intermediate relation. If this fails, the existing target is untouched.
     {%- call statement('main') -%}
-      {{ get_create_table_as_sql(False, target_relation, sql)}}
+      {{ get_create_table_as_sql(False, intermediate_relation, sql)}}
     {%- endcall -%}
 
     -- Dropping temp view relation
     {{ adapter.drop_relation(tmp_vw_relation) }}
+
+    -- Atomic swap: rename existing target to backup (if any), intermediate to target, then drop backup
+    {%- set target_existing = load_cached_relation(target_relation) -%}
+    {% if target_existing is not none %}
+      {{ adapter.rename_relation(target_existing, backup_relation) }}
+    {% endif %}
+    {{ adapter.rename_relation(intermediate_relation, target_relation) }}
+    {% if target_existing is not none %}
+      {{ adapter.drop_relation(backup_relation) }}
+    {% endif %}
 
     -- Add constraints including FK relation.
     {{ build_model_constraints(target_relation) }}
