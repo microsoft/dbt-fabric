@@ -1,5 +1,5 @@
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import agate
 import dbt_common.exceptions
@@ -20,6 +20,7 @@ from dbt_common.contracts.constraints import (
     ModelLevelConstraint,
 )
 from dbt_common.events.functions import fire_event
+from dbt_common.utils import filter_null_values
 
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
@@ -278,6 +279,15 @@ class FabricAdapter(SQLAdapter):
             return f"{constraint_prefix}{constraint.expression}"
         else:
             return None
+
+    def _make_match_kwargs(self, database: str, schema: str, identifier: str) -> Dict[str, str]:
+        return filter_null_values(
+            {
+                "database": database,
+                "identifier": identifier,
+                "schema": schema,
+            }
+        )
 
 
 COLUMNS_EQUAL_SQL = """
