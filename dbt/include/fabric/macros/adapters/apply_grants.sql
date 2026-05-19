@@ -1,11 +1,13 @@
 {% macro fabric__get_show_grant_sql(relation) %}
-    select
-        GRANTEE as grantee,
-        PRIVILEGE_TYPE as privilege_type
-    from INFORMATION_SCHEMA.TABLE_PRIVILEGES {{ information_schema_hints() }}
-    where TABLE_CATALOG = '{{ relation.database }}'
-      and TABLE_SCHEMA = '{{ relation.schema }}'
-      and TABLE_NAME = '{{ relation.identifier }}'
+    select distinct
+        pr.name as grantee,
+        pe.permission_name as privilege_type
+    from sys.database_principals as pr
+    inner join sys.database_permissions as pe
+      on pe.grantee_principal_id = pr.principal_id
+    where pe.major_id = object_id('[{{ relation.database }}].[{{ relation.schema }}].[{{ relation.identifier }}]')
+      and pe.state = 'G'
+      and pe.class_desc = 'OBJECT_OR_COLUMN'
 {% endmacro %}
 
 
