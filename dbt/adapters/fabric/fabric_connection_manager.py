@@ -1,12 +1,13 @@
 import atexit
 import datetime as dt
+import re
 import struct
 import sys
 import threading
 import time
 from contextlib import contextmanager
 from itertools import chain, repeat
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
 
 import agate
 import dbt_common.exceptions
@@ -742,22 +743,30 @@ class FabricConnectionManager(SQLConnectionManager):
     def get_credentials(cls, credentials: FabricCredentials) -> FabricCredentials:
         return credentials
 
+    _STATEMENT_ID_RE = re.compile(
+        r"statement\s*id:\s*([0-9A-Fa-f-]{36})",
+        re.IGNORECASE,
+    )
+
     @classmethod
     def get_response(cls, cursor: Any) -> AdapterResponse:
-        # message = str(cursor.statusmessage)
-        message = "OK"
-        rows = cursor.rowcount
-        # status_message_parts = message.split() if message is not None else []
-        # status_messsage_strings = [
-        #    part
-        #    for part in status_message_parts
-        #    if not part.isdigit()
-        # ]
-        # code = ' '.join(status_messsage_strings)
+        messages = getattr(cursor, "messages", None) or []
+        text_parts: List[str] = []
+        statement_id: Optional[str] = None
+        for entry in messages:
+            text = (
+                entry[1]
+                if isinstance(entry, (list, tuple)) and len(entry) > 1
+                else str(entry)
+            )
+            text_parts.append(text)
+            match = cls._STATEMENT_ID_RE.search(text)
+            if match and statement_id is None:
+                statement_id = match.group(1)
         return AdapterResponse(
-            _message=message,
-            # code=code,
-            rows_affected=rows,
+            _message="\n".join(text_parts) if text_parts else "OK",
+            rows_affected=cursor.rowcount,
+            query_id=statement_id,
         )
 
     @classmethod
