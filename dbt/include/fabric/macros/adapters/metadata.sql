@@ -21,7 +21,9 @@
 {% endmacro %}
 
 {%- macro fabric__get_use_database_sql(database) -%}
-  USE [{{database | replace('"', '') | replace('[', '') | replace(']', '')}}];
+  {%- if database is not none -%}
+    USE [{{database | replace('"', '') | replace('[', '') | replace(']', '')}}];
+  {%- endif -%}
 {%- endmacro -%}
 
 {% macro fabric__list_schemas(database) %}
