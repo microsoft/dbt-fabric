@@ -6,7 +6,7 @@
 {% macro fabric__create_columns(relation, columns) %}
   {% for column in columns %}
     {% call statement() %}
-      alter table {{ relation.render() }} add [{{ column.name }}] {{ column.data_type }} NULL;
+      alter table {{ relation.render() }} add [{{ column.name | replace(']', ']]') }}] {{ column.data_type }} NULL;
     {% endcall %}
   {% endfor %}
 {% endmacro %}

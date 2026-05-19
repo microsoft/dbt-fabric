@@ -35,7 +35,7 @@ class FabricAdapter(SQLAdapter):
 
     @classmethod
     def quote(cls, identifier):
-        return "[{}]".format(identifier)
+        return "[{}]".format(identifier.replace("]", "]]"))
 
     AdapterSpecificConfigs = FabricConfigs
     Relation = FabricRelation
