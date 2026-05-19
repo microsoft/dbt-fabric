@@ -10,11 +10,11 @@ class FabricColumn(Column):
         return "[{}]".format(self.column)
 
     TYPE_LABELS: ClassVar[Dict[str, str]] = {
-        "STRING": "VARCHAR(8000)",
-        "VARCHAR": "VARCHAR(8000)",
+        "STRING": "VARCHAR(MAX)",
+        "VARCHAR": "VARCHAR(MAX)",
         "CHAR": "CHAR(1)",
         "NCHAR": "CHAR(1)",
-        "NVARCHAR": "VARCHAR(8000)",
+        "NVARCHAR": "VARCHAR(MAX)",
         "TIMESTAMP": "DATETIME2(6)",
         "DATETIME2": "DATETIME2(6)",
         "DATETIME2(6)": "DATETIME2(6)",
@@ -40,7 +40,9 @@ class FabricColumn(Column):
 
     @classmethod
     def string_type(cls, size: int) -> str:
-        return f"varchar({size if size > 0 else '8000'})"
+        if size is None or size <= 0:
+            return "varchar(max)"
+        return f"varchar({size})"
 
     def literal(self, value: Any) -> str:
         return "cast('{}' as {})".format(value, self.data_type)
@@ -76,11 +78,16 @@ class FabricColumn(Column):
         if not self.is_string():
             raise DbtRuntimeError("Called string_size() on non-string field!")
         if self.char_size is None:
-            return 8000
-        else:
-            return int(self.char_size)
+            return -1
+        return int(self.char_size)
 
     def can_expand_to(self, other_column: "FabricColumn") -> bool:
         if not self.is_string() or not other_column.is_string():
             return False
-        return other_column.string_size() > self.string_size()
+        self_size = self.string_size()
+        other_size = other_column.string_size()
+        if other_size == -1:
+            return self_size != -1
+        if self_size == -1:
+            return False
+        return other_size > self_size
