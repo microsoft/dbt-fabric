@@ -17,7 +17,7 @@ class FabricRelation(BaseRelation):
     require_alias: bool = True
 
     def quoted(self, identifier):
-        return "[{}]".format(identifier)
+        return "[{}]".format(identifier.replace("]", "]]"))
 
     @classproperty
     def get_relation_type(cls) -> Type[FabricRelationType]:
