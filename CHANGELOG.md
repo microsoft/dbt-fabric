@@ -12,6 +12,10 @@
 * Bumped `dbt-adapters` requirement from `>=1.1.1,<2.0` to `>=1.10.0,<2.0`
 * Added Python 3.12 classifier
 
+## Improvements
+
+* **Incremental full refresh builds into a temp relation and swaps** — the `incremental` materialization's full-refresh path previously dropped the target table and ran `CREATE TABLE AS` in place, leaving the relation missing for the entire rebuild (concurrent readers error with "Invalid object name", which can last minutes on a large history rebuild). It now builds the replacement under a `__dbt_temp` name and swaps it into place with a metadata-only rename, keeping the previous data live until the swap. This matches the behavior of the `table` materialization. Resolves [#403](https://github.com/microsoft/dbt-fabric/issues/403).
+
 ### v1.9.10
 
 ## Features

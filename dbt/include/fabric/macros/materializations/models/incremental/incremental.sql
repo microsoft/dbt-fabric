@@ -24,18 +24,36 @@
 
   {% if existing_relation is none or full_refresh_mode or existing_relation.is_view %}
 
-    {% set tmp_vw_relation = target_relation.incorporate(path={"identifier": target_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-    -- Dropping temp view relation if it exists
-    {{ adapter.drop_relation(tmp_vw_relation) }}
-    -- Dropping target relation if exists
-    {{ adapter.drop_relation(target_relation) }}
+    {#-- Build into a temp relation and swap, so the target stays live during the
+         rebuild instead of being dropped up front. Mirrors the `table` materialization. --#}
 
+    {%- set temp_relation = make_temp_relation(target_relation, '__dbt_temp') -%}
+    {% set tmp_vw_relation = temp_relation.incorporate(path={"identifier": temp_relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+
+    -- Clean up leftovers from any previously failed run
+    {{ adapter.drop_relation(tmp_vw_relation) }}
+    {{ adapter.drop_relation(temp_relation) }}
+
+    -- Build the replacement under the temp name; the live target stays in place
     {%- call statement('main') -%}
-      {{ get_create_table_as_sql(False, target_relation, sql)}}
+      {{ get_create_table_as_sql(False, temp_relation, sql)}}
     {%- endcall -%}
 
-    -- Dropping temp view relation
+    -- Dropping temp view relation created by create_table_as
     {{ adapter.drop_relation(tmp_vw_relation) }}
+
+    {% if existing_relation is not none and existing_relation.is_table %}
+      -- Swap with renames: existing -> backup, temp -> target, then drop backup
+      {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
+      {{ adapter.drop_relation(backup_relation) }}
+      {{ adapter.rename_relation(existing_relation, backup_relation) }}
+      {{ adapter.rename_relation(temp_relation, target_relation) }}
+      {{ adapter.drop_relation(backup_relation) }}
+    {% else %}
+      -- First build, or the existing relation was a view (already dropped above):
+      -- promote the temp relation to the target name.
+      {{ adapter.rename_relation(temp_relation, target_relation) }}
+    {% endif %}
 
     -- Add constraints including FK relation.
     {{ build_model_constraints(target_relation) }}
