@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from dbt.adapters.events.logging import AdapterLogger
 
@@ -511,7 +511,7 @@ class PurviewSync:
 
         attrs: DbtMetadataAttrs = {
             "dbt_model_id": unique_id,
-            "dbt_last_sync": datetime.now(UTC).isoformat(),
+            "dbt_last_sync": datetime.now(timezone.utc).isoformat(),
         }
         if tags:
             attrs["dbt_tags"] = ",".join(tags) if isinstance(tags, list) else str(tags)
