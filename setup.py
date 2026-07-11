@@ -70,6 +70,7 @@ setup(
         "azure-identity>=1.14.0",
         "azure-core>=1.26.0",
         "requests>=2.33.0",
+        "typing_extensions>=4.0.0; python_version < '3.11'",
         "dbt-common>=1.0.4,<2.0",
         "dbt-core>=1.10.0",
         "dbt-adapters>=1.10.0,<2.0",

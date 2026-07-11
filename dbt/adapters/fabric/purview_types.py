@@ -1,4 +1,9 @@
-from typing import Any, NotRequired, TypedDict
+from typing import Any, TypedDict
+
+try:
+    from typing import NotRequired
+except ImportError:  # Python < 3.11
+    from typing_extensions import NotRequired
 
 
 class PurviewEntityRef(TypedDict):
