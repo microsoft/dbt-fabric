@@ -23,7 +23,7 @@ jobs:
       packages: read   # Grant explicit read access to packages
       id-token: write  # Needed if using OIDC authentication
     container:
-      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc${{ matrix.msodbc_version }}
+      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}
     steps:
       # Azure login using federated credentials
       - name: Azure login with OIDC

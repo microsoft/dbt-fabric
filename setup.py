@@ -74,6 +74,7 @@ setup(
         "dbt-core>=1.10.0",
         "dbt-adapters>=1.10.0,<2.0",
     ],
+    python_requires=">=3.10",
     cmdclass={
         "verify": VerifyVersionCommand,
     },
@@ -83,8 +84,6 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
