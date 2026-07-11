@@ -1,12 +1,7 @@
 import logging
 import time
 import urllib.parse
-from typing import Any
-
-try:
-    from typing import Self
-except ImportError:  # Python < 3.11
-    from typing_extensions import Self
+from typing import Any, Self
 
 import dbt_common.exceptions
 import requests

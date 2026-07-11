@@ -70,12 +70,11 @@ setup(
         "azure-identity>=1.14.0",
         "azure-core>=1.26.0",
         "requests>=2.33.0",
-        "typing_extensions>=4.0.0; python_version < '3.11'",
         "dbt-common>=1.0.4,<2.0",
         "dbt-core>=1.10.0",
         "dbt-adapters>=1.10.0,<2.0",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.12",
     cmdclass={
         "verify": VerifyVersionCommand,
     },
@@ -85,9 +84,8 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
     ],
     # TODO
     project_urls={

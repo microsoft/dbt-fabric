@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION="3.10"
+ARG PYTHON_VERSION="3.12"
 FROM python:${PYTHON_VERSION}-bullseye as base
 
 # enable Microsoft package repo (needed for the Azure CLI package below)

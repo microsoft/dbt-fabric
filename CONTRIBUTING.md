@@ -1,12 +1,12 @@
 # Development of the adapter
 
-Python 3.10 is used for developing the adapter. To get started, bootstrap your environment as follows:
+Python 3.12 is used for developing the adapter. To get started, bootstrap your environment as follows:
 
 Create a virtual environment, [pyenv](https://github.com/pyenv/pyenv) is used in the example:
 
 ```shell
-pyenv install 3.10.7
-pyenv virtualenv 3.10.7 dbt-fabric
+pyenv install 3.12.9
+pyenv virtualenv 3.12.9 dbt-fabric
 pyenv activate dbt-fabric
 ```
 
