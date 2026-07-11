@@ -9,6 +9,7 @@ class FabricRelationType(StrEnum):
     View = "view"
     Ephemeral = "ephemeral"
     CTE = "cte"
+    Function = "function"
 
 
 class FabricIncludePolicy(Policy):

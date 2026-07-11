@@ -1,6 +1,5 @@
 {% macro fabric__get_catalog(information_schemas, schemas) -%}
 
-    {% set query_label = apply_label() %}
     {%- call statement('catalog', fetch_result=True) -%}
         {{ get_use_database_sql(information_schemas.database) }}
         with
@@ -110,7 +109,11 @@
             cols.column_name,
             cols.column_index,
             cols.column_type,
-            null as column_comment
+            null as column_comment,
+            'Row Count' as [stats:row_count:label],
+            cast(objectpropertyex(tv.object_id, 'Cardinality') as int) as [stats:row_count:value],
+            'An approximate count of rows in this table' as [stats:row_count:description],
+            cast(case when tv.table_type = 'BASE TABLE' then 1 else 0 end as bit) as [stats:row_count:include]
         from tables_and_views tv
         join cols on tv.object_id = cols.object_id
         where ({%- for schema in schemas -%}
@@ -118,7 +121,6 @@
         {%- endfor -%})
 
         order by column_index
-        {{ query_label }}
 
         {%- endcall -%}
 
@@ -128,7 +130,6 @@
 
 {% macro fabric__get_catalog_relations(information_schema, relations) -%}
 
-    {% set query_label = apply_label() %}
     {%- set distinct_databases = relations | map(attribute='database') | unique | list -%}
 
     {%- if distinct_databases | length == 1 -%}
@@ -241,7 +242,11 @@
                 cols.column_name,
                 cols.column_index,
                 cols.column_type,
-                null as column_comment
+                null as column_comment,
+                'Row Count' as [stats:row_count:label],
+                cast(objectpropertyex(tv.object_id, 'Cardinality') as int) as [stats:row_count:value],
+                'An approximate count of rows in this table' as [stats:row_count:description],
+                cast(case when tv.table_type = 'BASE TABLE' then 1 else 0 end as bit) as [stats:row_count:include]
             from tables_and_views tv
             join cols on tv.object_id = cols.object_id
             where (
@@ -266,7 +271,6 @@
             )
 
             order by column_index
-            {{ query_label }}
 
         {%- endcall -%}
         {{ return(load_result('catalog').table) }}

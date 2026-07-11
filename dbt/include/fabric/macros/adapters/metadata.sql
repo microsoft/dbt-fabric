@@ -1,10 +1,3 @@
-
-{% macro apply_label() %}
-    {{ log (config.get('query_tag','dbt-fabric'))}}
-    {%- set query_label = config.get('query_tag','dbt-fabric-dw') -%}
-    OPTION (LABEL = '{{query_label}}');
-{% endmacro %}
-
 {% macro information_schema_hints() %}
     {{ return(adapter.dispatch('information_schema_hints')()) }}
 {% endmacro %}
@@ -21,21 +14,23 @@
 {% endmacro %}
 
 {%- macro fabric__get_use_database_sql(database) -%}
-  USE [{{database | replace('"', '') | replace('[', '') | replace(']', '')}}];
+  {%- if database is not none -%}
+    USE [{{database | replace('[', '') | replace(']', '') | replace('"', '')}}];
+  {%- endif -%}
 {%- endmacro -%}
 
 {% macro fabric__list_schemas(database) %}
   {% call statement('list_schemas', fetch_result=True, auto_begin=False) -%}
     {{ get_use_database_sql(database) }}
     select  name as [schema]
-    from sys.schemas {{ information_schema_hints() }} {{ apply_label() }}
+    from sys.schemas {{ information_schema_hints() }}
   {% endcall %}
   {{ return(load_result('list_schemas').table) }}
 {% endmacro %}
 
 {% macro fabric__check_schema_exists(information_schema, schema) -%}
   {% call statement('check_schema_exists', fetch_result=True, auto_begin=False) -%}
-    SELECT count(*) as schema_exist FROM sys.schemas WHERE name = '{{ schema }}' {{ apply_label() }}
+    SELECT count(*) as schema_exist FROM sys.schemas WHERE name = '{{ schema }}'
   {%- endcall %}
   {{ return(load_result('check_schema_exists').table) }}
 {% endmacro %}
@@ -45,53 +40,48 @@
     {{ get_use_database_sql(schema_relation.database) }}
     with base as (
       select
-        DB_NAME() as [database],
-        t.name as [name],
-        SCHEMA_NAME(t.schema_id) as [schema],
-        'table' as table_type
+          DB_NAME() as [database],
+          t.name as [name],
+          SCHEMA_NAME(t.schema_id) as [schema],
+          'table' as table_type
       from sys.tables as t {{ information_schema_hints() }}
       where SCHEMA_NAME(t.schema_id) like '{{ schema_relation.schema }}'
       union all
       select
-        DB_NAME() as [database],
-        v.name as [name],
-        SCHEMA_NAME(v.schema_id) as [schema],
-        'view' as table_type
+          DB_NAME() as [database],
+          v.name as [name],
+          SCHEMA_NAME(v.schema_id) as [schema],
+          'view' as table_type
       from sys.views as v {{ information_schema_hints() }}
       where SCHEMA_NAME(v.schema_id) like '{{ schema_relation.schema }}'
+      union all
+      select
+          DB_NAME() as [database],
+          f.name as [name],
+          SCHEMA_NAME(f.schema_id) as [schema],
+          'function' as table_type
+      from sys.objects as f {{ information_schema_hints() }}
+      where f.type_desc like '%function%'
+        and SCHEMA_NAME(f.schema_id) like '{{ schema_relation.schema }}'
     )
     select * from base
-    {{ apply_label() }}
   {% endcall %}
   {{ return(load_result('list_relations_without_caching').table) }}
 {% endmacro %}
 
-{% macro fabric__get_relation_without_caching(schema_relation) -%}
-  {% call statement('get_relation_without_caching', fetch_result=True) -%}
+{% macro fabric__list_function_relations_without_caching(schema_relation) %}
+  {% call statement('list_function_relations_without_caching', fetch_result=True) %}
     {{ get_use_database_sql(schema_relation.database) }}
-    with base as (
-      select
+    select
         DB_NAME() as [database],
-        t.name as [name],
-        SCHEMA_NAME(t.schema_id) as [schema],
-        'table' as table_type
-      from sys.tables as t {{ information_schema_hints() }}
-      where SCHEMA_NAME(t.schema_id) like '{{ schema_relation.schema }}'
-      and t.name like '{{ schema_relation.identifier }}'
-      union all
-      select
-        DB_NAME() as [database],
-        v.name as [name],
-        SCHEMA_NAME(v.schema_id) as [schema],
-        'view' as table_type
-      from sys.views as v {{ information_schema_hints() }}
-      where SCHEMA_NAME(v.schema_id) like '{{ schema_relation.schema }}'
-      and v.name like '{{ schema_relation.identifier }}'
-    )
-    select * from base
-    {{ apply_label() }}
+        f.name as [name],
+        SCHEMA_NAME(f.schema_id) as [schema],
+        'function' as table_type
+    from sys.objects as f {{ information_schema_hints() }}
+    where f.type_desc like '%function%'
+      and SCHEMA_NAME(f.schema_id) like '{{ schema_relation.schema }}'
   {% endcall %}
-  {{ return(load_result('get_relation_without_caching').table) }}
+  {{ return(load_result('list_function_relations_without_caching').table) }}
 {% endmacro %}
 
 {% macro fabric__get_relation_last_modified(information_schema, relations) -%}
@@ -100,7 +90,7 @@
         select
             o.name as [identifier]
             , s.name as [schema]
-            , CAST(o.modify_date AS datetime2(3)) as last_modified
+            , CAST(o.modify_date AS datetime2(6)) as last_modified
             , current_timestamp as snapshotted_at
         from sys.objects o
         inner join sys.schemas s on o.schema_id = s.schema_id and [type] = 'U'
@@ -110,7 +100,6 @@
                 upper(o.name) = upper('{{ relation.identifier }}')){%- if not loop.last %} or {% endif -%}
             {%- endfor -%}
         )
-        {{ apply_label() }}
   {%- endcall -%}
   {{ return(load_result('last_modified')) }}
 

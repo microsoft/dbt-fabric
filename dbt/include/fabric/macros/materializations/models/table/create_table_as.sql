@@ -1,79 +1,78 @@
-{% macro fabric__create_table_as(temporary, relation, sql) -%}
-    {% set query_label = apply_label() %}
-    {% set tmp_vw_relation = relation.incorporate(path={"identifier": relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
-    {% do adapter.drop_relation(tmp_vw_relation) %}
-    {{ get_create_view_as_sql(tmp_vw_relation, sql) }}
+{% macro check_for_nested_cte(sql) %}
+    {% if execute %}  {# Ensure this runs only at execution time #}
+        {% set cleaned_sql = sql | lower | replace("\n", " ") %}  {# Convert to lowercase and remove newlines #}
+        {% set cte_count = cleaned_sql.count("with ") %}  {# Count occurrences of "WITH " #}
+        {% if cte_count > 1 %}
+            {{ return(True) }}
+        {% else %}
+            {{ return(False) }}  {# No nested CTEs found #}
+        {% endif %}
+    {% else %}
+        {{ return(False) }}  {# Return False during parsing #}
+    {% endif %}
+{% endmacro %}
 
-    {# Build CLUSTER BY clause - only for non-temporary tables #}
-    {% set cluster_by_clause = fabric__build_cluster_by_clause(temporary) %}
 
+{% macro build_cluster_by_clause(temporary) %}
+    {{ return(adapter.dispatch('build_cluster_by_clause', 'dbt')(temporary)) }}
+{% endmacro %}
+
+{% macro fabric__build_cluster_by_clause(temporary) %}
+    {%- if not temporary -%}
+        {%- set cluster_by = config.get('cluster_by') -%}
+        {%- if cluster_by is not none -%}
+            {%- if cluster_by is string -%}
+                {%- set cluster_by = [cluster_by] -%}
+            {%- endif -%}
+            {%- set quoted_columns = [] -%}
+            {%- for col in cluster_by -%}
+                {%- do quoted_columns.append('[' ~ col | replace(']', ']]') ~ ']') -%}
+            {%- endfor -%}
+            WITH (CLUSTER BY ({{ quoted_columns | join(', ') }}))
+        {%- endif -%}
+    {%- endif -%}
+{% endmacro %}
+
+
+{% macro fabric__create_table_as(temporary, relation, compiled_code, language='sql') -%}
+    {%- if language != 'sql' -%}
+        {% do exceptions.raise_compiler_error("fabric__create_table_as macro didn't get supported language, it got %s" % language) %}
+    {%- endif -%}
     {% set contract_config = config.get('contract') %}
-    {% if contract_config.enforced %}
+    {% set is_nested_cte = check_for_nested_cte(compiled_code) %}
+
+    {% if is_nested_cte and contract_config.enforced %}
+
+        {{ exceptions.raise_compiler_error(
+            "Since the contract is enforced and the model contains a nested CTE, Fabric DW uses CREATE TABLE + INSERT to load data.
+            INSERT INTO is not supported with nested CTEs. To resolve this, either disable contract enforcement or modify the model."
+        ) }}
+
+    {%- elif not is_nested_cte and contract_config.enforced %}
 
         CREATE TABLE {{relation}}
         {{ build_columns_constraints(relation) }}
-        {{ cluster_by_clause }}
-        {{ get_assert_columns_equivalent(sql)  }}
+        {{ get_assert_columns_equivalent(compiled_code)  }}
+        {{ build_cluster_by_clause(temporary) }}
+
         {% set listColumns %}
             {% for column in model['columns'] %}
-                {{ "["~column~"]" }}{{ ", " if not loop.last }}
+                {{ "["~column | replace(']', ']]')~"]" }}{{ ", " if not loop.last }}
             {% endfor %}
         {%endset%}
 
-        {% if not adapter.behavior.empty.no_warn %}
-            INSERT INTO {{relation}} ({{listColumns}})
-            SELECT {{listColumns}} FROM {{tmp_vw_relation}} {{ query_label }}
-        {% endif %}
+        {% set tmp_vw_relation = relation.incorporate(path={"identifier": relation.identifier ~ '__dbt_tmp_vw'}, type='view')-%}
+        {% do adapter.drop_relation(tmp_vw_relation) %}
+        {{ get_create_view_as_sql(tmp_vw_relation, compiled_code) }}
+
+        INSERT INTO {{relation}} ({{listColumns}})
+        SELECT {{listColumns}} FROM {{tmp_vw_relation}}
 
     {%- else %}
-        {%- set query_label_option = query_label.replace("'", "''") -%}
-        {% if adapter.behavior.empty.no_warn %}
-            EXEC('CREATE TABLE {{relation}} {{ cluster_by_clause }} AS SELECT * FROM {{tmp_vw_relation}} WHERE 0=1 {{ query_label_option }}');
-        {% else %}
-            EXEC('CREATE TABLE {{relation}} {{ cluster_by_clause }} AS SELECT * FROM {{tmp_vw_relation}} {{ query_label_option }}');
-        {% endif %}
+
+        CREATE TABLE {{relation}}
+        {{ build_cluster_by_clause(temporary) }}
+        AS {{compiled_code}}
+
     {% endif %}
-
-{% endmacro %}
-
-{#
-    Builds a WITH (CLUSTER BY (...)) clause for Fabric Data Warehouse tables.
-    See: https://learn.microsoft.com/en-us/fabric/data-warehouse/data-clustering
-
-    Limitations enforced:
-      - Maximum of 4 columns allowed in CLUSTER BY.
-      - Skipped for temporary tables (clustering is only applied at final table creation).
-      - Clustering must be defined at table creation; it cannot be added to existing tables via ALTER.
-      - Supported column types: bigint, int, smallint, decimal, numeric, float, real,
-        date, datetime2, time, char, varchar. Columns of unsupported types (bit, varchar(max),
-        varbinary, uniqueidentifier) cannot be used in CLUSTER BY.
-      - IDENTITY columns cannot be used with CLUSTER BY.
-
-    Config usage:
-      - Model level:  {{ config(cluster_by=['col1', 'col2']) }}
-      - Project level: +cluster_by: ['col1', 'col2']
-      - Single column shorthand: {{ config(cluster_by='col1') }}
-#}
-{% macro fabric__build_cluster_by_clause(temporary) %}
-    {%- set cluster_by = config.get('cluster_by') -%}
-    {%- if cluster_by is not none and not temporary -%}
-        {%- if cluster_by is string -%}
-            {%- set cluster_by = [cluster_by] -%}
-        {%- endif -%}
-
-        {%- if cluster_by | length < 1 -%}
-            {%- do exceptions.raise_compiler_error(
-                "CLUSTER BY requires at least one column."
-            ) -%}
-        {%- endif -%}
-
-        {%- if cluster_by | length > 4 -%}
-            {%- do exceptions.raise_compiler_error(
-                "Fabric Data Warehouse supports a maximum of 4 columns in CLUSTER BY. Got "
-                ~ cluster_by | length ~ " columns: " ~ cluster_by | join(', ') ~ "."
-            ) -%}
-        {%- endif -%}
-
-        WITH (CLUSTER BY ({{ cluster_by | join(', ') }}))
-    {%- endif -%}
 {% endmacro %}

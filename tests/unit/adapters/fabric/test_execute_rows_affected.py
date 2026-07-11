@@ -23,6 +23,8 @@ class MockCursor:
         self._index = 0
         self.rowcount = rowcounts[0] if rowcounts else -1
         self.description = self._descriptions[0] if self._descriptions else None
+        # get_response() reads cursor.messages (mssql-python/pyodbc convention).
+        self.messages = []
 
     def nextset(self):
         self._index += 1
