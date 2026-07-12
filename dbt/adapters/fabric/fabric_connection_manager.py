@@ -162,7 +162,16 @@ class FabricConnectionManager(BaseFabricConnectionManager):
 
         assert credentials.authentication is not None
 
-        if "ActiveDirectory" in credentials.authentication:
+        # "ActiveDirectoryAccessToken" is not a real ODBC "Authentication" keyword
+        # value; it is this adapter's own convention for supplying a pre-fetched
+        # access token (delivered separately via attrs_before /
+        # SQL_COPT_SS_ACCESS_TOKEN, see FabricTokenProvider.get_sql_attrs_before).
+        # Sending it as a literal Authentication= value causes the driver to
+        # reject the connection string, so it must be excluded from this branch.
+        if (
+            credentials.authentication.lower() != "activedirectoryaccesstoken"
+            and "ActiveDirectory" in credentials.authentication
+        ):
             con_str.append(f"Authentication={credentials.authentication}")
         if credentials.authentication == "ActiveDirectoryPassword":
             con_str.append(f"UID={{{credentials.UID}}}")

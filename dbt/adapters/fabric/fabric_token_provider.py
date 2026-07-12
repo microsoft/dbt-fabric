@@ -213,10 +213,17 @@ class FabricTokenProvider:
     def get_sql_attrs_before(self) -> dict[int, bytes] | None:
         """Build the SQL connection attrs_before dict with an encoded access token.
 
-        Returns None when ActiveDirectory authentication is used, since the
-        mssql-python driver handles token acquisition internally in that case.
+        Returns None when a driver-native ActiveDirectory authentication mode is
+        used, since the mssql-python driver handles token acquisition internally
+        in that case. "ActiveDirectoryAccessToken" is excluded from this check:
+        it is not a real driver-native mode, but this adapter's own convention
+        for supplying a pre-fetched token, which must always be attached via
+        attrs_before.
         """
-        if "ActiveDirectory" in self.credentials.authentication:
+        if (
+            self.credentials.authentication.lower() != "activedirectoryaccesstoken"
+            and "ActiveDirectory" in self.credentials.authentication
+        ):
             return None
 
         token = self.get_access_token(scope=self.SQL_CREDENTIAL_SCOPE)
