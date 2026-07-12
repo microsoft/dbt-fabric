@@ -1,5 +1,7 @@
 import json
 import time
+from collections.abc import Mapping
+from typing import Any
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 import dbt_common.exceptions
@@ -236,7 +238,7 @@ class PurviewClient:
         self,
         url: str,
         method: str = "get",
-        body: dict | list | None = None,
+        body: Mapping[str, Any] | list | None = None,
         expected_statuses: set[int] | None = None,
     ) -> requests.Response:
         """Send an HTTP request with auth headers, automatic 429 retry, and error handling.
@@ -277,10 +279,10 @@ class PurviewClient:
     def _api_get(self, url: str) -> requests.Response:
         return self._api_request(url, method="get")
 
-    def _api_post(self, url: str, body: dict | list) -> requests.Response:
+    def _api_post(self, url: str, body: Mapping[str, Any] | list) -> requests.Response:
         return self._api_request(url, method="post", body=body)
 
-    def _api_put(self, url: str, body: dict | list) -> requests.Response:
+    def _api_put(self, url: str, body: Mapping[str, Any] | list) -> requests.Response:
         return self._api_request(url, method="put", body=body)
 
     def search_entities(
@@ -490,7 +492,7 @@ class PurviewClient:
         self, guid: str, type_name: str, qualified_name: str, name: str, description: str
     ) -> None:
         """Set the userDescription field on a Purview entity."""
-        entity = {
+        entity: AtlasEntity = {
             "typeName": type_name,
             "guid": guid,
             "attributes": {

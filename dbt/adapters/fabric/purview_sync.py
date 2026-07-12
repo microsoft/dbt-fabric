@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from typing import cast
 
 from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
@@ -223,6 +224,7 @@ class PurviewSync:
             else:
                 results = []
 
+            entity: PurviewEntityRef | None
             if results:
                 entity = self._pick_best_entity(results, db_ids)
                 if len(results) > 1:
@@ -374,7 +376,7 @@ class PurviewSync:
             persist_relation = persist_docs.get("relation", True)
             persist_columns = persist_docs.get("columns", True)
 
-            update: dict = {
+            update: AtlasEntity = {
                 "typeName": entity["entityType"],
                 "guid": entity["id"],
                 "attributes": {
@@ -391,7 +393,9 @@ class PurviewSync:
             if sync_metadata:
                 unique_id = model.get("unique_id", "")
                 bm_attrs = self._build_business_metadata_attrs(model, unique_id, test_results)
-                update["businessAttributes"] = {"dbt_metadata": bm_attrs}
+                update["businessAttributes"] = {
+                    "dbt_metadata": cast(dict[str, str], dict(bm_attrs))
+                }
 
                 tags = model.get("tags", [])
                 if tags:
@@ -472,7 +476,7 @@ class PurviewSync:
             col_qn = f"{table_qn}/columns/{col_name}"
             data_type = col["data_type"]
 
-            entity = {
+            entity: AtlasEntity = {
                 "typeName": "fabric_warehouse_table_column",
                 "attributes": {
                     "qualifiedName": col_qn,
@@ -564,7 +568,7 @@ class PurviewSync:
                 continue
 
             process_qn = f"dbt://{unique_id}"
-            process_entity = {
+            process_entity: AtlasEntity = {
                 "typeName": "dbt_transformation",
                 "attributes": {
                     "qualifiedName": process_qn,
