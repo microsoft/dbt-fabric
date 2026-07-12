@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 from dbt.tests.util import read_file, run_dbt, run_dbt_and_capture
 
 # -- Model fixtures --

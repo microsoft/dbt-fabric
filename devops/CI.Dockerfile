@@ -1,6 +1,9 @@
 ARG PYTHON_VERSION="3.12"
 FROM python:${PYTHON_VERSION}-bullseye as base
 
+# install uv (used to install/sync project dependencies from uv.lock)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 # enable Microsoft package repo (needed for the Azure CLI package below)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

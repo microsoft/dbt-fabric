@@ -6,10 +6,10 @@ from typing import Any
 
 import agate
 import dbt_common.exceptions
-from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
-from dbt.adapters.events.logging import AdapterLogger
 from dbt_common.clients.agate_helper import empty_table
 
+from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
+from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.fabric.base_connection_manager import BaseFabricConnectionManager
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 

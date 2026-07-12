@@ -2,14 +2,14 @@ import abc
 from typing import Any
 
 import dbt_common.exceptions
+
 from dbt.adapters.contracts.connection import Connection
 from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.sql.connections import SQLConnectionManager
-
 from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 from dbt.adapters.fabric.purview_client import PurviewClient
+from dbt.adapters.sql.connections import SQLConnectionManager
 
 logger = AdapterLogger("fabric")
 

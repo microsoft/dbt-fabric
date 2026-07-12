@@ -1,24 +1,53 @@
 # Development of the adapter
 
-Python 3.12 is used for developing the adapter. To get started, bootstrap your environment as follows:
+Python 3.12 (or 3.13) is used for developing the adapter. Dependencies and environments are managed with
+[`uv`](https://docs.astral.sh/uv/). Install `uv` first ([installation instructions](https://docs.astral.sh/uv/getting-started/installation/)).
 
-Create a virtual environment, [pyenv](https://github.com/pyenv/pyenv) is used in the example:
-
-```shell
-pyenv install 3.12.9
-pyenv virtualenv 3.12.9 dbt-fabric
-pyenv activate dbt-fabric
-```
-
-Install the development dependencies and pre-commit and get information about possible make commands:
+## Setup (one-time)
 
 ```shell
 make dev
-make help
 ```
 
-[Pre-commit](https://pre-commit.com/) helps us to maintain a consistent style and code quality across the entire project.
-After running `make dev`, pre-commit will automatically validate your commits and fix any formatting issues whenever possible.
+This runs `uv sync` (creates `.venv`, installs the adapter itself in editable mode, and installs the `dev`
+dependency group — pytest, ruff, mypy, pre-commit, etc. — pinned exactly as recorded in the checked-in
+`uv.lock`) and then installs the git pre-commit hooks.
+
+## Everyday commands
+
+Everything below is a thin wrapper around `uv run <command>`; you can always call `uv run ...` directly instead.
+
+| Command           | What it does                                          |
+|--------------------|--------------------------------------------------------|
+| `make unit`        | Runs the unit tests (`uv run pytest tests/unit`)       |
+| `make functional`  | Runs the functional tests (`uv run pytest tests/functional`) — see [Testing](#testing) below for local setup |
+| `make ruff`        | Runs ruff lint checks (`uv run ruff check .`)          |
+| `make format`      | Runs ruff format checks (`uv run ruff format --check .`) |
+| `make mypy`        | Runs static type checking (`uv run mypy`)              |
+| `make lint`        | Runs `ruff` + `format` + `mypy` together               |
+| `make test`        | Runs unit tests + `lint`                                |
+| `make server`      | Spins up a local SQL Server via Docker Compose (for functional tests) |
+| `make all`         | Runs every pre-commit hook against all files            |
+| `make help`        | Lists all available `make` targets                     |
+
+Changed a dependency in `pyproject.toml` (`dependencies` or `[dependency-groups]`)? Run `uv lock` to update
+`uv.lock`, then commit both files together. `uv run ...` will auto-sync your `.venv` to match.
+
+## Packaging
+
+The project is packaged with [Hatchling](https://hatch.pypa.io/latest/) via a PEP 621 `pyproject.toml`
+(no more `setup.py`). The package version is read from `dbt/adapters/fabric/__version__.py`
+(`[tool.hatch.version]`). Runtime dependencies live under `[project.dependencies]`; dev-only dependencies
+(pytest, ruff, mypy, etc.) live under `[dependency-groups].dev` and are pinned in the checked-in `uv.lock`.
+
+## Code quality: what runs when
+
+* **On every `git commit`** — pre-commit runs `ruff` (auto-fixes lint issues), `ruff format`, and `mypy`,
+  plus a handful of hygiene checks (YAML/JSON validity, trailing whitespace, merge conflict markers, etc.).
+  This is the fast, local feedback loop — most issues are caught and fixed before you even push.
+* **On every push / pull request to `main`** — GitHub Actions re-runs the unit tests (see [CI/CD](#cicd) below)
+  as the CI safety net. There is currently no separate CI lint job; formatting/lint enforcement happens via
+  the local pre-commit hook.
 
 ## Testing
 
@@ -46,7 +75,7 @@ The 3 users are defined by the following environment variables containing their 
 * `DBT_TEST_USER_2`
 * `DBT_TEST_USER_3`
 
-You can use the following commands to run the unit and the functional tests respectively:
+Then run the tests:
 
 ```shell
 make unit
@@ -55,19 +84,22 @@ make functional
 
 ## CI/CD
 
-We use Docker images that have all the things we need to test the adapter in the CI/CD workflows.
-The Dockerfile is located in the *devops* directory and pushed to GitHub Packages to this repo.
-There is one tag per supported Python version.
+All pipelines run on GitHub Actions. Each one, in the order it typically fires:
 
-All CI/CD pipelines are using GitHub Actions. The following pipelines are available:
+1. **`publish-docker`** — builds and pushes the Docker image (one tag per supported Python version) used by
+   the other pipelines below. Triggered when files under `devops/` or the workflow itself change.
+   The `Dockerfile` lives in `devops/CI.Dockerfile` and includes `uv` pre-installed.
+2. **`unit-tests`** — on push/PR to `main`/`v*`: `uv sync --locked` then `uv run pytest tests/unit`, once
+   per supported Python version (3.12, 3.13).
+3. **`integration-tests-azure`** — on PR to `main`: authenticates to Azure via OIDC, then `uv sync --locked`
+   and `uv run pytest tests/functional --profile integration_tests` against a real Azure SQL-backed Fabric
+   Warehouse. See [Azure integration tests](#azure-integration-tests) below for the required secrets.
+4. **`release-version`** — on pushing a `v*` tag: `uv run scripts/verify_version.py` checks the tag matches
+   `__version__.py`, then `uv build` + `uv publish` ship the package to PyPI. See
+   [Releasing a new version](#releasing-a-new-version) below.
 
-* `publish-docker`: publishes the image we use in all other pipelines.
-* `unit-tests`: runs the unit tests for each supported Python version.
-* `integration-tests-azure`: runs the integration tests for Azure SQL Server.
-* `integration-tests-fabric`: runs the integration tests for SQL Server.
-* `release-version`: publishes the adapter to PyPI.
-
-There is an additional [Pre-commit](https://pre-commit.ci/) pipeline that validates the code style.
+There is no dedicated lint/format CI job today — that check happens locally via the pre-commit hook
+(see [Code quality](#code-quality-what-runs-when) above).
 
 ### Azure integration tests
 
@@ -85,7 +117,10 @@ The following environment variables are available:
 
 ## Releasing a new version
 
-Make sure the version number is bumped in `__version__.py`. Then, create a git tag named `v<version>` and push it to GitHub.
-A GitHub Actions workflow will be triggered to build the package and push it to PyPI. 
-
-If you're releasing support for a new version of `dbt-core`, also bump the `dbt_version` in `setup.py`.
+1. Bump the version number in `dbt/adapters/fabric/__version__.py`.
+2. If you're releasing support for a new version of `dbt-core`, also bump the `dbt-core`/`dbt-adapters`
+   version constraints in `pyproject.toml`.
+3. Create a git tag named `v<version>` (matching the version from step 1) and push it to GitHub.
+4. The `release-version` GitHub Actions workflow triggers automatically: it verifies the tag matches
+   `__version__.py` (`scripts/verify_version.py`), builds the package (`uv build`, using the `hatchling`
+   backend), and publishes it to PyPI (`uv publish`).

@@ -1,5 +1,4 @@
 from dbt.adapters.base import AdapterPlugin
-
 from dbt.adapters.fabric.fabric_adapter import FabricAdapter
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.fabric_column import FabricColumn

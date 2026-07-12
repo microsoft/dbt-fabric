@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.incremental.fixtures import (
     _MODELS__A,
     _MODELS__INCREMENTAL_APPEND_NEW_COLUMNS,

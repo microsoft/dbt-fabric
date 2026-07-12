@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.contracts.results import CatalogArtifact
 from dbt.tests.util import run_dbt
 

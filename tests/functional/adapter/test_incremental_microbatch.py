@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.incremental.test_incremental_microbatch import BaseMicrobatch
 
 # No requirement for a unique_id for snowflake microbatch!

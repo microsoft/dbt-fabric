@@ -52,8 +52,8 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: pip install -r dev_requirements.txt
+      - name: Sync dependencies (uv)
+        run: uv sync --locked
 
       - name: Run functional tests
         env:
@@ -63,4 +63,4 @@ jobs:
           DBT_TEST_USER_1: dbo
           DBT_TEST_USER_2: dbo
           DBT_TEST_USER_3: dbo
-        run: pytest -ra -vv -x tests/functional --profile "${{ matrix.profile }}"
+        run: uv run pytest -ra -vv -x tests/functional --profile "${{ matrix.profile }}"

@@ -139,8 +139,10 @@ class FabricApiClient:
 
         workspace_id = self.get_workspace_id()
 
-        url = f"{self._credentials.fabric_base_api_uri}/workspaces/{workspace_id}/warehouses"
-        warehouses = []
+        url: str | None = (
+            f"{self._credentials.fabric_base_api_uri}/workspaces/{workspace_id}/warehouses"
+        )
+        warehouses: list[dict] = []
 
         while url is not None:
             response = self._api_get(url)

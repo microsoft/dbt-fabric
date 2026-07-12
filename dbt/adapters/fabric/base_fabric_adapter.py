@@ -3,9 +3,8 @@ from typing import Any
 
 from dbt.adapters.base import available
 from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.sql.impl import SQLAdapter
-
 from dbt.adapters.fabric.purview_sync import PurviewSync, extract_syncable_models
+from dbt.adapters.sql.impl import SQLAdapter
 
 logger = AdapterLogger("fabric")
 

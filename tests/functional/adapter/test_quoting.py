@@ -11,6 +11,7 @@ Verifies that the adapter uses [] brackets (not "") across:
 """
 
 import pytest
+
 from dbt.tests.util import get_manifest, run_dbt
 
 # ---------------------------------------------------------------------------
@@ -234,6 +235,6 @@ class TestRelationRenderingBrackets:
                 relation_name = node.relation_name
                 if relation_name:
                     # Should not contain double-quote quoting
-                    assert (
-                        '""' not in relation_name
-                    ), f"Found double-quote quoting in {node_id}: {relation_name}"
+                    assert '""' not in relation_name, (
+                        f"Found double-quote quoting in {node_id}: {relation_name}"
+                    )

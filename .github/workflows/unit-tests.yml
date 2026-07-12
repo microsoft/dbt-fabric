@@ -30,8 +30,8 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: pip install -r dev_requirements.txt
+      - name: Sync dependencies (uv)
+        run: uv sync --locked
 
       - name: Run unit tests
-        run: python -m pytest -n auto -ra -v tests/unit
+        run: uv run pytest -n auto -ra -v tests/unit

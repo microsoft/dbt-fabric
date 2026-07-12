@@ -33,7 +33,7 @@ class TestByteArrayToDatetime:
     def test_utc_datetime(self):
         data = self._pack(2024, 3, 15, 10, 30, 45, 123456000, 0, 0)
         result = byte_array_to_datetime(data)
-        assert result == dt.datetime(2024, 3, 15, 10, 30, 45, 123456, tzinfo=dt.timezone.utc)
+        assert result == dt.datetime(2024, 3, 15, 10, 30, 45, 123456, tzinfo=dt.UTC)
 
     def test_positive_offset(self):
         data = self._pack(2025, 12, 31, 23, 59, 59, 0, 5, 30)

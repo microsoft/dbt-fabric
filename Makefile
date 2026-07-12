@@ -1,35 +1,36 @@
 .DEFAULT_GOAL:=help
 
 .PHONY: dev
-dev: ## Installs adapter in develop mode along with development dependencies
+dev: ## Sets up the dev environment (uv sync) and installs pre-commit hooks.
 	@\
-	pip install -r dev_requirements.txt && pre-commit install
+	uv sync && uv run pre-commit install
 
 .PHONY: mypy
-mypy: ## Runs mypy against staged changes for static type checking.
+mypy: ## Runs mypy for static type checking.
 	@\
-	pre-commit run --hook-stage manual mypy-check | grep -v "INFO"
+	uv run mypy
 
-.PHONY: flake8
-flake8: ## Runs flake8 against staged changes to enforce style guide.
+.PHONY: ruff
+ruff: ## Runs ruff lint checks.
 	@\
-	pre-commit run --hook-stage manual flake8-check | grep -v "INFO"
+	uv run ruff check .
 
-.PHONY: black
-black: ## Runs black  against staged changes to enforce style guide.
+.PHONY: format
+format: ## Runs ruff format checks.
 	@\
-	pre-commit run --hook-stage manual black-check -v | grep -v "INFO"
+	uv run ruff format --check .
 
 .PHONY: lint
-lint: ## Runs flake8 and mypy code checks against staged changes.
+lint: ## Runs ruff and mypy code checks.
 	@\
-	pre-commit run flake8-check --hook-stage manual | grep -v "INFO"; \
-	pre-commit run mypy-check --hook-stage manual | grep -v "INFO"
+	uv run ruff check .; \
+	uv run ruff format --check .; \
+	uv run mypy
 
 .PHONY: all
-all: ## Runs all checks against staged changes.
+all: ## Runs all pre-commit checks against staged changes.
 	@\
-	pre-commit run -a
+	uv run pre-commit run -a
 
 .PHONY: linecheck
 linecheck: ## Checks for all Python lines 100 characters or more
@@ -39,20 +40,20 @@ linecheck: ## Checks for all Python lines 100 characters or more
 .PHONY: unit
 unit: ## Runs unit tests.
 	@\
-	pytest -n auto -ra -v tests/unit
+	uv run pytest -n auto -ra -v tests/unit
 
 .PHONY: functional
 functional: ## Runs functional tests.
 	@\
-	pytest -n auto -ra -v tests/functional
+	uv run pytest -n auto -ra -v tests/functional
 
 .PHONY: test
-test: ## Runs unit tests and code checks against staged changes.
+test: ## Runs unit tests and code checks.
 	@\
-	pytest -n auto -ra -v tests/unit; \
-	pre-commit run black-check --hook-stage manual | grep -v "INFO"; \
-	pre-commit run flake8-check --hook-stage manual | grep -v "INFO"; \
-	pre-commit run mypy-check --hook-stage manual | grep -v "INFO"
+	uv run pytest -n auto -ra -v tests/unit; \
+	uv run ruff check .; \
+	uv run ruff format --check .; \
+	uv run mypy
 
 .PHONY: server
 server: ## Spins up a local MS SQL Server instance for development. Docker-compose is required.

@@ -4,8 +4,8 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 import dbt_common.exceptions
 import requests
-from dbt.adapters.events.logging import AdapterLogger
 
+from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 from dbt.adapters.fabric.purview_types import (
     AtlasEntity,

@@ -2,9 +2,8 @@ import builtins
 from dataclasses import dataclass, field
 
 from dbt.adapters.base.relation import BaseRelation
-from dbt.adapters.utils import classproperty
-
 from dbt.adapters.fabric.relation_configs import FabricQuotePolicy, FabricRelationType
+from dbt.adapters.utils import classproperty
 
 
 @dataclass(frozen=True, eq=False, repr=False)

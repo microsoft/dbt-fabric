@@ -1,8 +1,7 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from dbt.adapters.events.logging import AdapterLogger
-
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
 from dbt.adapters.fabric.purview_client import PurviewClient, _qualifiedname_matches
 from dbt.adapters.fabric.purview_types import (
@@ -511,7 +510,7 @@ class PurviewSync:
 
         attrs: DbtMetadataAttrs = {
             "dbt_model_id": unique_id,
-            "dbt_last_sync": datetime.now(timezone.utc).isoformat(),
+            "dbt_last_sync": datetime.now(UTC).isoformat(),
         }
         if tags:
             attrs["dbt_tags"] = ",".join(tags) if isinstance(tags, list) else str(tags)

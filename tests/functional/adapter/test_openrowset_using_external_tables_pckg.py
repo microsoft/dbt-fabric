@@ -18,6 +18,7 @@ live Fabric warehouse connection (OneLake sample files uploaded to the test lake
 import re
 
 import pytest
+
 from dbt.tests.util import run_dbt, run_dbt_and_capture
 
 # -- Constants --
@@ -72,9 +73,7 @@ sources:
             data_type: "varchar(200)"
           - name: created_at
             data_type: datetime2
-""".replace(
-    "{base}", ONELAKE_BASE
-)
+""".replace("{base}", ONELAKE_BASE)
 
 parquet_model_sql = """
 select * from {{ source('ext_parquet', 'customers_ext') }}
@@ -104,9 +103,7 @@ sources:
             data_type: "decimal(10,2)"
           - name: in_stock
             data_type: bit
-""".replace(
-    "{base}", ONELAKE_BASE
-)
+""".replace("{base}", ONELAKE_BASE)
 
 csv_model_sql = """
 select * from {{ source('ext_csv', 'products_ext') }}
@@ -129,9 +126,7 @@ sources:
             data_type: "varchar(50)"
           - name: timestamp
             data_type: "varchar(50)"
-""".replace(
-    "{base}", ONELAKE_BASE
-)
+""".replace("{base}", ONELAKE_BASE)
 
 jsonl_model_sql = """
 select * from {{ source('ext_jsonl', 'events_ext') }}
@@ -154,9 +149,7 @@ sources:
         columns:
           - name: customer_id
             data_type: int
-""".replace(
-    "{base}", ONELAKE_BASE
-)
+""".replace("{base}", ONELAKE_BASE)
 
 
 # -- Test classes --
