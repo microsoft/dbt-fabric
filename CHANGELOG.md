@@ -1,5 +1,11 @@
 # Changelog
 
+### v1.10.1
+
+## Bug Fixes
+
+* **Retry `08S01` connection resets during result-set fetch (`SQLMoreResults`)** — `FabricConnectionManager.execute()` walked result sets (`cursor.nextset()`) outside any retry wrapper, and called `add_query()` without a `retryable_exceptions` tuple, so its retry loop compiled to `except ()` and never matched. A connection reset that surfaced mid-fetch therefore failed the run outright, even with `ConnectRetryCount` set — because `ConnectRetryCount` only retries the initial connect and restores *idle* pooled connections, not a connection actively streaming results, which Fabric Warehouse's gateway resets when it recycles a session. `execute()` now threads the same retryable-exception set used at connect time (`OperationalError`, `InternalError`, plus `InterfaceError` for AAD auth) into `add_query()`, and wraps the result-set walk so a reset re-establishes the connection and re-runs the whole statement from a fresh cursor, bounded by the `retries` credential. Gated behind a new opt-in `retry_result_set_errors` credential (default `False`), because re-running a statement can double-apply a `MERGE`/`INSERT` that partially committed before the reset was observed; existing behaviour is unchanged when it is off. Resolves [#417](https://github.com/microsoft/dbt-fabric/issues/417).
+
 ### v1.10.0
 
 ## Features

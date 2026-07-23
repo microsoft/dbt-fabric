@@ -3,6 +3,7 @@ from unittest import mock
 import pytest
 
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
+from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 
 class MockCursor:
@@ -37,14 +38,23 @@ class MockConnection:
     def __init__(self):
         self.name = "test_connection"
         self.transaction_open = True
-        self.credentials = mock.MagicMock()
-        self.credentials.retries = 1
+        # Real credentials so execute() reads retry_result_set_errors (False by
+        # default) rather than a truthy MagicMock attribute.
+        self.credentials = FabricCredentials(
+            driver="ODBC Driver 18 for SQL Server",
+            host="fake.sql.fabric.net",
+            database="dbt",
+            schema="fabric",
+        )
         self.handle = mock.MagicMock()
 
 
 @pytest.fixture
 def connection_manager():
     cm = FabricConnectionManager.__new__(FabricConnectionManager)
+    # execute() now reads credentials via get_thread_connection(); the manager
+    # is built with __new__ (no lock), so stub it to a plain MockConnection.
+    cm.get_thread_connection = lambda: MockConnection()
     return cm
 
 
