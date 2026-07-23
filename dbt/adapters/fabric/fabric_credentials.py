@@ -36,6 +36,14 @@ class FabricCredentials(Credentials):
     # Useful when routing connections through a proxy or when catalog-lock
     # contention makes it preferable to open a fresh connection each time.
     pooling: Optional[bool] = True
+    # Set to True to retry statements that hit a transient connection reset
+    # (08S01) while stepping through result sets (SQLMoreResults). Off by
+    # default because the retry re-runs the whole statement, which can
+    # double-apply a MERGE/INSERT that partially committed before the reset
+    # surfaced. Only enable for targets (e.g. Fabric Warehouse) whose gateway
+    # recycles sessions mid-fetch and whose statements are re-execution-safe.
+    # See https://github.com/microsoft/dbt-fabric/issues/417
+    retry_result_set_errors: Optional[bool] = False
 
     _ALIASES = {
         "user": "UID",
@@ -97,6 +105,7 @@ class FabricCredentials(Credentials):
             "trust_cert",
             "api_url",
             "pooling",
+            "retry_result_set_errors",
         )
 
     @property

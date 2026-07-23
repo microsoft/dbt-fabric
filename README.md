@@ -96,6 +96,29 @@ flags:
 
 Or pass `--no-populate-cache` on the CLI for a single run. This prevents dbt from listing every schema in the warehouse upfront, significantly reducing catalog read pressure during concurrent runs.
 
+## Retrying mid-fetch connection resets (`08S01`)
+
+Fabric Warehouse's gateway can recycle a session while a statement is still streaming results, surfacing as:
+
+```
+('08S01', '[08S01] [Microsoft][ODBC Driver 18 for SQL Server]TCP Provider: Error code 0x68 (104) (SQLMoreResults)')
+```
+
+`ConnectRetryCount` does **not** cover this — it only retries the initial connect and restores *idle* pooled connections, not one actively mid-fetch. Set `retry_result_set_errors: true` to make the adapter re-establish the connection and re-run the statement (up to `retries` times) when this happens:
+
+```yaml
+# profiles.yml
+my_fabric_project:
+  outputs:
+    dev:
+      type: fabric
+      # ... connection settings ...
+      retries: 3
+      retry_result_set_errors: true  # default false
+```
+
+It is **off by default** because the retry re-runs the whole statement, which can double-apply a `MERGE`/`INSERT` that had already partially committed before the reset surfaced. Enable it only when your target hits these resets and its statements are safe to re-execute (e.g. the CTAS/backup-relation patterns the adapter emits for `table`/`view` materializations). See [#417](https://github.com/microsoft/dbt-fabric/issues/417).
+
 ## Changelog
 
 See [the changelog](CHANGELOG.md)

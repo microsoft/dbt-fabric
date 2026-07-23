@@ -31,7 +31,7 @@ from azure.core.credentials import AccessToken
 from azure.identity import AzureCliCredential, DefaultAzureCredential, EnvironmentCredential
 from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
 from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.events.types import AdapterEventDebug, ConnectionUsed, SQLQuery, SQLQueryStatus
+from dbt.adapters.events.types import ConnectionUsed, SQLQuery, SQLQueryStatus
 from dbt.adapters.sql import SQLConnectionManager
 from dbt_common.clients.agate_helper import empty_table
 from dbt_common.events.contextvars import get_node_info
@@ -473,6 +473,22 @@ class FabricConnectionManager(SQLConnectionManager):
             raise dbt_common.exceptions.DbtRuntimeError(e)
 
     @classmethod
+    def _get_retryable_exceptions(
+        cls, credentials: FabricCredentials
+    ) -> Tuple[Type[Exception], ...]:
+        # https://github.com/mkleehammer/pyodbc/wiki/Exceptions
+        retryable_exceptions = [
+            pyodbc.InternalError,  # not used according to docs, but defined in PEP-249
+            pyodbc.OperationalError,
+        ]
+
+        if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
+            # Temporary login/token errors fall into this category when using AAD
+            retryable_exceptions.append(pyodbc.InterfaceError)
+
+        return tuple(retryable_exceptions)
+
+    @classmethod
     def open(cls, connection: Connection) -> Connection:
         if connection.state == ConnectionState.OPEN:
             logger.debug("Connection is already open, skipping open.")
@@ -557,14 +573,7 @@ class FabricConnectionManager(SQLConnectionManager):
 
         con_str_display = ";".join(con_str)
 
-        retryable_exceptions = [  # https://github.com/mkleehammer/pyodbc/wiki/Exceptions
-            pyodbc.InternalError,  # not used according to docs, but defined in PEP-249
-            pyodbc.OperationalError,
-        ]
-
-        if credentials.authentication.lower() in AZURE_AUTH_FUNCTIONS:
-            # Temporary login/token errors fall into this category when using AAD
-            retryable_exceptions.append(pyodbc.InterfaceError)
+        retryable_exceptions = cls._get_retryable_exceptions(credentials)
 
         def connect():
             logger.debug(f"Using connection string: {con_str_display}")
@@ -669,10 +678,9 @@ class FabricConnectionManager(SQLConnectionManager):
                 if attempt >= retry_limit:
                     raise e
 
-                fire_event(
-                    AdapterEventDebug(
-                        message=f"Got a retryable error {type(e)}. {retry_limit-attempt} retries left. Retrying in 1 second.\nError:\n{e}"
-                    )
+                logger.debug(
+                    f"Got a retryable error {type(e)}. {retry_limit-attempt} retries left. "
+                    f"Retrying in 1 second.\nError:\n{e}"
                 )
                 time.sleep(1)
 
@@ -765,22 +773,80 @@ class FabricConnectionManager(SQLConnectionManager):
         data_type = str(type_code)[str(type_code).index("'") + 1 : str(type_code).rindex("'")]  # type: ignore
         return datatypes[data_type]
 
+    def _reconnect(self, connection: Connection) -> Connection:
+        """
+        Force a fresh connection before re-running a statement.
+
+        An 08S01 reset surfaced while stepping through result sets leaves the
+        underlying pyodbc connection dead, so re-running the statement on the
+        same handle would just fail again. Close it (best-effort) and re-open.
+        """
+        try:
+            if connection.handle is not None:
+                connection.handle.close()
+        except Exception:
+            logger.debug("Failed to close handle before reconnect; continuing.")
+
+        connection.state = ConnectionState.CLOSED
+        connection.handle = None
+        return self.open(connection)
+
     def execute(
         self, sql: str, auto_begin: bool = True, fetch: bool = False, limit: Optional[int] = None
     ) -> Tuple[AdapterResponse, agate.Table]:
         sql = self._add_query_comment(sql)
-        _, cursor = self.add_query(sql, auto_begin)
-        if fetch:
-            # Get the result of the first non-empty result set (if any)
-            while cursor.description is None:
-                if not cursor.nextset():
-                    break
-            table = self.get_result_from_cursor(cursor, limit)
+
+        connection = self.get_thread_connection()
+        credentials = self.get_credentials(connection.credentials)
+
+        # Opt-in (see FabricCredentials.retry_result_set_errors and issue #417).
+        # When disabled, retryable_exceptions is empty and the walk below runs
+        # exactly once, preserving the previous behaviour.
+        if getattr(credentials, "retry_result_set_errors", False):
+            retryable_exceptions = self._get_retryable_exceptions(credentials)
+            retry_limit = credentials.retries if credentials.retries > 3 else 2
         else:
-            table = empty_table()
-        # Step through all result sets so we process all errors
-        while cursor.nextset():
-            pass
+            retryable_exceptions: Tuple[Type[Exception], ...] = ()
+            retry_limit = 0
+
+        attempt = 0
+        while True:
+            # add_query() already retries the initial cursor.execute() on these
+            # exceptions; passing the tuple restores that path (previously it
+            # defaulted to an empty tuple and never retried). See issue #417.
+            _, cursor = self.add_query(sql, auto_begin, retryable_exceptions=retryable_exceptions)
+            try:
+                if fetch:
+                    # Get the result of the first non-empty result set (if any)
+                    while cursor.description is None:
+                        if not cursor.nextset():
+                            break
+                    table = self.get_result_from_cursor(cursor, limit)
+                else:
+                    table = empty_table()
+                # Step through all result sets so we process all errors
+                while cursor.nextset():
+                    pass
+            except retryable_exceptions as e:
+                # A connection reset during the result-set walk (e.g. 08S01 /
+                # SQLMoreResults) has no retry coverage in add_query(), which
+                # only wraps the initial execute. Re-establish the connection
+                # and re-run the whole statement from a fresh cursor.
+                attempt += 1
+                if attempt > retry_limit:
+                    raise
+
+                logger.debug(
+                    f"Got a retryable error {type(e)} while stepping through result sets. "
+                    f"{retry_limit - attempt + 1} retries left. "
+                    f"Re-running statement in 1 second.\nError:\n{e}"
+                )
+                time.sleep(1)
+                connection = self._reconnect(connection)
+                continue
+
+            break
+
         # Get response after stepping through all result sets
         # so that cursor.rowcount reflects the last statement executed.
         # This fixes rows_affected being -1 for table materializations
