@@ -23,6 +23,7 @@
     CREATE OR ALTER FUNCTION {{ target_relation.include(database=False) }}
     ({{ formatted_scalar_function_args_sql()}})
     RETURNS {{ model.returns.data_type }}
+    {{ scalar_function_volatility_sql() }}
     AS
 {% endmacro %}
 

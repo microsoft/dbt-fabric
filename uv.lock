@@ -277,8 +277,8 @@ wheels = [
 
 [[package]]
 name = "dbt-core"
-version = "1.10.22"
-source = { git = "https://github.com/dbt-labs/dbt-core.git?subdirectory=core&rev=1.10.latest#6b6b3bdf5410ff786d7d747de9144382fb6acf2d" }
+version = "1.11.12"
+source = { git = "https://github.com/dbt-labs/dbt-core.git?subdirectory=core&rev=1.11.latest#feb6a454bb3711003db7ad690d38811105699f75" }
 dependencies = [
     { name = "agate" },
     { name = "click" },
@@ -359,9 +359,9 @@ dev = [
 requires-dist = [
     { name = "azure-core", specifier = ">=1.26.0" },
     { name = "azure-identity", specifier = ">=1.14.0" },
-    { name = "dbt-adapters", specifier = ">=1.10.0,<2.0" },
+    { name = "dbt-adapters", specifier = ">=1.15.5,<2.0" },
     { name = "dbt-common", specifier = ">=1.0.4,<2.0" },
-    { name = "dbt-core", specifier = ">=1.10.0" },
+    { name = "dbt-core", specifier = ">=1.11.0" },
     { name = "mssql-python", specifier = ">=1.4.0" },
     { name = "requests", specifier = ">=2.33.0" },
 ]
@@ -369,7 +369,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "dbt-adapters", specifier = ">=1.15.5,<1.24" },
-    { name = "dbt-core", git = "https://github.com/dbt-labs/dbt-core.git?subdirectory=core&rev=1.10.latest" },
+    { name = "dbt-core", git = "https://github.com/dbt-labs/dbt-core.git?subdirectory=core&rev=1.11.latest" },
     { name = "dbt-tests-adapter", specifier = ">=1.15.5,<1.24" },
     { name = "flaky", specifier = "==3.7.0" },
     { name = "freezegun", specifier = "==1.5.5" },
@@ -1200,11 +1200,11 @@ wheels = [
 
 [[package]]
 name = "sqlparse"
-version = "0.5.4"
+version = "0.5.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/18/67/701f86b28d63b2086de47c942eccf8ca2208b3be69715a1119a4e384415a/sqlparse-0.5.4.tar.gz", hash = "sha256:4396a7d3cf1cd679c1be976cf3dc6e0a51d0111e87787e7a8d780e7d5a998f9e", size = 120112, upload-time = "2025-11-28T07:10:18.377Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/76/437d71068094df0726366574cf3432a4ed754217b436eb7429415cf2d480/sqlparse-0.5.5.tar.gz", hash = "sha256:e20d4a9b0b8585fdf63b10d30066c7c94c5d7a7ec47c889a2d83a3caa93ff28e", size = 120815, upload-time = "2025-12-19T07:17:45Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/70/001ee337f7aa888fb2e3f5fd7592a6afc5283adb1ed44ce8df5764070f22/sqlparse-0.5.4-py3-none-any.whl", hash = "sha256:99a9f0314977b76d776a0fcb8554de91b9bb8a18560631d6bc48721d07023dcb", size = 45933, upload-time = "2025-11-28T07:10:19.73Z" },
+    { url = "https://files.pythonhosted.org/packages/49/4b/359f28a903c13438ef59ebeee215fb25da53066db67b305c125f1c6d2a25/sqlparse-0.5.5-py3-none-any.whl", hash = "sha256:12a08b3bf3eec877c519589833aed092e2444e68240a3577e8e26148acc7b1ba", size = 46138, upload-time = "2025-12-19T07:17:46.573Z" },
 ]
 
 [[package]]
