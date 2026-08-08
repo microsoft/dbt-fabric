@@ -10,6 +10,9 @@
         {% endif %}
     {% endfor %}
 
+    {% if ns.powers_of_two is none %}
+        {{ exceptions.raise_compiler_error("upper bound must be <= 2 ** 99 (got " ~ upper_bound ~ ")") }}
+    {% endif %}
     with fabric_powers_of_two as (
         select 0 as generated_number
         union all
