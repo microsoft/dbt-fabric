@@ -11,6 +11,8 @@
   {% endset %}
   {% set groupby_gb_cols = 'group by ' + group_by_columns|join(',') %}
 {% else %}
+  {% set select_gb_cols = '' %}
+  {% set groupby_gb_cols = '' %}
   {% set join_gb_cols = '1 = 1' %}
 {% endif %}
 
