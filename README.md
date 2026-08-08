@@ -13,55 +13,7 @@ We've bundled all documentation on the dbt docs site
 
 ## Installation
 
-This adapter requires the Microsoft ODBC driver to be installed:
-[Windows](https://docs.microsoft.com/nl-be/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16#download-for-windows) |
-[macOS](https://docs.microsoft.com/nl-be/sql/connect/odbc/linux-mac/install-microsoft-odbc-driver-sql-server-macos?view=sql-server-ver16) |
-[Linux](https://docs.microsoft.com/nl-be/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16)
-
-<details><summary>Debian/Ubuntu</summary>
-<p>
-
-Make sure to install the ODBC headers as well as the driver linked above:
-
-```shell
-sudo apt-get install -y unixodbc-dev
-```
-
-</p>
-</details>
-
-<details><summary>macOS (Apple Silicon)</summary>
-<p>
-
-Install unixODBC and the ODBC driver via Homebrew:
-
-```shell
-brew install unixodbc msodbcsql18
-```
-
-Modern Homebrew (post-Sonoma) ships `libodbc.3.dylib`, but `pyodbc` wheels are often compiled against `libodbc.2.dylib`. This mismatch causes the following error at runtime:
-
-```
-Library not loaded: /opt/homebrew/opt/unixodbc/lib/libodbc.2.dylib
-```
-
-**Fix — recompile `pyodbc` against the installed unixODBC:**
-
-```shell
-export LDFLAGS="-L/opt/homebrew/opt/unixodbc/lib"
-export CPPFLAGS="-I/opt/homebrew/opt/unixodbc/include"
-pip install --force-reinstall --no-binary :all: pyodbc
-```
-
-**Alternative — create a compatibility symlink:**
-
-```shell
-ln -s /opt/homebrew/opt/unixodbc/lib/libodbc.3.dylib \
-      /opt/homebrew/opt/unixodbc/lib/libodbc.2.dylib
-```
-
-</p>
-</details>
+This adapter uses [`mssql-python`](https://github.com/microsoft/mssql-python) to connect to Fabric, which bundles its own driver.
 
 Latest version: ![PyPI](https://img.shields.io/pypi/v/dbt-fabric?label=latest&logo=pypi)
 

@@ -1,11 +1,3 @@
-{% macro fabric__make_temp_relation(base_relation, suffix='__dbt_temp') %}
-    {%- set temp_identifier = base_relation.identifier ~ suffix -%}
-    {%- set temp_relation = base_relation.incorporate(
-                                path={"identifier": temp_identifier}) -%}
-
-    {{ return(temp_relation) }}
-{% endmacro %}
-
 {% macro fabric__get_drop_sql(relation) -%}
   {% if relation.type == 'view' -%}
       {% call statement('find_references', fetch_result=true) %}
@@ -23,7 +15,8 @@
         and refs.referenced_entity_name = '{{ relation.identifier }}'
         and refs.referencing_class = 1
         and obj.type = 'V'
-        {{ apply_label() }}
+
+
       {% endcall %}
       {% set references = load_result('find_references')['data'] %}
       {% for reference in references -%}
@@ -33,10 +26,6 @@
             identifier = reference[1], schema = reference[0], database = relation.database, type='view'
           ))%}
       {% endfor %}
-    {% elif relation.type == 'table'%}
-      {% set object_id_type = 'U' %}
-    {%- else -%}
-        {{ exceptions.raise_not_implemented('Invalid relation being dropped: ' ~ relation) }}
     {% endif %}
     {{ get_use_database_sql(relation.database) }}
     EXEC('DROP {{ relation.type }} IF EXISTS {{ relation.include(database=False) }};');

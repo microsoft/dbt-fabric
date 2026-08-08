@@ -15,7 +15,6 @@
 
 {% macro fabric__get_delete_insert_merge_sql(target, source, unique_key, dest_columns, incremental_predicates=none) %}
 
-    {% set query_label = apply_label() %}
     {%- set dest_cols_csv = get_quoted_csv(dest_columns | map(attribute="name")) -%}
 
     {% if unique_key %}
@@ -35,7 +34,7 @@
                     and {{ predicate }}
                 {% endfor %}
             {% endif %}
-            {{ query_label }}
+            ;
         {% else %}
             delete from {{ target }}
             where (
@@ -48,7 +47,7 @@
                     and {{ predicate }}
                 {% endfor %}
             {%- endif -%}
-            {{ query_label }}
+            ;
         {% endif %}
     {% endif %}
 
@@ -56,7 +55,7 @@
     (
         select {{ dest_cols_csv }}
         from {{ source }}
-    ){{ query_label }}
+    );
 {% endmacro %}
 
 {#
@@ -71,7 +70,6 @@
     {%- set merge_update_columns = config.get('merge_update_columns') -%}
     {%- set merge_exclude_columns = config.get('merge_exclude_columns') -%}
     {%- set update_columns = get_merge_update_columns(merge_update_columns, merge_exclude_columns, dest_columns) -%}
-    {%- set query_label = apply_label() -%}
 
     {% if unique_key %}
         {% if unique_key is sequence and unique_key is not mapping and unique_key is not string %}
@@ -106,7 +104,7 @@
         ({{ dest_cols_csv }})
 
     when not matched by source then delete
-    {{ query_label }};
+    ;
 {% endmacro %}
 
 
@@ -118,8 +116,6 @@
   Aliases available in the condition: DBT_INTERNAL_SOURCE, DBT_INTERNAL_DEST
 #}
 {% macro fabric__get_merge_delete_condition_sql(target, source, unique_key, delete_condition) %}
-    {%- set query_label = apply_label() -%}
-
     delete DBT_INTERNAL_DEST
     from {{ target }} as DBT_INTERNAL_DEST
     inner join {{ source }} as DBT_INTERNAL_SOURCE
@@ -133,11 +129,15 @@
             DBT_INTERNAL_SOURCE.{{ unique_key }} = DBT_INTERNAL_DEST.{{ unique_key }}
         {% endif %}
     where {{ delete_condition }}
-    {{ query_label }};
+    ;
 {% endmacro %}
 
 
 {% macro fabric__get_incremental_microbatch_sql(arg_dict) %}
+    {% if arg_dict["unique_key"] %}
+        {% do return(adapter.dispatch('get_incremental_merge_sql', 'dbt')(arg_dict)) %}
+    {% endif %}
+
     {%- set target = arg_dict["target_relation"] -%}
     {%- set source = arg_dict["temp_relation"] -%}
     {%- set dest_columns = arg_dict["dest_columns"] -%}

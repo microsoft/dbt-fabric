@@ -16,13 +16,13 @@ jobs:
     name: Unit tests
     strategy:
       matrix:
-        python_version: ["3.10", "3.11"]
+        python_version: ["3.12", "3.13"]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
     container:
-      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}-msodbc18
+      image: ghcr.io/${{ github.repository }}:CI-${{ matrix.python_version }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.github_token }}
@@ -30,8 +30,11 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: pip install -r dev_requirements.txt
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Sync dependencies (uv)
+        run: uv sync --locked
 
       - name: Run unit tests
-        run: pytest -n auto -ra -v tests/unit
+        run: uv run pytest -n auto -ra -v tests/unit

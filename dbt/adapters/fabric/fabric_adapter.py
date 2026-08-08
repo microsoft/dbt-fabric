@@ -1,44 +1,38 @@
-import time
-from typing import List, Optional
-
 import agate
 import dbt_common.exceptions
-from dbt.adapters.base import Column as BaseColumn
-from dbt.adapters.base.impl import ConstraintSupport
-from dbt.adapters.base.meta import available
-from dbt.adapters.base.relation import BaseRelation
-from dbt.adapters.cache import _make_ref_key_dict
-from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
-from dbt.adapters.events.logging import AdapterLogger
-from dbt.adapters.events.types import SchemaCreation
-from dbt.adapters.sql import SQLAdapter
-from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME
-from dbt_common.behavior_flags import BehaviorFlag
 from dbt_common.contracts.constraints import (
     ColumnLevelConstraint,
     ConstraintType,
     ModelLevelConstraint,
 )
 from dbt_common.events.functions import fire_event
+from dbt_common.utils.dict import filter_null_values
 
+from dbt.adapters.base.column import Column as BaseColumn
+from dbt.adapters.base.impl import ConstraintSupport
+from dbt.adapters.base.meta import available
+from dbt.adapters.base.relation import BaseRelation
+from dbt.adapters.capability import Capability, CapabilityDict, CapabilitySupport, Support
+from dbt.adapters.events.types import SchemaCreation
+from dbt.adapters.fabric.base_fabric_adapter import BaseFabricAdapter
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
 from dbt.adapters.fabric.fabric_relation import FabricRelation
+from dbt.adapters.reference_keys import _make_ref_key_dict
+from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME, SQLAdapter
 
-logger = AdapterLogger("fabric")
 
-
-class FabricAdapter(SQLAdapter):
+class FabricAdapter(BaseFabricAdapter, SQLAdapter):
     ConnectionManager = FabricConnectionManager
+    connections: FabricConnectionManager
     Column = FabricColumn
+    AdapterSpecificConfigs = FabricConfigs
+    Relation = FabricRelation
 
     @classmethod
     def quote(cls, identifier):
-        return "[{}]".format(identifier)
-
-    AdapterSpecificConfigs = FabricConfigs
-    Relation = FabricRelation
+        return "[{}]".format(identifier.replace("]", "]]"))
 
     _capabilities: CapabilityDict = CapabilityDict(
         {
@@ -54,43 +48,8 @@ class FabricAdapter(SQLAdapter):
         ConstraintType.foreign_key: ConstraintSupport.ENFORCED,
     }
 
-    def list_relations_without_caching(self, schema_relation: BaseRelation) -> List[BaseRelation]:
-        """Override to add retry logic for catalog-lock contention on Fabric Warehouse.
-
-        Under concurrent DDL, sys.tables / sys.views reads can be blocked for
-        minutes. If query_timeout is set and a timeout fires, we retry up to
-        `retries` times with a short back-off before re-raising.
-        See https://github.com/microsoft/dbt-fabric/issues/362
-        """
-        retries = self.config.credentials.retries
-        last_exc: Exception
-        for attempt in range(1, retries + 2):  # +2: first attempt + retries
-            try:
-                return super().list_relations_without_caching(schema_relation)
-            except Exception as exc:
-                last_exc = exc
-                if attempt <= retries:
-                    wait = min(2 ** (attempt - 1), 30)  # 1s, 2s, 4s … capped at 30s
-                    logger.debug(
-                        f"list_relations_without_caching attempt {attempt} failed "
-                        f"({type(exc).__name__}: {exc}). "
-                        f"Retrying in {wait}s ({retries - attempt + 1} retries left)."
-                    )
-                    time.sleep(wait)
-        raise last_exc
-
-    @property
-    def _behavior_flags(self) -> List[BehaviorFlag]:
-        return [
-            {
-                "name": "empty",
-                "default": False,
-                "description": "When enabled, table and view materializations will be created as empty structures (no data).",
-            },
-        ]
-
     @available.parse(lambda *a, **k: [])
-    def get_column_schema_from_query(self, sql: str) -> List[BaseColumn]:
+    def get_column_schema_from_query(self, sql: str) -> list[BaseColumn]:
         """Get a list of the Columns with names and data types from the given sql."""
         _, cursor = self.connections.add_select_query(sql)
 
@@ -138,7 +97,7 @@ class FabricAdapter(SQLAdapter):
         lens = [len(d.encode("utf-8")) for d in column.values_without_nulls()]
         max_len = max(lens) if lens else 64
         length = max_len if max_len > 16 else 16
-        return "varchar({})".format(length)
+        return f"varchar({length})"
 
     @classmethod
     def convert_time_type(cls, agate_table, col_idx):
@@ -177,7 +136,7 @@ class FabricAdapter(SQLAdapter):
         self,
         relation_a: BaseRelation,
         relation_b: BaseRelation,
-        column_names: Optional[List[str]] = None,
+        column_names: list[str] | None = None,
         except_operator: str = "EXCEPT",
     ) -> str:
         """
@@ -187,12 +146,12 @@ class FabricAdapter(SQLAdapter):
         relations and the number of mismatched rows.
         """
         # This method only really exists for test reasons.
-        names: List[str]
+        names: list[str]
         if column_names is None:
             columns = self.get_columns_in_relation(relation_a)
-            names = sorted((self.quote(c.name) for c in columns))
+            names = sorted(self.quote(c.name) for c in columns)
         else:
-            names = sorted((self.quote(n) for n in column_names))
+            names = sorted(self.quote(n) for n in column_names)
         columns_csv = ", ".join(names)
 
         if columns_csv == "":
@@ -211,7 +170,7 @@ class FabricAdapter(SQLAdapter):
         """The set of standard builtin strategies which this adapter supports out-of-the-box.
         Not used to validate custom strategies defined by end users.
         """
-        return ["append", "delete+insert", "merge", "microbatch"]
+        return ["append", "delete+insert", "microbatch", "merge"]
 
     # This is for use in the test suite
     def run_sql_for_tests(self, sql, fetch, conn):
@@ -235,7 +194,7 @@ class FabricAdapter(SQLAdapter):
 
     @available
     @classmethod
-    def render_column_constraint(cls, constraint: ColumnLevelConstraint) -> Optional[str]:
+    def render_column_constraint(cls, constraint: ColumnLevelConstraint) -> str | None:
         rendered_column_constraint = None
         if constraint.type == ConstraintType.not_null:
             rendered_column_constraint = "not null "
@@ -248,7 +207,7 @@ class FabricAdapter(SQLAdapter):
         return rendered_column_constraint
 
     @classmethod
-    def render_model_constraint(cls, constraint: ModelLevelConstraint) -> Optional[str]:
+    def render_model_constraint(cls, constraint: ModelLevelConstraint) -> str | None:
         constraint_prefix = "add constraint "
         column_list = ", ".join(constraint.columns)
 
@@ -272,12 +231,39 @@ class FabricAdapter(SQLAdapter):
         elif constraint.type == ConstraintType.foreign_key and constraint.expression:
             return (
                 constraint_prefix
-                + f"{constraint.name} foreign key({column_list}) references {constraint.expression} not enforced"
+                + f"{constraint.name} foreign key({column_list}) references "
+                + f"{constraint.expression} not enforced"
             )
         elif constraint.type == ConstraintType.custom and constraint.expression:
             return f"{constraint_prefix}{constraint.expression}"
         else:
             return None
+
+    def _make_match_kwargs(self, database: str, schema: str, identifier: str) -> dict[str, str]:
+        return filter_null_values(
+            {
+                "database": database,
+                "identifier": identifier,
+                "schema": schema,
+            }
+        )
+
+    @available
+    def create_or_update_warehouse_snapshot(
+        self, snapshot_name: str, description: str | None = None
+    ) -> str:
+        """Create a new warehouse snapshot or update an existing one with the same name.
+
+        Exposed as a Jinja macro via ``@available``, so it can be called from
+        ``on-run-start``, ``on-run-end``, ``post-hook``, or any other Jinja context.
+
+        Args:
+            snapshot_name: Display name for the snapshot.
+            description: Optional description for the snapshot.
+        """
+        api = self.connections.get_fabric_api_client(self.config.credentials)
+        api.create_or_update_warehouse_snapshot(snapshot_name, description)
+        return ""
 
 
 COLUMNS_EQUAL_SQL = """

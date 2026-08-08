@@ -12,6 +12,7 @@ Two scenarios:
 """
 
 import pytest
+
 from dbt.tests.util import run_dbt
 
 # ---------------------------------------------------------------------------
@@ -106,9 +107,9 @@ class TestIncrementalMergeDeleteNotMatchedBySource:
             "select count(*) as cnt from {schema}.incremental_delete_not_matched",
             fetch="one",
         )
-        assert (
-            result[0] == 2
-        ), f"Expected 2 rows after incremental run (id=3 deleted), got {result[0]}"
+        assert result[0] == 2, (
+            f"Expected 2 rows after incremental run (id=3 deleted), got {result[0]}"
+        )
 
         # Confirm id=3 is gone and id=1, id=2 remain
         rows = project.run_sql(
@@ -154,9 +155,9 @@ class TestIncrementalMergeDeleteCondition:
             "select count(*) as cnt from {schema}.incremental_delete_condition",
             fetch="one",
         )
-        assert (
-            result[0] == 2
-        ), f"Expected 2 rows after incremental run (id=2 deleted), got {result[0]}"
+        assert result[0] == 2, (
+            f"Expected 2 rows after incremental run (id=2 deleted), got {result[0]}"
+        )
 
         # Confirm id=2 is gone and id=1, id=3 remain
         rows = project.run_sql(

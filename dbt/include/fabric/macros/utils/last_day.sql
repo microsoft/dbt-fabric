@@ -7,7 +7,7 @@
     {%- elif datepart == 'year' -%}
         CAST(DATEADD(YEAR, DATEDIFF(year, 0, {{ date }}) + 1, -1) AS DATE)
     {%- else -%}
-        {{dbt_utils.default_last_day(date, datepart)}}
+        {{default_last_day(date, datepart)}}
     {%- endif -%}
 
 {%- endmacro %}

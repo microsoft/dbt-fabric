@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.aliases.fixtures import MACROS__EXPECT_VALUE_SQL
 from dbt.tests.adapter.aliases.test_aliases import (
     BaseAliasErrors,

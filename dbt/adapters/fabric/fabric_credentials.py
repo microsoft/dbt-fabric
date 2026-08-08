@@ -1,104 +1,61 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any
 
-from dbt.adapters.contracts.connection import Credentials
+from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
 
 
 @dataclass
-class FabricCredentials(Credentials):
-    driver: str
-    host: str
-    database: str
-    schema: str
-    UID: Optional[str] = None
-    PWD: Optional[str] = None
-    windows_login: Optional[bool] = False
-    trace_flag: Optional[bool] = False
-    tenant_id: Optional[str] = None
-    client_id: Optional[str] = None
-    client_secret: Optional[str] = None
-    access_token: Optional[str] = None
-    # Added for access token expiration for oAuth and integration tests scenarios.
-    access_token_expires_on: Optional[int] = 0
-    authentication: str = "ActiveDirectoryServicePrincipal"
-    encrypt: Optional[bool] = True  # default value in MS ODBC Driver 18 as well
-    trust_cert: Optional[bool] = False  # default value in MS ODBC Driver 18 as well
-    retries: int = 3
-    schema_authorization: Optional[str] = None
-    login_timeout: Optional[int] = 0
-    query_timeout: Optional[int] = 0
-    workspace_id: Optional[str] = None
-    warehouse_snapshot_name: Optional[str] = None
-    warehouse_snapshot_id: Optional[str] = None
-    snapshot_timestamp: Optional[str] = None
-    api_url: Optional[str] = "https://api.fabric.microsoft.com/v1"
-    # Set to False to disable pyodbc connection pooling (one pool per process).
-    # Useful when routing connections through a proxy or when catalog-lock
-    # contention makes it preferable to open a fresh connection each time.
-    pooling: Optional[bool] = True
+class FabricCredentials(BaseFabricCredentials):
+    host: str | None = None
+    UID: str | None = None
+    PWD: str | None = None
+    windows_login: bool | None = False
+    trace_flag: bool | None = False
+    encrypt: bool | None = True
+    trust_cert: bool | None = False
+    schema_authorization: str | None = None
+    login_timeout: int = 0
+    lock_timeout: int = 30000
 
-    _ALIASES = {
+    _ALIASES = BaseFabricCredentials._ALIASES | {
         "user": "UID",
         "username": "UID",
         "pass": "PWD",
         "password": "PWD",
         "server": "host",
         "trusted_connection": "windows_login",
-        "auth": "authentication",
-        "app_id": "client_id",
-        "app_secret": "client_secret",
         "TrustServerCertificate": "trust_cert",
         "schema_auth": "schema_authorization",
         "SQL_ATTR_TRACE": "trace_flag",
-        "workspace_id": "workspace_id",
-        "warehouse_snapshot_name": "warehouse_snapshot_name",
-        "api_url": "api_url",
     }
 
     @property
     def type(self):
         return "fabric"
 
-    def validate_snapshot_properties(self):
-        workspace_provided = self.workspace_id is not None
-        snapshot_name_provided = self.warehouse_snapshot_name is not None
+    def __post_serialize__(self, dct: dict, context: dict | None = None) -> dict[Any, Any]:
+        des = super().__post_serialize__(dct, context)
 
-        if workspace_provided != snapshot_name_provided:
-            raise ValueError(
-                "Both workspace_id and warehouse_snapshot_name must be provided together, "
-                "or both must be None. Cannot have one without the other."
-            )
+        if des.get("authentication", "").lower() == "auto":
+            des["authentication"] = "ActiveDirectoryDefault"
 
-    def _connection_keys(self):
-        # return an iterator of keys to pretty-print in 'dbt debug'
-        # raise NotImplementedError
-        if self.windows_login is True:
-            self.authentication = "Windows Login"
+        if des.get("windows_login", False) is True:
+            des["authentication"] = "Windows Login"
 
-        if self.authentication.lower().strip() == "serviceprincipal":
-            self.authentication = "ActiveDirectoryServicePrincipal"
+        return des
 
-        self.validate_snapshot_properties()
-
-        return (
-            "server",
-            "database",
-            "schema",
-            "warehouse_snapshot_name",
-            "snapshot_timestamp",
+    def _connection_keys(self) -> tuple[str, ...]:
+        return super()._connection_keys() + (
             "UID",
-            "workspace_id",
-            "authentication",
-            "retries",
-            "login_timeout",
-            "query_timeout",
+            "windows_login",
             "trace_flag",
             "encrypt",
             "trust_cert",
-            "api_url",
-            "pooling",
+            "schema_authorization",
+            "login_timeout",
+            "lock_timeout",
         )
 
     @property
     def unique_field(self):
-        return self.host
+        return self.host or super().unique_field

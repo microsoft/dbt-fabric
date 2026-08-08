@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 from dbt.tests.util import read_file, run_dbt, run_dbt_and_capture
 
 # -- Model fixtures --
@@ -88,6 +89,7 @@ models:
 
 def _normalize_whitespace(input: str) -> str:
     subbed = re.sub(r"\s+", " ", input)
+    subbed = re.sub(r"[\[\]]", "", subbed)
     return re.sub(r"\s?([\(\),])\s?", r"\1", subbed).lower().strip()
 
 
@@ -179,7 +181,7 @@ class TestClusterByTooManyColumns:
             ["run", "-s", "cluster_by_too_many"], expect_pass=False
         )
         assert len(results) == 1
-        assert "maximum of 4 columns" in log_output
+        assert "greater than the maximum clustering column count 4" in log_output
 
 
 class TestClusterByMaxColumns:

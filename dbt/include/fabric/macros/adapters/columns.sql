@@ -7,7 +7,6 @@
 {% endmacro %}
 
 {% macro fabric__get_columns_in_relation(relation) -%}
-    {% set query_label = apply_label() %}
     {% call statement('get_columns_in_relation', fetch_result=True) %}
         {{ get_use_database_sql(relation.database) }}
         with mapping as (
@@ -35,7 +34,6 @@
             numeric_scale
         from mapping
         order by ordinal_position
-        {{ query_label }}
 
     {% endcall %}
     {% set table = load_result('get_columns_in_relation').table %}
@@ -43,7 +41,6 @@
 {% endmacro %}
 
 {% macro fabric__get_columns_in_query(select_sql) %}
-    {% set query_label = apply_label() %}
     {% call statement('get_columns_in_query', fetch_result=True, auto_begin=False) -%}
         with __dbt_sbq as
         (
@@ -52,7 +49,6 @@
         select top 0 *
         from __dbt_sbq
         where 0 = 1
-        {{ query_label }}
 
     {% endcall %}
 
@@ -69,14 +65,14 @@
         FROM
         (
             SELECT
-            '"' + CAST(c.COLUMN_NAME AS VARCHAR(128)) + '"' AS ColumnName
+            '[' + REPLACE(CAST(c.COLUMN_NAME AS VARCHAR(128)), ']', ']]') + ']' AS ColumnName
             FROM INFORMATION_SCHEMA.TABLES t
             JOIN INFORMATION_SCHEMA.COLUMNS c
                 ON t.TABLE_SCHEMA = c.TABLE_SCHEMA
                 AND t.TABLE_NAME = c.TABLE_NAME
-                WHERE t.TABLE_NAME = REPLACE('{{table_name}}','"','')
-                AND t.TABLE_SCHEMA = REPLACE('{{schema_name}}','"','')
-                AND c.COLUMN_NAME <> REPLACE('{{column_name}}','"','')
+                WHERE t.TABLE_NAME = REPLACE(REPLACE('{{table_name}}','[',''),']','')
+                AND t.TABLE_SCHEMA = REPLACE(REPLACE('{{schema_name}}','[',''),']','')
+                AND c.COLUMN_NAME <> REPLACE(REPLACE('{{column_name}}','[',''),']','')
         ) T
     {% endset %}
 
@@ -90,8 +86,7 @@
 
     {% set tempTable %}
         CREATE TABLE {{tempTableName}}
-        AS SELECT {{query_result_text}}, CAST([{{ column_name }}] AS {{new_column_type}}) AS [{{column_name}}] FROM {{ relation.schema }}.{{ relation.identifier }}
-        {{ apply_label() }}
+        AS SELECT {{query_result_text}}, CAST([{{ column_name | replace(']', ']]') }}] AS {{new_column_type}}) AS [{{ column_name | replace(']', ']]') }}] FROM {{ relation.schema }}.{{ relation.identifier }}
     {% endset %}
 
     {% call statement('create_temp_table') -%}
@@ -108,7 +103,7 @@
 
     {% set createTable %}
         CREATE TABLE {{ relation.schema }}.{{ relation.identifier }}
-        AS SELECT * FROM {{tempTableName}} {{ apply_label() }}
+        AS SELECT * FROM {{tempTableName}}
     {% endset %}
 
     {% call statement('create_Table') -%}
@@ -124,17 +119,16 @@
     {%- endcall %}
 {% endmacro %}
 
---TODO
 {% macro fabric__alter_relation_add_remove_columns(relation, add_columns, remove_columns) %}
   {% call statement('add_drop_columns') -%}
     {% if add_columns %}
         alter {{ relation.type }} {{ relation }}
-        add {% for column in add_columns %}[{{ column.name }}] {{ column.data_type }}{{ ', ' if not loop.last }}{% endfor %};
+        add {% for column in add_columns %}[{{ column.name | replace(']', ']]') }}] {{ column.data_type }}{{ ', ' if not loop.last }}{% endfor %};
     {% endif %}
 
     {% if remove_columns %}
         alter {{ relation.type }} {{ relation }}
-        drop column {% for column in remove_columns %}[{{ column.name }}]{{ ',' if not loop.last }}{% endfor %};
+        drop column {% for column in remove_columns %}[{{ column.name | replace(']', ']]') }}]{{ ',' if not loop.last }}{% endfor %};
     {% endif %}
   {%- endcall -%}
 {% endmacro %}

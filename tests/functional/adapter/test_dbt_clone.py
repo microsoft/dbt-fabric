@@ -4,6 +4,8 @@ from collections import Counter
 from copy import deepcopy
 
 import pytest
+from dbt_common.exceptions import DbtRuntimeError
+
 from dbt.tests.adapter.dbt_clone.fixtures import (
     custom_can_clone_tables_false_macros_sql,
     ephemeral_model_sql,
@@ -18,7 +20,6 @@ from dbt.tests.adapter.dbt_clone.fixtures import (
     view_model_sql,
 )
 from dbt.tests.util import run_dbt
-from dbt_common.exceptions import DbtRuntimeError
 
 
 class BaseClone:
@@ -124,7 +125,7 @@ class BaseClonePossible(BaseClone):
         # objects already exist, so this is a no-op
         results = run_dbt(clone_args)
         assert len(results) == 4
-        assert all("ok" in r.message.lower() for r in results)
+        assert all("no-op" in r.message.lower() for r in results)
 
         # recreate all objects
         results = run_dbt([*clone_args, "--full-refresh"])
@@ -133,7 +134,7 @@ class BaseClonePossible(BaseClone):
         # select only models this time
         results = run_dbt([*clone_args, "--resource-type", "model"])
         assert len(results) == 2
-        assert all("ok" in r.message.lower() for r in results)
+        assert all("no-op" in r.message.lower() for r in results)
 
     def test_clone_no_state(self, project, unique_schema, other_schema):
         project.create_test_schema(other_schema)
@@ -185,7 +186,7 @@ class BaseCloneNotPossible(BaseClone):
         # objects already exist, so this is a no-op
         results = run_dbt(clone_args)
         assert len(results) == 4
-        assert all("ok" in r.message.lower() for r in results)
+        assert all("no-op" in r.message.lower() for r in results)
 
         # recreate all objects
         results = run_dbt([*clone_args, "--full-refresh"])
@@ -194,7 +195,7 @@ class BaseCloneNotPossible(BaseClone):
         # select only models this time
         results = run_dbt([*clone_args, "--resource-type", "model"])
         assert len(results) == 2
-        assert all("ok" in r.message.lower() for r in results)
+        assert all("no-op" in r.message.lower() for r in results)
 
 
 class TestFabricCloneNotPossible(BaseCloneNotPossible):

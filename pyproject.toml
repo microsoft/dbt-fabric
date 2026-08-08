@@ -1,3 +1,124 @@
+[project]
+name = "dbt-fabric"
+dynamic = ["version"]
+description = "A Microsoft Fabric Synapse Data Warehouse adapter plugin for dbt"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Pradeep Srikakolapu" },
+]
+requires-python = ">=3.12,<3.14"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "mssql-python>=1.4.0",
+    "azure-identity>=1.14.0",
+    "azure-core>=1.26.0",
+    "requests>=2.33.0",
+    "dbt-common>=1.0.4,<2.0",
+    "dbt-core>=1.10.0",
+    "dbt-adapters>=1.10.0,<2.0",
+]
+
+[project.urls]
+"Setup & configuration" = "https://docs.getdbt.com/reference/warehouse-profiles/fabric-profile"
+"Documentation & usage" = "https://docs.getdbt.com/reference/resource-configs/fabric-configs"
+"Changelog" = "https://github.com/microsoft/dbt-fabric/blob/main/CHANGELOG.md"
+"Issue Tracker" = "https://github.com/microsoft/dbt-fabric/issues"
+"Repository" = "https://github.com/microsoft/dbt-fabric"
+
+[dependency-groups]
+dev = [
+    # install latest changes in dbt-core
+    # TODO: how to automate switching from develop to version branches?
+    "dbt-core @ git+https://github.com/dbt-labs/dbt-core.git@1.10.latest#subdirectory=core",
+    "dbt-adapters>=1.15.5,<1.24",
+    "dbt-tests-adapter>=1.15.5,<1.24",
+    "pytest==8.0.1",
+    "pytest-dotenv==0.5.2",
+    "pytest-xdist==3.5.0",
+    "freezegun==1.5.5",
+    "flaky==3.7.0",
+    "pre-commit==3.8.0",
+    "ruff==0.15.21",
+    "mypy>=1.10,<1.15",
+]
+
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "dbt/adapters/fabric/__version__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dbt"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/dbt",
+    "/tests",
+    "/CHANGELOG.md",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:.*'soft_unicode' has been renamed to 'soft_str'*:DeprecationWarning",
+    "ignore:unclosed file .*:ResourceWarning",
+]
+env_files = ["test.env"]
+testpaths = ["tests/unit", "tests/functional"]
+markers = [
+    "skip_profile",
+    "only_with_profile",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 99
+
+[tool.ruff.lint]
+select = [
+    "F",   # pyflakes
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "SIM", # simplify
+    "C4",  # flake8-comprehensions
+    "TID", # flake8-tidy-imports (ban relative imports, like absolufy-imports did)
+]
+ignore = [
+    "E203", # whitespace before ':' (conflicts with formatter)
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.isort]
+known-first-party = ["dbt"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["E501", "SIM102", "SIM117", "C419", "B015", "B904"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+namespace_packages = true
+explicit_package_bases = true
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+show_error_codes = true

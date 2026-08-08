@@ -1,4 +1,5 @@
 import pytest
+
 from dbt.tests.adapter.sample_mode.test_sample_mode import BaseSampleModeTest
 
 # The upstream fixture uses TIMESTAMP '...' syntax which is not valid T-SQL.

@@ -1,19 +1,17 @@
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 import agate
+
 from dbt.adapters.base.relation import Policy
 from dbt.adapters.contracts.relation import RelationConfig
-from dbt.adapters.relation_configs import RelationConfigBase, RelationResults
-
 from dbt.adapters.fabric.relation_configs.policies import FabricIncludePolicy, FabricQuotePolicy
+from dbt.adapters.relation_configs import RelationConfigBase, RelationResults
 
 
 @dataclass(frozen=True, eq=True, unsafe_hash=True)
 class FabricRelationConfigBase(RelationConfigBase):
-    """
-    This base class implements a few boilerplate methods and provides some light structure for Fabric relations.
-    """
+    """Base class with boilerplate methods and light structure for Fabric relations."""
 
     @classmethod
     def include_policy(cls) -> Policy:
@@ -30,7 +28,7 @@ class FabricRelationConfigBase(RelationConfigBase):
         return relation
 
     @classmethod
-    def parse_relation_config(cls, relation_config: RelationConfig) -> Dict:
+    def parse_relation_config(cls, relation_config: RelationConfig) -> dict:
         raise NotImplementedError(
             "`parse_relation_config()` needs to be implemented on this RelationConfigBase instance"
         )
@@ -42,18 +40,11 @@ class FabricRelationConfigBase(RelationConfigBase):
         return relation  # type: ignore
 
     @classmethod
-    def parse_relation_results(cls, relation_results: RelationResults) -> Dict[str, Any]:
+    def parse_relation_results(cls, relation_results: RelationResults) -> dict[str, Any]:
         raise NotImplementedError(
-            "`parse_relation_results()` needs to be implemented on this RelationConfigBase instance"
+            "`parse_relation_results()` needs to be implemented "
+            "on this RelationConfigBase instance"
         )
-
-    # @classmethod
-    # def _render_part(cls, component: ComponentName, value: Optional[str]) -> Optional[str]:
-    #     if cls.include_policy().get_part(component) and value:
-    #         if cls.quote_policy().get_part(component):
-    #             return f"[{value}]"
-    #         return value.lower()
-    #     return None
 
     @classmethod
     def _get_first_row(cls, results: agate.Table) -> agate.Row:

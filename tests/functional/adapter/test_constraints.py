@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 from dbt.tests.adapter.constraints.fixtures import (
     foreign_key_model_sql,
     model_data_type_schema_yml,

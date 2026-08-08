@@ -1,16 +1,20 @@
 {% macro fabric__get_incremental_default_sql(arg_dict) %}
 
     {% if arg_dict["unique_key"] %}
-        -- Delete + Insert Strategy, calls get_delete_insert_merge_sql
         {% do return(get_incremental_merge_sql(arg_dict)) %}
     {% else %}
-        -- Incremental Append will insert data into target table.
         {% do return(get_incremental_append_sql(arg_dict)) %}
     {% endif %}
 
 {% endmacro %}
 
 
+{#
+  Custom "merge" strategy dispatch that adds support for delete_condition and
+  delete_not_matched_by_source on top of the standard MERGE behavior.
+  See fabric__get_merge_delete_not_matched_sql / fabric__get_merge_delete_condition_sql
+  in merge.sql for the underlying SQL generation.
+#}
 {% macro fabric__get_incremental_merge_sql(arg_dict) %}
 
     {%- set target = arg_dict["target_relation"] -%}

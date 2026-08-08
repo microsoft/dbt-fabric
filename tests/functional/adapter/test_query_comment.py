@@ -26,9 +26,7 @@ class TestMacroArgsQueryComments(BaseMacroArgsQueryComments):
             "macro_version": "0.1.0",
             "message": f"blah: {project.adapter.config.target_name}",
         }
-        expected = r"/* {} */\n".format(json.dumps(expected_dct, sort_keys=True)).replace(
-            '"', r"\""
-        )
+        expected = rf"/* {json.dumps(expected_dct, sort_keys=True)} */\n".replace('"', r"\"")
         assert expected in logs
 
 

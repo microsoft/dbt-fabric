@@ -3,3 +3,5 @@ from dbt.adapters.fabric.relation_configs.policies import (
     FabricQuotePolicy,
     FabricRelationType,
 )
+
+__all__ = ["FabricIncludePolicy", "FabricQuotePolicy", "FabricRelationType"]

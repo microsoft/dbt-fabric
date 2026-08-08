@@ -1,86 +1,50 @@
-from typing import Any, ClassVar, Dict
+from typing import Any, ClassVar
 
-from dbt.adapters.base import Column
-from dbt_common.exceptions import DbtRuntimeError
+from dbt.adapters.base.column import Column
 
 
 class FabricColumn(Column):
-    @property
-    def quoted(self) -> str:
-        return "[{}]".format(self.column)
-
-    TYPE_LABELS: ClassVar[Dict[str, str]] = {
-        "STRING": "VARCHAR(8000)",
-        "VARCHAR": "VARCHAR(8000)",
-        "CHAR": "CHAR(1)",
-        "NCHAR": "CHAR(1)",
-        "NVARCHAR": "VARCHAR(8000)",
-        "TIMESTAMP": "DATETIME2(6)",
-        "DATETIME2": "DATETIME2(6)",
-        "DATETIME2(6)": "DATETIME2(6)",
-        "DATE": "DATE",
-        "TIME": "TIME(6)",
-        "FLOAT": "FLOAT",
-        "REAL": "REAL",
-        "INT": "INT",
-        "INTEGER": "INT",
-        "BIGINT": "BIGINT",
-        "SMALLINT": "SMALLINT",
-        "TINYINT": "SMALLINT",
-        "BIT": "BIT",
-        "BOOLEAN": "BIT",
-        "DECIMAL": "DECIMAL",
-        "NUMERIC": "NUMERIC",
-        "MONEY": "DECIMAL",
-        "SMALLMONEY": "DECIMAL",
-        "UNIQUEIDENTIFIER": "UNIQUEIDENTIFIER",
-        "VARBINARY": "VARBINARY(MAX)",
+    TYPE_LABELS: ClassVar[dict[str, str]] = {
         "BINARY": "BINARY(1)",
+        "BOOLEAN": "BIT",
+        "CHAR": "CHAR(1)",
+        "DATETIME2": "DATETIME2(6)",
+        "INTEGER": "INT",
+        "MONEY": "DECIMAL",
+        "NCHAR": "CHAR(1)",
+        "NVARCHAR": "VARCHAR(MAX)",
+        "SMALLMONEY": "DECIMAL",
+        "STRING": "VARCHAR(MAX)",
+        "TIME": "TIME(6)",
+        "TIMESTAMP": "DATETIME2(6)",
+        "TINYINT": "SMALLINT",
+        "VARBINARY": "VARBINARY(MAX)",
+        "VARCHAR": "VARCHAR(MAX)",
     }
 
     @classmethod
     def string_type(cls, size: int) -> str:
-        return f"varchar({size if size > 0 else '8000'})"
+        return f"varchar({size if size > 0 else 'max'})"
 
     def literal(self, value: Any) -> str:
-        return "cast('{}' as {})".format(value, self.data_type)
+        return f"cast('{value}' as {self.data_type})"
 
-    @property
-    def data_type(self) -> str:
-        # Always enforce datetime2 precision
-        if self.dtype.lower() == "datetime2":
-            return "datetime2(6)"
-        if self.is_string():
-            return self.string_type(self.string_size())
-        elif self.is_numeric():
-            return self.numeric_type(self.dtype, self.numeric_precision, self.numeric_scale)
-        else:
-            return self.dtype
+    def is_integer(self):
+        return super().is_integer() or self.dtype.lower() == "int"
 
     def is_string(self) -> bool:
         return self.dtype.lower() in ["varchar", "char"]
 
-    def is_number(self):
-        return any([self.is_integer(), self.is_numeric(), self.is_float()])
-
-    def is_float(self):
-        return self.dtype.lower() in ["float", "real"]
-
-    def is_integer(self) -> bool:
-        return self.dtype.lower() in ["int", "integer", "bigint", "smallint", "tinyint"]
-
     def is_numeric(self) -> bool:
         return self.dtype.lower() in ["numeric", "decimal", "money", "smallmoney"]
 
-    def string_size(self) -> int:
-        if not self.is_string():
-            raise DbtRuntimeError("Called string_size() on non-string field!")
-        if self.char_size is None:
-            return 8000
-        else:
-            return int(self.char_size)
+    @property
+    def quoted(self) -> str:
+        return "[{}]".format(self.column.replace("]", "]]"))
 
-    def can_expand_to(self, other_column: "FabricColumn") -> bool:
-        if not self.is_string() or not other_column.is_string():
-            return False
-        return other_column.string_size() > self.string_size()
+    @property
+    def data_type(self) -> str:
+        if self.dtype.lower() == "datetime2":
+            scale = self.numeric_scale if self.numeric_scale is not None else 6
+            return f"datetime2({scale})"
+        return super().data_type
