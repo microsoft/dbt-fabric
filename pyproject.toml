@@ -45,7 +45,7 @@ dev = [
     "pytest-dotenv==0.5.2",
     "pytest-xdist==3.5.0",
     "freezegun==1.5.5",
-    "flaky==3.7.0",
+    "flaky==3.8.1",
     "pre-commit==3.8.0",
     "ruff==0.15.21",
     "mypy>=1.10,<1.15",
