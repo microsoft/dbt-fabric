@@ -66,8 +66,8 @@
         {{ get_create_view_as_sql(tmp_vw_relation, compiled_code) }}
 
         INSERT INTO {{relation}} ({{listColumns}})
-        SELECT {{listColumns}} FROM {{tmp_vw_relation}}
-
+        SELECT {{listColumns}} FROM {{tmp_vw_relation}};
+        DROP VIEW IF EXISTS {{ tmp_vw_relation.include(database=False) }};
     {%- else %}
 
         CREATE TABLE {{relation}}

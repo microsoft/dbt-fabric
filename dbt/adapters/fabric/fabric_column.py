@@ -44,6 +44,7 @@ class FabricColumn(Column):
 
     @property
     def data_type(self) -> str:
-        if self.dtype == "datetime2":
-            return f"datetime2({self.numeric_scale})"
+        if self.dtype.lower() == "datetime2":
+            scale = self.numeric_scale if self.numeric_scale is not None else 6
+            return f"datetime2({scale})"
         return super().data_type

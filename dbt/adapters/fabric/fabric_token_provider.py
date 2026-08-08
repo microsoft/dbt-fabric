@@ -222,7 +222,7 @@ class FabricTokenProvider:
         """
         if (
             self.credentials.authentication.lower() != "activedirectoryaccesstoken"
-            and "ActiveDirectory" in self.credentials.authentication
+            and "activedirectory" in self.credentials.authentication.lower()
         ):
             return None
 
