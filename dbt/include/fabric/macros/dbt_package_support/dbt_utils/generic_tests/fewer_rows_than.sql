@@ -6,18 +6,20 @@
   {% set select_gb_cols = group_by_columns|join(', ') + ', ' %}
   {% set join_gb_cols %}
     {% for c in group_by_columns %}
-      and a.{{c}} = b.{{c}}
+      {% if not loop.first %}and {% endif %}a.{{c}} = b.{{c}}
     {% endfor %}
   {% endset %}
   {% set groupby_gb_cols = 'group by ' + group_by_columns|join(',') %}
+{% else %}
+  {% set select_gb_cols = '' %}
+  {% set groupby_gb_cols = '' %}
+  {% set join_gb_cols = '1 = 1' %}
 {% endif %}
 
 with a as (
 
     select
       {{ select_gb_cols }}
-      {#- Synthetic join key: T-SQL FULL JOIN requires an explicit ON clause (upstream uses subqueries) -#}
-      1 as id_dbtutils_test_fewer_rows_than,
       count(*) as count_our_model
     from {{ model }}
     {{ groupby_gb_cols }}
@@ -27,7 +29,6 @@ b as (
 
     select
       {{ select_gb_cols }}
-      1 as id_dbtutils_test_fewer_rows_than,
       count(*) as count_comparison_model
     from {{ compare_model }}
     {{ groupby_gb_cols }}
@@ -46,8 +47,7 @@ counts as (
         count_comparison_model
     from a
     full join b
-    on a.id_dbtutils_test_fewer_rows_than = b.id_dbtutils_test_fewer_rows_than
-    {{ join_gb_cols }}
+    on {{ join_gb_cols }}
 
 ),
 final as (

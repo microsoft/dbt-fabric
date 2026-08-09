@@ -1,5 +1,17 @@
 # Changelog
 
+### v1.11.0
+
+## Features
+
+* Added dbt Core 1.11 support, including first-class SQL scalar UDF resources in Fabric Data Warehouse. Functions participate in DAG execution, can be referenced with `function()`, support default arguments, and are discoverable through the adapter relation cache.
+
+## Dependencies
+
+* Bumped `dbt-core` requirement from `>=1.10.0` to `>=1.11.0`.
+* Bumped `dbt-adapters` requirement from `>=1.10.0,<2.0` to `>=1.15.5,<2.0`.
+* Updated the development environment to track the dbt Core `1.11.latest` branch.
+
 ### v1.10.0
 
 ## Features

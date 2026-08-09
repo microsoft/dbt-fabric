@@ -88,3 +88,14 @@ class TestFabricRelationRendering:
         assert r.quote_policy.database is True
         assert r.quote_policy.schema is True
         assert r.quote_policy.identifier is True
+
+    def test_function_relation_type(self):
+        relation = FabricRelation.create(
+            database="mydb",
+            schema="dbo",
+            identifier="calculate_price",
+            type=FabricRelationType.Function,
+        )
+
+        assert relation.type == FabricRelationType.Function
+        assert str(relation) == "[mydb].[dbo].[calculate_price]"

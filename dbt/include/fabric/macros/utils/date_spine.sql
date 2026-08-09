@@ -18,8 +18,12 @@
 
 {% macro fabric__date_spine(datepart, start_date, end_date) %}
 
-    select *
-    from (
+    {% set intervals = fabric__get_intervals_between(start_date, end_date, datepart) %}
+
+    with raw_data as (
+        {{ fabric__generate_series(intervals) }}
+    ),
+    all_periods as (
         select (
             {{
                 dbt.dateadd(
@@ -29,12 +33,11 @@
                 )
             }}
         ) as date_{{datepart}}
-        from ({{
-                dbt.generate_series(
-                    dbt.get_intervals_between(start_date, end_date, datepart)
-                )
-            }}) raw_data
-    ) all_periods
-    where date_{{datepart}} <= {{ end_date }}
+        from raw_data
+    )
+
+    select *
+    from all_periods
+    where date_{{datepart}} < {{ end_date }}
 
 {% endmacro %}
