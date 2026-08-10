@@ -48,7 +48,7 @@ dev = [
     "flaky==3.7.0",
     "pre-commit==3.8.0",
     "ruff==0.15.21",
-    "mypy>=1.10,<1.15",
+    "mypy>=1.10,<2.4",
 ]
 
 [build-system]
