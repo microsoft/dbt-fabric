@@ -26,7 +26,7 @@ jobs:
     steps:
       # Azure login using federated credentials
       - name: Azure login with OIDC
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
         with:
           client-id: ${{ secrets.DBT_AZURE_SP_NAME }}
           tenant-id: ${{ secrets.DBT_AZURE_TENANT }}
@@ -50,10 +50,10 @@ jobs:
             logging.error("Error occurred while connecting to the database.", exc_info=True)
           EOF
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
 
       - name: Sync dependencies (uv)
         run: uv sync --locked --python ${{ matrix.python_version }}
