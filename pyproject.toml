@@ -7,13 +7,14 @@ license = "MIT"
 authors = [
     { name = "Pradeep Srikakolapu" },
 ]
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.11,<3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
@@ -69,6 +70,9 @@ include = [
     "/README.md",
     "/LICENSE",
 ]
+
+[tool.uv]
+index-url = "https://pypi.org/simple"
 
 [tool.pytest.ini_options]
 filterwarnings = [

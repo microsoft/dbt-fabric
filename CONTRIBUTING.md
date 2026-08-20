@@ -1,6 +1,6 @@
 # Development of the adapter
 
-Python 3.12 (or 3.13) is used for developing the adapter. Dependencies and environments are managed with
+Python 3.11, 3.12, or 3.13 can be used for developing the adapter. Dependencies and environments are managed with
 [`uv`](https://docs.astral.sh/uv/). Install `uv` first ([installation instructions](https://docs.astral.sh/uv/getting-started/installation/)).
 
 ## Setup (one-time)
@@ -90,7 +90,7 @@ All pipelines run on GitHub Actions. Each one, in the order it typically fires:
    the other pipelines below. Triggered when files under `devops/` or the workflow itself change.
    The `Dockerfile` lives in `devops/CI.Dockerfile` and includes `uv` pre-installed.
 2. **`unit-tests`** — on push/PR to `main`/`v*`: `uv sync --locked` then `uv run pytest tests/unit`, once
-   per supported Python version (3.12, 3.13).
+   per supported Python version (3.11, 3.12, 3.13).
 3. **`integration-tests-azure`** — on PR to `main`: authenticates to Azure via OIDC, then `uv sync --locked`
    and `uv run pytest tests/functional --profile integration_tests` against a real Azure SQL-backed Fabric
    Warehouse. See [Azure integration tests](#azure-integration-tests) below for the required secrets.

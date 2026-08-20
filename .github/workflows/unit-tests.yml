@@ -34,7 +34,29 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Sync dependencies (uv)
-        run: uv sync --locked
+        run: uv sync --locked --python ${{ matrix.python_version }}
+
+      - name: Run unit tests
+        run: uv run pytest -n auto -ra -v tests/unit
+
+  unit-tests-python-311:
+    name: Unit tests (Python 3.11)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Sync dependencies (uv)
+        run: uv sync --locked --python 3.11
 
       - name: Run unit tests
         run: uv run pytest -n auto -ra -v tests/unit

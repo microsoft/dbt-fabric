@@ -14,7 +14,7 @@ jobs:
       max-parallel: 1
       matrix:
         profile: ["integration_tests"]
-        python_version: ["3.12"]
+        python_version: ["3.11", "3.12"]
 
     runs-on: ubuntu-latest
     permissions:
@@ -56,7 +56,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Sync dependencies (uv)
-        run: uv sync --locked
+        run: uv sync --locked --python ${{ matrix.python_version }}
 
       - name: Run functional tests
         env:
