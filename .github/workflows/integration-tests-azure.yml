@@ -56,7 +56,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Sync dependencies (uv)
-        run: uv sync --locked
+        run: uv sync --locked --python ${{ matrix.python_version }}
 
       - name: Run functional tests
         env:
