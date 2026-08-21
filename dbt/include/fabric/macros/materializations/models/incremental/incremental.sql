@@ -42,84 +42,86 @@
 
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
   {# `BEGIN` happens here: #}
-  {{ run_hooks(pre_hooks, inside_transaction=True) }}
+  {%- call statement('transaction', language=language, autobegin=True) -%}
+    {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
-  {# Full rebuild when no target table exists or full refresh requested #}
-  {% if existing_relation is none or full_refresh_mode %}
+    {# Full rebuild when no target table exists or full refresh requested #}
+    {% if existing_relation is none or full_refresh_mode %}
 
-    {# Set up intermediate and backup relations #}
-    {%- set intermediate_relation = make_intermediate_relation(target_relation) -%}
-    {%- set preexisting_intermediate_relation = load_cached_relation(intermediate_relation) -%}
-    {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
-    {%- set preexisting_backup_relation = load_cached_relation(backup_relation) -%}
+      {# Set up intermediate and backup relations #}
+      {%- set intermediate_relation = make_intermediate_relation(target_relation) -%}
+      {%- set preexisting_intermediate_relation = load_cached_relation(intermediate_relation) -%}
+      {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
+      {%- set preexisting_backup_relation = load_cached_relation(backup_relation) -%}
 
-    {{ drop_relation_if_exists(preexisting_backup_relation) }}
-    {{ drop_relation_if_exists(preexisting_intermediate_relation) }}
+      {# Cleanup backup_relations left over from older versions of dbt-fabric. Consider removing for performance reasons in the future. #}
+      {{ drop_relation_if_exists(preexisting_backup_relation) }}
+      {{ drop_relation_if_exists(preexisting_intermediate_relation) }}
 
-    {# Build model into intermediate relation #}
-    {%- call statement('main', language=language) -%}
-      {{ create_table_as(False, intermediate_relation, compiled_code, language) }}
-    {%- endcall -%}
+      {# Build model into intermediate relation #}
+      {%- call statement('main', language=language) -%}
+        {{ create_table_as(False, intermediate_relation, compiled_code, language) }}
+      {%- endcall -%}
 
-    {% do create_indexes(intermediate_relation) %}
+      {% do create_indexes(intermediate_relation) %}
 
-    {# Swap: rename existing → backup, intermediate → target, then drop backup #}
-    {% if existing_relation is not none %}
-      {{ adapter.rename_relation(existing_relation, backup_relation) }}
+      {# Swap: drop existing if present, intermediate → target #}
+      {% if existing_relation is not none %}
+        {{ adapter.drop_relation(existing_relation) }}
+      {% endif %}    
       {{ adapter.rename_relation(intermediate_relation, target_relation) }}
-      {{ adapter.drop_relation(backup_relation) }}
+
+    {% endif %}
+
+    {# Incremental merge into existing target table #}
     {% else %}
-      {{ adapter.rename_relation(intermediate_relation, target_relation) }}
+
+      {%- set temp_relation = make_temp_relation(target_relation) -%}
+      {{ drop_relation_if_exists(temp_relation) }}
+
+      {%- call statement('create_tmp_relation', language=language) -%}
+        {{ create_table_as(True, temp_relation, compiled_code, language) }}
+      {%- endcall -%}
+
+      {% do adapter.expand_target_column_types(
+          from_relation=temp_relation,
+          to_relation=target_relation
+      ) %}
+
+      {# Process schema changes. Returns dict of changes if successful. Use source columns for upserting/merging #}
+      {% set dest_columns = process_schema_changes(on_schema_change, temp_relation, existing_relation) %}
+      {% if not dest_columns %}
+        {% set dest_columns = adapter.get_columns_in_relation(existing_relation) %}
+      {% endif %}
+
+      {# Build the SQL for the incremental strategy macro #}
+      {%- set strategy_arg_dict = ({
+          'target_relation': target_relation,
+          'temp_relation': temp_relation,
+          'unique_key': unique_key,
+          'dest_columns': dest_columns,
+          'incremental_predicates': incremental_predicates,
+          'delete_condition': delete_condition,
+          'delete_not_matched_by_source': delete_not_matched_by_source,
+      }) -%}
+
+      {%- call statement('main') -%}
+        {{ strategy_sql_macro_func(strategy_arg_dict) }}
+      {%- endcall -%}
+
+      {{ adapter.drop_relation(temp_relation) }}
+
     {% endif %}
 
-  {# Incremental merge into existing target table #}
-  {% else %}
+    {{ run_hooks(post_hooks, inside_transaction=True) }}
 
-    {%- set temp_relation = make_temp_relation(target_relation) -%}
-    {{ drop_relation_if_exists(temp_relation) }}
+    {%- set should_revoke = should_revoke(existing_relation, full_refresh_mode) -%}
+    {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
+    {% do persist_docs(target_relation, model) %}
 
-    {%- call statement('create_tmp_relation', language=language) -%}
-      {{ create_table_as(True, temp_relation, compiled_code, language) }}
-    {%- endcall -%}
-
-    {% do adapter.expand_target_column_types(
-        from_relation=temp_relation,
-        to_relation=target_relation
-    ) %}
-
-    {# Process schema changes. Returns dict of changes if successful. Use source columns for upserting/merging #}
-    {% set dest_columns = process_schema_changes(on_schema_change, temp_relation, existing_relation) %}
-    {% if not dest_columns %}
-      {% set dest_columns = adapter.get_columns_in_relation(existing_relation) %}
-    {% endif %}
-
-    {# Build the SQL for the incremental strategy macro #}
-    {%- set strategy_arg_dict = ({
-        'target_relation': target_relation,
-        'temp_relation': temp_relation,
-        'unique_key': unique_key,
-        'dest_columns': dest_columns,
-        'incremental_predicates': incremental_predicates,
-        'delete_condition': delete_condition,
-        'delete_not_matched_by_source': delete_not_matched_by_source,
-    }) -%}
-
-    {%- call statement('main') -%}
-      {{ strategy_sql_macro_func(strategy_arg_dict) }}
-    {%- endcall -%}
-
-    {{ adapter.drop_relation(temp_relation) }}
-
-  {% endif %}
-
-  {{ run_hooks(post_hooks, inside_transaction=True) }}
-
-  {%- set should_revoke = should_revoke(existing_relation, full_refresh_mode) -%}
-  {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
-  {% do persist_docs(target_relation, model) %}
-
-  {# `COMMIT` happens here #}
-  {% do adapter.commit() %}
+    {# `COMMIT` happens here #}
+    {% do adapter.commit() %}
+  {%- endcall -%}
 
   {# Add constraints including FK relation #}
   {{ build_model_constraints(target_relation) }}

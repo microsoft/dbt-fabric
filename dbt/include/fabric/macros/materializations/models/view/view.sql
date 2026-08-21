@@ -11,6 +11,7 @@
   {% endif %}
 
   {% if (existing_relation != none) %}
+    -- TODO: may be able to use explicit transactions here (assuming for example, that replacing a view with a table of the same name and vice versa within a transaction is supported)
     -- drop the temp relations if they exist already in the database
     {% do adapter.drop_relation(backup_relation) %}
     -- Rename target relation as backup relation

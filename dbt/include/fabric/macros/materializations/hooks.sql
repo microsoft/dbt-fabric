@@ -1,6 +1,6 @@
 {% macro run_hooks(hooks, inside_transaction=True) %}
   {% for hook in hooks | selectattr('transaction', 'equalto', inside_transaction)  %}
-    {# For now we don't support transactions #}
+    {# For now we don't support transactions TODO: adjust now that we do #}
     {# {% if not inside_transaction and loop.first %}
       {% call statement(auto_begin=inside_transaction) %}
         commit;
