@@ -49,10 +49,7 @@ class TestFabricRelationRenderLimited:
             type=FabricRelationType.Table,
             limit=0,
         )
-        result = r.render_limited()
-        assert "where 1=0" in result
-        assert "[mydb].[dbo].[my_table]" in result
-        assert "select *" in result
+        assert r.render_limited() == "(select * from [mydb].[dbo].[my_table] where 1=0)"
 
     def test_limit_positive(self):
         r = FabricRelation.create(
@@ -62,10 +59,7 @@ class TestFabricRelationRenderLimited:
             type=FabricRelationType.Table,
             limit=10,
         )
-        result = r.render_limited()
-        assert "TOP 10" in result
-        assert "[mydb].[dbo].[my_table]" in result
-        assert "select TOP 10 *" in result
+        assert r.render_limited() == "(select TOP 10 * from [mydb].[dbo].[my_table])"
 
 
 class TestFabricRelationRendering:

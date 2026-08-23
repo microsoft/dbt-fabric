@@ -10,7 +10,7 @@ from dbt.adapters.utils import classproperty
 class FabricRelation(BaseRelation):
     type: FabricRelationType | None = None  # type: ignore
     quote_policy: FabricQuotePolicy = field(default_factory=lambda: FabricQuotePolicy())
-    require_alias: bool = True
+    require_alias: bool = False
 
     def quoted(self, identifier):
         return "[{}]".format(identifier.replace("]", "]]"))
@@ -24,6 +24,6 @@ class FabricRelation(BaseRelation):
         if self.limit is None:
             return rendered
         elif self.limit == 0:
-            return f"(select * from {rendered} where 1=0) AS {self._render_limited_alias()}"
+            return f"(select * from {rendered} where 1=0){self._render_limited_alias()}"
         else:
-            return f"(select TOP {self.limit} * from {rendered}) AS {self._render_limited_alias()}"
+            return f"(select TOP {self.limit} * from {rendered}){self._render_limited_alias()}"
