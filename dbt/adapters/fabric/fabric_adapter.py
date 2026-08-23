@@ -19,6 +19,15 @@ from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_configs import FabricConfigs
 from dbt.adapters.fabric.fabric_connection_manager import FabricConnectionManager
 from dbt.adapters.fabric.fabric_relation import FabricRelation
+from dbt.adapters.fabric.table_refresh import (
+    FabricTableColumn,
+    FabricTableConstraint,
+    build_refresh_plan,
+    desired_constraint,
+    diff_constraints,
+    query_references_relation,
+    requires_constraint_replacement,
+)
 from dbt.adapters.reference_keys import _make_ref_key_dict
 from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME, SQLAdapter
 
@@ -52,15 +61,269 @@ class FabricAdapter(BaseFabricAdapter, SQLAdapter):
     def get_column_schema_from_query(self, sql: str) -> list[BaseColumn]:
         """Get a list of the Columns with names and data types from the given sql."""
         _, cursor = self.connections.add_select_query(sql)
-
-        columns = [
+        return [
             self.Column.create(
-                column_name, self.connections.data_type_code_to_name(column_type_code)
+                column_name,
+                self.connections.data_type_code_to_name(column_type_code),
             )
-            # https://peps.python.org/pep-0249/#description
             for column_name, column_type_code, *_ in cursor.description
         ]
-        return columns
+
+    @available.parse(
+        lambda *a, **k: {
+            "action": "replace",
+            "reason": "parse-time default",
+            "column_names": [],
+            "constraints_to_drop": [],
+            "constraint_add_sql": [],
+        }
+    )
+    def get_table_refresh_plan(
+        self,
+        relation: BaseRelation,
+        sql: str,
+        cluster_by: str | list[str] | None = None,
+        constraints: list[object] | None = None,
+    ) -> dict[str, object]:
+        """Choose whether a full refresh can preserve the existing table object."""
+        query_columns = [
+            FabricTableColumn.from_column(column) for column in self._describe_query_columns(sql)
+        ]
+        target_columns = [
+            FabricTableColumn.from_column(column)
+            for column in self.get_columns_in_relation(relation)
+        ]
+        target_cluster_by = self._get_table_cluster_by(relation)
+        target_constraints = self.get_constraints_in_relation(relation)
+        raw_constraints = constraints or []
+        desired_constraints: list[FabricTableConstraint] = []
+        raw_constraints_by_name: dict[str, object] = {}
+        replacement_required = False
+        for constraint in raw_constraints:
+            replacement_required = replacement_required or requires_constraint_replacement(
+                constraint
+            )
+            parsed_constraint = desired_constraint(constraint)
+            if parsed_constraint is None:
+                continue
+            normalized_name = parsed_constraint.name.casefold()
+            if normalized_name in raw_constraints_by_name:
+                raise dbt_common.exceptions.DbtDatabaseError(
+                    f"Duplicate desired Fabric constraint name: {parsed_constraint.name}"
+                )
+            desired_constraints.append(parsed_constraint)
+            raw_constraints_by_name[normalized_name] = constraint
+
+        refresh_plan = build_refresh_plan(
+            query_columns,
+            target_columns,
+            cluster_by,
+            target_cluster_by,
+        )
+        constraints_to_drop, constraints_to_add = diff_constraints(
+            desired_constraints,
+            target_constraints,
+        )
+        refresh_plan["constraints_to_drop"] = constraints_to_drop
+        refresh_plan["constraints_to_add"] = constraints_to_add
+        refresh_plan["constraint_add_sql"] = [
+            rendered_constraint
+            for constraint_name in constraints_to_add
+            for rendered_constraint in self.render_raw_model_constraints(
+                raw_constraints=[raw_constraints_by_name[constraint_name.casefold()]]
+            )
+        ]
+        if refresh_plan["action"] == "reload" and replacement_required:
+            refresh_plan["action"] = "replace"
+            refresh_plan["reason"] = "constraint definition requires table replacement"
+        if refresh_plan["action"] == "reload" and query_references_relation(
+            sql,
+            [
+                str(relation),
+                str(relation.include(database=False)),
+            ],
+        ):
+            return {
+                "action": "replace",
+                "reason": "query references the target relation",
+                "column_names": [column.name for column in query_columns],
+                "constraints_to_drop": constraints_to_drop,
+                "constraints_to_add": constraints_to_add,
+                "constraint_add_sql": refresh_plan["constraint_add_sql"],
+            }
+        return refresh_plan
+
+    def _describe_query_columns(self, sql: str) -> list[FabricColumn]:
+        escaped_sql = sql.replace("'", "''")
+        rows = self._fetch_dicts(f"EXEC sys.sp_describe_first_result_set @tsql = N'{escaped_sql}'")
+        return [
+            FabricColumn(
+                column=str(row["name"]),
+                dtype=str(row["system_type_name"]).split("(", 1)[0],
+                char_size=self._column_character_size(
+                    str(row["system_type_name"]).split("(", 1)[0],
+                    row["max_length"],
+                ),
+                numeric_precision=row["precision"],
+                numeric_scale=row["scale"],
+                is_nullable=bool(row["is_nullable"]),
+                collation_name=(
+                    None if row["collation_name"] is None else str(row["collation_name"])
+                ),
+                is_identity=bool(row["is_identity_column"]),
+            )
+            for row in rows
+            if not row["is_hidden"]
+        ]
+
+    @staticmethod
+    def _column_character_size(data_type: str, max_length: object) -> int | None:
+        if max_length is None:
+            return None
+        if not isinstance(max_length, (int, str)):
+            raise TypeError(f"Unexpected max_length value: {max_length!r}")
+        size = int(max_length)
+        if data_type.casefold() in {"nchar", "nvarchar", "sysname"} and size != -1:
+            return size // 2
+        return size
+
+    def _get_table_cluster_by(self, relation: BaseRelation) -> list[str]:
+        relation_name = str(relation).replace("'", "''")
+        rows = self._fetch_dicts(
+            f"""
+            {self._use_database_sql(relation.database)}
+            SELECT c.name
+            FROM sys.columns AS c
+            INNER JOIN sys.index_columns AS ic
+                ON c.object_id = ic.object_id
+                AND c.column_id = ic.column_id
+            WHERE c.object_id = OBJECT_ID(N'{relation_name}')
+                AND ic.data_clustering_ordinal > 0
+            ORDER BY ic.data_clustering_ordinal
+            """
+        )
+        return [str(row["name"]) for row in rows]
+
+    @available.parse(lambda *a, **k: [])
+    def get_constraints_in_relation(self, relation: BaseRelation) -> list[FabricTableConstraint]:
+        """Return the named constraints defined on a Fabric table."""
+        relation_name = str(relation).replace("'", "''")
+        rows = self._fetch_dicts(
+            f"""
+            {self._use_database_sql(relation.database)}
+            SELECT
+                kc.name,
+                CASE kc.type WHEN 'PK' THEN 'primary_key' ELSE 'unique' END
+                    AS constraint_type,
+                c.name AS column_name,
+                ic.key_ordinal AS column_ordinal,
+                CAST(NULL AS varchar(128)) AS referenced_table,
+                CAST(NULL AS varchar(128)) AS referenced_schema,
+                CAST(NULL AS varchar(128)) AS referenced_database,
+                CAST(NULL AS varchar(128)) AS referenced_column
+            FROM sys.key_constraints AS kc
+            INNER JOIN sys.index_columns AS ic
+                ON kc.parent_object_id = ic.object_id
+                AND kc.unique_index_id = ic.index_id
+            INNER JOIN sys.columns AS c
+                ON ic.object_id = c.object_id
+                AND ic.column_id = c.column_id
+            WHERE kc.parent_object_id = OBJECT_ID(N'{relation_name}')
+            UNION ALL
+            SELECT
+                fk.name,
+                'foreign_key',
+                parent_column.name,
+                fkc.constraint_column_id,
+                referenced_table.name,
+                referenced_schema.name,
+                DB_NAME(),
+                referenced_column.name
+            FROM sys.foreign_keys AS fk
+            INNER JOIN sys.foreign_key_columns AS fkc
+                ON fk.object_id = fkc.constraint_object_id
+            INNER JOIN sys.columns AS parent_column
+                ON fkc.parent_object_id = parent_column.object_id
+                AND fkc.parent_column_id = parent_column.column_id
+            INNER JOIN sys.tables AS referenced_table
+                ON fkc.referenced_object_id = referenced_table.object_id
+            INNER JOIN sys.schemas AS referenced_schema
+                ON referenced_table.schema_id = referenced_schema.schema_id
+            INNER JOIN sys.columns AS referenced_column
+                ON fkc.referenced_object_id = referenced_column.object_id
+                AND fkc.referenced_column_id = referenced_column.column_id
+            WHERE fk.parent_object_id = OBJECT_ID(N'{relation_name}')
+            ORDER BY name, column_ordinal
+            """
+        )
+        grouped: dict[
+            str,
+            tuple[
+                str,
+                list[str],
+                str | None,
+                str | None,
+                str | None,
+                list[str],
+            ],
+        ] = {}
+        for row in rows:
+            name = str(row["name"])
+            _, columns, _, _, _, referenced_columns = grouped.setdefault(
+                name,
+                (
+                    str(row["constraint_type"]),
+                    [],
+                    (
+                        None
+                        if row["referenced_database"] is None
+                        else str(row["referenced_database"])
+                    ),
+                    (None if row["referenced_schema"] is None else str(row["referenced_schema"])),
+                    (None if row["referenced_table"] is None else str(row["referenced_table"])),
+                    [],
+                ),
+            )
+            columns.append(str(row["column_name"]))
+            if row["referenced_column"] is not None:
+                referenced_columns.append(str(row["referenced_column"]))
+        return [
+            FabricTableConstraint(
+                name=name,
+                constraint_type=constraint_type,
+                columns=tuple(columns),
+                referenced_database=referenced_database,
+                referenced_schema=referenced_schema,
+                referenced_table=referenced_table,
+                referenced_columns=tuple(referenced_columns),
+            )
+            for name, (
+                constraint_type,
+                columns,
+                referenced_database,
+                referenced_schema,
+                referenced_table,
+                referenced_columns,
+            ) in grouped.items()
+        ]
+
+    def _fetch_dicts(self, sql: str) -> list[dict[str, object]]:
+        _, cursor = self.connections.add_select_query(sql)
+        try:
+            while cursor.description is None and cursor.nextset():
+                pass
+            if cursor.description is None:
+                return []
+            fields = [str(description[0]).casefold() for description in cursor.description]
+            return [dict(zip(fields, row, strict=True)) for row in cursor.fetchall()]
+        finally:
+            cursor.close()
+
+    @classmethod
+    def _use_database_sql(cls, database: str | None) -> str:
+        if database is None:
+            return ""
+        return f"USE {cls.quote(database)};"
 
     @classmethod
     def convert_boolean_type(cls, agate_table, col_idx):

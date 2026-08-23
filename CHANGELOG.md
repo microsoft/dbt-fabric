@@ -1,5 +1,17 @@
 # Changelog
 
+### v1.11.2rc1
+
+## Improvements
+
+* **Schema-aware full refreshes** — table models and incremental models running with
+  `--full-refresh` preserve the existing table object when its ordered schema, identity
+  properties, and `cluster_by` layout are unchanged. The adapter performs an atomic
+  `TRUNCATE` and full reload, retaining object-bound metadata and optimization history.
+  Named primary-key, unique, and foreign-key constraints are reconciled transactionally.
+  Schema, identity, physical-layout, or non-reconcilable custom-constraint changes use an
+  atomic CTAS/drop/rename replacement.
+
 ### v1.11.0
 
 ## Features
@@ -58,7 +70,7 @@
 * Improving table materialization to minimize downtime #189
 * Handling temp tables in incremental models #188
 * Add label support to filter queries #181
-* Addressed bug - incremental models cannot full refresh #179 
+* Addressed bug - incremental models cannot full refresh #179
 * Addressed bug - #197, dbt test incorrect syntax with macro helpers.sql
 
 ### v1.8.0rc2

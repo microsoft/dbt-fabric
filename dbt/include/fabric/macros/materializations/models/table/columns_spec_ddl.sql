@@ -28,3 +28,37 @@
       {%- endcall %}
     {% endfor -%}
 {% endmacro %}
+
+{% macro reconcile_model_constraints(relation, refresh_plan) %}
+    {{ return(adapter.dispatch('reconcile_model_constraints', 'dbt')(
+        relation,
+        refresh_plan
+    )) }}
+{% endmacro %}
+
+{% macro fabric__reconcile_model_constraints(relation, refresh_plan) %}
+  {% set constraints_to_drop = refresh_plan['constraints_to_drop'] %}
+  {% set constraint_add_sql = refresh_plan['constraint_add_sql'] %}
+  {% if constraints_to_drop or constraint_add_sql %}
+    {% call statement('reconcile_model_constraints', auto_begin=False) -%}
+      {{ get_use_database_sql(relation.database) }}
+      BEGIN TRY
+        BEGIN TRANSACTION;
+        {% for constraint_name in constraints_to_drop %}
+          ALTER TABLE {{ relation.include(database=False) }}
+          DROP CONSTRAINT {{ adapter.quote(constraint_name) }};
+        {% endfor %}
+        {% for rendered_constraint in constraint_add_sql %}
+          ALTER TABLE {{ relation.include(database=False) }}
+          {{ rendered_constraint }};
+        {% endfor %}
+        COMMIT TRANSACTION;
+      END TRY
+      BEGIN CATCH
+        IF @@TRANCOUNT > 0
+          ROLLBACK TRANSACTION;
+        THROW;
+      END CATCH;
+    {%- endcall %}
+  {% endif %}
+{% endmacro %}
