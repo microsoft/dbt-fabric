@@ -12,6 +12,14 @@
   Schema, identity, physical-layout, or non-reconcilable custom-constraint changes use an
   atomic CTAS/drop/rename replacement.
 
+## Bug Fixes
+
+* **Service principal authentication with `mssql-python`** — retain support for the
+  `ServicePrincipal` profile alias and stop adding the unsupported `Authority Id`
+  connection-string keyword. `ActiveDirectoryServicePrincipal` now uses the
+  `Authentication`, `UID`, and `PWD` fields supported by `mssql-python`. Resolves
+  [#434](https://github.com/microsoft/dbt-fabric/issues/434).
+
 ### v1.11.0
 
 ## Features

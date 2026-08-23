@@ -1,13 +1,17 @@
 import datetime as dt
 import struct
+from types import SimpleNamespace
+from unittest import mock
 
 import pytest
 
+from dbt.adapters.contracts.connection import ConnectionState
 from dbt.adapters.fabric.fabric_connection_manager import (
     FabricConnectionManager,
     bool_to_connection_string_arg,
     byte_array_to_datetime,
 )
+from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 
 class TestBoolToConnectionStringArg:
@@ -78,6 +82,56 @@ class TestDataTypeCodeToName:
     def test_unknown_type_raises(self):
         with pytest.raises(KeyError):
             FabricConnectionManager.data_type_code_to_name("<class 'unknown'>")
+
+
+class TestServicePrincipalConnectionString:
+    def test_uses_mssql_python_supported_keywords(self):
+        credentials = FabricCredentials(
+            database="warehouse",
+            schema="dbo",
+            host="server.datawarehouse.fabric.microsoft.com",
+            authentication="ActiveDirectoryServicePrincipal",
+            tenant_id="tenant-id",
+            client_id="client-id",
+            client_secret="client-secret",
+            lock_timeout=0,
+        )
+        connection = SimpleNamespace(
+            state=ConnectionState.INIT,
+            credentials=credentials,
+            handle=None,
+        )
+        handle = mock.MagicMock()
+        token_provider = mock.MagicMock()
+        token_provider.get_sql_attrs_before.return_value = None
+
+        def retry_connection(connection, connect, **kwargs):
+            connection.handle = connect()
+            connection.state = ConnectionState.OPEN
+            return connection
+
+        FabricConnectionManager._host = None
+        with (
+            mock.patch("mssql_python.connect", return_value=handle) as connect,
+            mock.patch.object(
+                FabricConnectionManager,
+                "get_fabric_token_provider",
+                return_value=token_provider,
+            ),
+            mock.patch.object(
+                FabricConnectionManager,
+                "retry_connection",
+                side_effect=retry_connection,
+            ),
+        ):
+            FabricConnectionManager.open(connection)
+
+        connection_string = connect.call_args.args[0]
+        assert "Authentication=ActiveDirectoryServicePrincipal" in connection_string
+        assert "UID={client-id}" in connection_string
+        assert "PWD={client-secret}" in connection_string
+        assert "Authority Id" not in connection_string
+        assert "tenant-id" not in connection_string
 
 
 class MockCursor:

@@ -179,7 +179,6 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         if credentials.authentication == "ActiveDirectoryServicePrincipal":
             con_str.append(f"UID={{{credentials.client_id}}}")
             con_str.append(f"PWD={{{credentials.client_secret}}}")
-            con_str.append(f"Authority Id={{{credentials.tenant_id}}}")
 
         # https://docs.microsoft.com/en-us/sql/relational-databases/native-client/features/using-encryption-without-validation?view=sql-server-ver15
         assert credentials.encrypt is not None
