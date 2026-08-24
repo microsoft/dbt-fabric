@@ -14,11 +14,6 @@
 
 ## Bug Fixes
 
-* **`--empty` with explicitly aliased relations** — stop adding generated aliases to
-  limited `ref()` and `source()` relations, preventing invalid double aliases when model
-  SQL supplies its own alias. Resolves
-  [#437](https://github.com/microsoft/dbt-fabric/issues/437).
-
 * **Service principal authentication with `mssql-python`** — retain support for the
   `ServicePrincipal` profile alias and stop adding the unsupported `Authority Id`
   connection-string keyword. `ActiveDirectoryServicePrincipal` now uses the
