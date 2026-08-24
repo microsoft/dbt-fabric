@@ -7,7 +7,11 @@
 {% endmacro %}
 
 {% macro fabric__get_columns_in_relation(relation) -%}
-    {% call statement('get_columns_in_relation', fetch_result=True) %}
+    {% call statement(
+        'get_columns_in_relation',
+        fetch_result=True,
+        auto_begin=False
+    ) %}
         {{ get_use_database_sql(relation.database) }}
         with mapping as (
             select
@@ -19,7 +23,10 @@
 					else c.max_length
 				end as character_maximum_length,
                 c.precision as numeric_precision,
-                c.scale as numeric_scale
+				c.scale as numeric_scale,
+				c.is_nullable,
+				c.collation_name,
+				c.is_identity
             from sys.columns c {{ information_schema_hints() }}
             inner join sys.types t {{ information_schema_hints() }}
             on c.user_type_id = t.user_type_id
@@ -31,7 +38,10 @@
             data_type,
             character_maximum_length,
             numeric_precision,
-            numeric_scale
+            numeric_scale,
+            is_nullable,
+            collation_name,
+            is_identity
         from mapping
         order by ordinal_position
 

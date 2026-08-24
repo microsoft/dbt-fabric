@@ -6,6 +6,23 @@
   {{ return(400) }}
 {% endmacro %}
 
+{% macro fabric__reset_csv_table(model, full_refresh, old_relation, agate_table) %}
+    {# reset_csv_table mutates the target before any statement() call can open the transaction. #}
+    {% call statement('begin_seed_reset', auto_begin=True) %}
+        select 1
+    {% endcall %}
+
+    {% if full_refresh %}
+        {{ adapter.drop_relation(old_relation) }}
+        {% set sql = create_csv_table(model, agate_table) %}
+    {% else %}
+        {{ adapter.truncate_relation(old_relation) }}
+        {% set sql = "truncate table " ~ old_relation.render() %}
+    {% endif %}
+
+    {{ return(sql) }}
+{% endmacro %}
+
 {% macro calc_batch_size(num_columns) %}
     {#
         SQL Server allows for a max of 2100 parameters in a single statement.

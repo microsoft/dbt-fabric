@@ -103,13 +103,15 @@
   {% endif %}
 
   {{ run_hooks(post_hooks, inside_transaction=True) }}
-  {{ adapter.commit() }}
+
+  {{ create_or_update_statistics(target_relation, existing_table=target_relation_exists) }}
 
   {% if staging_table is defined %}
       {% do post_snapshot(staging_table) %}
   {% endif %}
 
-  {{ create_or_update_statistics(target_relation, existing_table=target_relation_exists) }}
+  {{ adapter.commit() }}
+
   {{ run_hooks(post_hooks, inside_transaction=False) }}
   {{ return({'relations': [target_relation]}) }}
 

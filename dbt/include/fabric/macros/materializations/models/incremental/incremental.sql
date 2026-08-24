@@ -33,44 +33,19 @@
   {%- set target_relation = this.incorporate(type='table') -%}
   {%- set existing_relation = load_cached_relation(this) -%}
 
-  {# Can't overwrite a view with a table - we must drop #}
-  {% if existing_relation is not none and existing_relation.type == 'view' %}
-    {{ log("Dropping relation " ~ existing_relation ~ " because it is a view and target is a table.") }}
-    {% do adapter.drop_relation(existing_relation) %}
-    {%- set existing_relation = none -%}
-  {% endif %}
-
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
   {# `BEGIN` happens here: #}
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
   {# Full rebuild when no target table exists or full refresh requested #}
-  {% if existing_relation is none or full_refresh_mode %}
+  {% if existing_relation is none or full_refresh_mode or existing_relation.type == 'view' %}
 
-    {# Set up intermediate and backup relations #}
-    {%- set intermediate_relation = make_intermediate_relation(target_relation) -%}
-    {%- set preexisting_intermediate_relation = load_cached_relation(intermediate_relation) -%}
-    {%- set backup_relation = make_backup_relation(target_relation, 'table') -%}
-    {%- set preexisting_backup_relation = load_cached_relation(backup_relation) -%}
-
-    {{ drop_relation_if_exists(preexisting_backup_relation) }}
-    {{ drop_relation_if_exists(preexisting_intermediate_relation) }}
-
-    {# Build model into intermediate relation #}
-    {%- call statement('main', language=language) -%}
-      {{ create_table_as(False, intermediate_relation, compiled_code, language) }}
-    {%- endcall -%}
-
-    {% do create_indexes(intermediate_relation) %}
-
-    {# Swap: rename existing → backup, intermediate → target, then drop backup #}
-    {% if existing_relation is not none %}
-      {{ adapter.rename_relation(existing_relation, backup_relation) }}
-      {{ adapter.rename_relation(intermediate_relation, target_relation) }}
-      {{ adapter.drop_relation(backup_relation) }}
-    {% else %}
-      {{ adapter.rename_relation(intermediate_relation, target_relation) }}
-    {% endif %}
+    {% set refresh_plan = fabric_full_refresh_table(
+        target_relation,
+        existing_relation,
+        compiled_code,
+        language
+    ) %}
 
   {# Incremental merge into existing target table #}
   {% else %}
@@ -118,12 +93,23 @@
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
   {% do persist_docs(target_relation, model) %}
 
+  {# Add or reconcile constraints including FK relations. #}
+  {% if full_refresh_mode and refresh_plan['action'] == 'reload' %}
+    {{ reconcile_model_constraints(target_relation, refresh_plan) }}
+  {% else %}
+    {{ build_model_constraints(target_relation) }}
+  {% endif %}
+  {{ create_or_update_statistics(
+      target_relation,
+      existing_table=(
+          (existing_relation is not none and not full_refresh_mode)
+          or (full_refresh_mode and refresh_plan['action'] == 'reload')
+      )
+  ) }}
+
   {# `COMMIT` happens here #}
   {% do adapter.commit() %}
 
-  {# Add constraints including FK relation #}
-  {{ build_model_constraints(target_relation) }}
-  {{ create_or_update_statistics(target_relation, existing_table=(existing_relation is not none and not full_refresh_mode)) }}
   {{ run_hooks(post_hooks, inside_transaction=False) }}
 
   {{ return({'relations': [target_relation]}) }}

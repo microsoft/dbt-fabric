@@ -1,9 +1,15 @@
+from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from dbt.adapters.base.column import Column
 
 
+@dataclass(eq=False, repr=False)
 class FabricColumn(Column):
+    is_nullable: bool | None = None
+    collation_name: str | None = None
+    is_identity: bool = False
+
     TYPE_LABELS: ClassVar[dict[str, str]] = {
         "BINARY": "BINARY(1)",
         "BOOLEAN": "BIT",

@@ -36,7 +36,11 @@
 {% endmacro %}
 
 {% macro fabric__list_relations_without_caching(schema_relation) -%}
-  {% call statement('list_relations_without_caching', fetch_result=True) -%}
+  {% call statement(
+      'list_relations_without_caching',
+      fetch_result=True,
+      auto_begin=False
+  ) -%}
     {{ get_use_database_sql(schema_relation.database) }}
     with base as (
       select
@@ -70,7 +74,11 @@
 {% endmacro %}
 
 {% macro fabric__list_function_relations_without_caching(schema_relation) %}
-  {% call statement('list_function_relations_without_caching', fetch_result=True) %}
+  {% call statement(
+      'list_function_relations_without_caching',
+      fetch_result=True,
+      auto_begin=False
+  ) %}
     {{ get_use_database_sql(schema_relation.database) }}
     select
         DB_NAME() as [database],
@@ -85,7 +93,11 @@
 {% endmacro %}
 
 {% macro fabric__get_relation_last_modified(information_schema, relations) -%}
-  {%- call statement('last_modified', fetch_result=True) -%}
+  {%- call statement(
+      'last_modified',
+      fetch_result=True,
+      auto_begin=False
+  ) -%}
         {{ get_use_database_sql(information_schema.database) }}
         select
             o.name as [identifier]

@@ -1,6 +1,6 @@
 {% macro fabric__get_catalog(information_schemas, schemas) -%}
 
-    {%- call statement('catalog', fetch_result=True) -%}
+    {%- call statement('catalog', fetch_result=True, auto_begin=False) -%}
         {{ get_use_database_sql(information_schemas.database) }}
         with
         principals as (
@@ -133,7 +133,7 @@
     {%- set distinct_databases = relations | map(attribute='database') | unique | list -%}
 
     {%- if distinct_databases | length == 1 -%}
-        {%- call statement('catalog', fetch_result=True) -%}
+        {%- call statement('catalog', fetch_result=True, auto_begin=False) -%}
             {{ get_use_database_sql(distinct_databases[0]) }}
             with
             principals as (

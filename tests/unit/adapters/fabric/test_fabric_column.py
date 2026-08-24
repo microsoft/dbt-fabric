@@ -125,3 +125,39 @@ class TestFabricColumnDataType:
     def test_non_datetime2_delegates_to_super(self):
         col = FabricColumn(column="name", dtype="varchar", char_size=100)
         assert col.data_type == "varchar(100)"
+
+
+class TestFabricColumnMetadata:
+    def test_metadata_defaults_preserve_existing_constructor(self):
+        col = FabricColumn("id", "int")
+
+        assert col.is_nullable is None
+        assert col.collation_name is None
+        assert col.is_identity is False
+
+    def test_accepts_catalog_metadata_after_existing_fields(self):
+        col = FabricColumn(
+            "id",
+            "bigint",
+            None,
+            19,
+            0,
+            False,
+            "Latin1_General_100_CI_AS",
+            True,
+        )
+
+        assert col.is_nullable is False
+        assert col.collation_name == "Latin1_General_100_CI_AS"
+        assert col.is_identity is True
+
+    def test_metadata_does_not_change_existing_equality_contract(self):
+        existing = FabricColumn("id", "int")
+        enriched = FabricColumn(
+            "id",
+            "int",
+            is_nullable=False,
+            is_identity=True,
+        )
+
+        assert existing == enriched

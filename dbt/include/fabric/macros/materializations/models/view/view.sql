@@ -10,11 +10,16 @@
       {%- set backup_relation = make_backup_relation(target_relation, 'view') -%}
   {% endif %}
 
-  {% if (existing_relation != none) %}
-    -- drop the temp relations if they exist already in the database
-    {% do adapter.drop_relation(backup_relation) %}
-    -- Rename target relation as backup relation
-    {{ adapter.rename_relation(existing_relation, backup_relation) }}
+  {% if backup_relation is not none %}
+    {%- set preexisting_backup_relation = adapter.get_relation(
+        database=backup_relation.database,
+        schema=backup_relation.schema,
+        identifier=backup_relation.identifier
+    ) -%}
+    {% if preexisting_backup_relation is not none %}
+      {% do adapter.drop_relation(preexisting_backup_relation) %}
+      {% do adapter.commit() %}
+    {% endif %}
   {% endif %}
 
   {% set grant_config = config.get('grants') %}
@@ -22,6 +27,10 @@
 
   -- `BEGIN` happens here:
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
+
+  {% if existing_relation is not none %}
+    {{ adapter.rename_relation(existing_relation, backup_relation) }}
+  {% endif %}
 
   -- build model
   {% call statement('main') -%}
@@ -33,10 +42,13 @@
 
   {% do persist_docs(target_relation, model) %}
   {{ run_hooks(post_hooks, inside_transaction=True) }}
-  {{ adapter.commit() }}
-  {% if (backup_relation != none) %}
+
+  {% if backup_relation is not none %}
     {% do adapter.drop_relation(backup_relation) %}
   {% endif %}
+
+  {{ adapter.commit() }}
+
   {{ run_hooks(post_hooks, inside_transaction=False) }}
   {{ return({'relations': [target_relation]}) }}
 

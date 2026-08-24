@@ -1,5 +1,41 @@
 # Changelog
 
+### v1.11.2rc1
+
+## Improvements
+
+* **Warehouse transaction support** — model, seed, snapshot, function, hook,
+  grant, constraint, statistics, and table-clone operations now participate in
+  dbt-managed `BEGIN`/`COMMIT`/`ROLLBACK` boundaries. Failed table reloads,
+  relation replacements, incremental writes, schema changes, seed resets, and
+  table or function creation restore the previous target instead of leaving
+  partial data or temporary relations. Clone and function grants,
+  documentation metadata, and transactional hooks commit with their resources.
+  Statements inside an open transaction are not retried individually, avoiding
+  replay of non-idempotent work.
+
+* **Transaction-safe metadata queries** — read-only relation, column, index,
+  freshness, and catalog queries no longer open transactions. This prevents
+  adapter introspection during operations such as
+  `dbt_external_tables.stage_external_sources` from accidentally owning and
+  rolling back subsequent DDL when the operation connection closes.
+
+* **Schema-aware full refreshes** — table models and incremental models running with
+  `--full-refresh` preserve the existing table object when its ordered schema, identity
+  properties, and `cluster_by` layout are unchanged. The adapter performs an atomic
+  `TRUNCATE` and full reload, retaining object-bound metadata and optimization history.
+  Named primary-key, unique, and foreign-key constraints are reconciled transactionally.
+  Schema, identity, physical-layout, or non-reconcilable custom-constraint changes use an
+  atomic CTAS/drop/rename replacement.
+
+## Bug Fixes
+
+* **Service principal authentication with `mssql-python`** — retain support for the
+  `ServicePrincipal` profile alias and stop adding the unsupported `Authority Id`
+  connection-string keyword. `ActiveDirectoryServicePrincipal` now uses the
+  `Authentication`, `UID`, and `PWD` fields supported by `mssql-python`. Resolves
+  [#434](https://github.com/microsoft/dbt-fabric/issues/434).
+
 ### v1.11.0
 
 ## Features
@@ -58,7 +94,7 @@
 * Improving table materialization to minimize downtime #189
 * Handling temp tables in incremental models #188
 * Add label support to filter queries #181
-* Addressed bug - incremental models cannot full refresh #179 
+* Addressed bug - incremental models cannot full refresh #179
 * Addressed bug - #197, dbt test incorrect syntax with macro helpers.sql
 
 ### v1.8.0rc2
