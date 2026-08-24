@@ -1,9 +1,11 @@
 import datetime as dt
+import inspect
 import struct
 from types import SimpleNamespace
 from unittest import mock
 
 import pytest
+from dbt_common.exceptions import DbtInternalError
 
 from dbt.adapters.contracts.connection import ConnectionState
 from dbt.adapters.fabric.fabric_connection_manager import (
@@ -12,6 +14,7 @@ from dbt.adapters.fabric.fabric_connection_manager import (
     byte_array_to_datetime,
 )
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
+from dbt.adapters.sql.connections import SQLConnectionManager
 
 
 class TestBoolToConnectionStringArg:
@@ -132,6 +135,156 @@ class TestServicePrincipalConnectionString:
         assert "PWD={client-secret}" in connection_string
         assert "Authority Id" not in connection_string
         assert "tenant-id" not in connection_string
+
+
+class TestTransactionManagement:
+    def test_execute_does_not_auto_begin_by_default(self):
+        assert (
+            inspect.signature(FabricConnectionManager.execute).parameters["auto_begin"].default
+            is False
+        )
+
+    def test_begin_and_commit_update_connection_state(self):
+        manager = FabricConnectionManager.__new__(FabricConnectionManager)
+        connection = SimpleNamespace(name="transaction-test", transaction_open=False)
+
+        with (
+            mock.patch.object(manager, "get_thread_connection", return_value=connection),
+            mock.patch.object(manager, "add_begin_query") as add_begin,
+            mock.patch.object(manager, "add_commit_query") as add_commit,
+        ):
+            assert manager.begin() is connection
+            assert connection.transaction_open is True
+            add_begin.assert_called_once_with()
+
+            assert manager.commit() is connection
+            assert connection.transaction_open is False
+            add_commit.assert_called_once_with()
+
+    def test_begin_rejects_nested_transaction(self):
+        manager = FabricConnectionManager.__new__(FabricConnectionManager)
+        connection = SimpleNamespace(name="transaction-test", transaction_open=True)
+
+        with mock.patch.object(manager, "get_thread_connection", return_value=connection):
+            with pytest.raises(DbtInternalError, match="already had one open"):
+                manager.begin()
+
+    def test_begin_failure_leaves_transaction_closed(self):
+        manager = FabricConnectionManager.__new__(FabricConnectionManager)
+        connection = SimpleNamespace(name="transaction-test", transaction_open=False)
+
+        with (
+            mock.patch.object(manager, "get_thread_connection", return_value=connection),
+            mock.patch.object(
+                manager, "add_begin_query", side_effect=RuntimeError("begin failed")
+            ),
+        ):
+            with pytest.raises(RuntimeError, match="begin failed"):
+                manager.begin()
+
+        assert connection.transaction_open is False
+
+    def test_commit_requires_open_transaction(self):
+        manager = FabricConnectionManager.__new__(FabricConnectionManager)
+        connection = SimpleNamespace(name="transaction-test", transaction_open=False)
+
+        with mock.patch.object(manager, "get_thread_connection", return_value=connection):
+            with pytest.raises(DbtInternalError, match="does not have one open"):
+                manager.commit()
+
+    def test_commit_failure_leaves_transaction_open_for_rollback(self):
+        manager = FabricConnectionManager.__new__(FabricConnectionManager)
+        connection = SimpleNamespace(name="transaction-test", transaction_open=True)
+
+        with (
+            mock.patch.object(manager, "get_thread_connection", return_value=connection),
+            mock.patch.object(
+                manager, "add_commit_query", side_effect=RuntimeError("commit failed")
+            ),
+        ):
+            with pytest.raises(RuntimeError, match="commit failed"):
+                manager.commit()
+
+        assert connection.transaction_open is True
+
+    def test_transaction_control_uses_guarded_tsql(self):
+        manager = FabricConnectionManager.__new__(FabricConnectionManager)
+
+        with mock.patch.object(
+            manager,
+            "add_query",
+            return_value=(mock.sentinel.connection, mock.sentinel.cursor),
+        ) as add_query:
+            manager.add_begin_query()
+            manager.add_commit_query()
+
+        assert add_query.call_args_list == [
+            mock.call("BEGIN TRANSACTION", auto_begin=False),
+            mock.call("IF @@TRANCOUNT > 0 COMMIT TRANSACTION", auto_begin=False),
+        ]
+
+    def test_rollback_executes_tsql_and_updates_connection_state(self):
+        cursor = mock.MagicMock()
+        handle = mock.MagicMock()
+        handle.cursor.return_value = cursor
+        connection = SimpleNamespace(
+            type="fabric",
+            name="transaction-test",
+            state=ConnectionState.OPEN,
+            transaction_open=True,
+            handle=handle,
+        )
+
+        FabricConnectionManager._rollback(connection)
+
+        cursor.execute.assert_called_once_with("IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION")
+        cursor.close.assert_called_once_with()
+        assert connection.transaction_open is False
+
+    def test_rollback_driver_failure_still_clears_dbt_transaction_state(self):
+        cursor = mock.MagicMock()
+        cursor.execute.side_effect = RuntimeError("rollback failed")
+        handle = mock.MagicMock()
+        handle.cursor.return_value = cursor
+        connection = SimpleNamespace(
+            type="fabric",
+            name="transaction-test",
+            state=ConnectionState.OPEN,
+            transaction_open=True,
+            handle=handle,
+        )
+
+        FabricConnectionManager._rollback(connection)
+
+        cursor.close.assert_called_once_with()
+        assert connection.transaction_open is False
+
+    @pytest.mark.parametrize(
+        ("transaction_open", "auto_begin", "expected_retry_limit"),
+        [
+            (False, False, 3),
+            (False, True, 1),
+            (True, False, 1),
+            (True, True, 1),
+        ],
+    )
+    def test_transactional_statements_are_not_retried(
+        self, transaction_open, auto_begin, expected_retry_limit
+    ):
+        manager = FabricConnectionManager.__new__(FabricConnectionManager)
+        connection = SimpleNamespace(transaction_open=transaction_open)
+
+        with (
+            mock.patch.object(manager, "get_thread_connection", return_value=connection),
+            mock.patch.object(
+                SQLConnectionManager,
+                "add_query",
+                return_value=(connection, mock.sentinel.cursor),
+            ) as add_query,
+        ):
+            manager.add_query("select 1", auto_begin=auto_begin, retry_limit=3)
+
+        assert add_query.call_args.args[-1] == expected_retry_limit
 
 
 class MockCursor:

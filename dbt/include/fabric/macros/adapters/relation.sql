@@ -1,6 +1,10 @@
 {% macro fabric__get_drop_sql(relation) -%}
   {% if relation.type == 'view' -%}
-      {% call statement('find_references', fetch_result=true) %}
+      {% call statement(
+          'find_references',
+          fetch_result=true,
+          auto_begin=False
+      ) %}
         {{ get_use_database_sql(relation.database) }}
         select
             sch.name as schema_name,

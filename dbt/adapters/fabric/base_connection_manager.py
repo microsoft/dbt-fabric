@@ -1,9 +1,7 @@
 import abc
-from typing import Any
 
 import dbt_common.exceptions
 
-from dbt.adapters.contracts.connection import Connection
 from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient
@@ -55,23 +53,3 @@ class BaseFabricConnectionManager(SQLConnectionManager, metaclass=abc.ABCMeta):
                 credentials.purview_endpoint, cls.get_fabric_token_provider(credentials)
             )
         return cls._purview_client
-
-    # No transaction support
-    def begin(self):  # type: ignore
-        logger.debug("Not supported: begin")
-
-    def commit_if_has_connection(self) -> None:
-        logger.debug("Not supported: commit_if_has_connection")
-
-    @classmethod
-    def _rollback(cls, connection: Connection) -> None:  # type: ignore
-        logger.debug("Not supported: rollback")
-
-    def commit(self) -> None:  # type: ignore
-        logger.debug("Not supported: commit")
-
-    def add_begin_query(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
-        logger.debug("Not supported: add_begin_query")
-
-    def add_commit_query(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
-        logger.debug("Not supported: add_commit_query")

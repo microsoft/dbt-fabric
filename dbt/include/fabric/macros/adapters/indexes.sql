@@ -19,7 +19,11 @@
 {% endmacro %}
 
 {% macro drop_fk_indexes_on_table(relation) -%}
-  {% call statement('find_references', fetch_result=true) %}
+  {% call statement(
+      'find_references',
+      fetch_result=true,
+      auto_begin=False
+  ) %}
       USE [{{ relation.database }}];
       SELECT  obj.name AS FK_NAME,
       sch.name AS [schema_name],
@@ -59,7 +63,11 @@
 {% endmacro %}
 
 {% macro fabric__list_nonclustered_rowstore_indexes(relation) -%}
-  {% call statement('list_nonclustered_rowstore_indexes', fetch_result=True) -%}
+  {% call statement(
+      'list_nonclustered_rowstore_indexes',
+      fetch_result=True,
+      auto_begin=False
+  ) -%}
 
     SELECT i.name AS index_name
     , i.name + '__dbt_backup' as index_new_name

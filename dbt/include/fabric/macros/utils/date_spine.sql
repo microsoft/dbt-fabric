@@ -1,5 +1,9 @@
 {% macro fabric__get_intervals_between(start_date, end_date, datepart) -%}
-    {%- call statement('get_intervals_between', fetch_result=True) %}
+    {%- call statement(
+        'get_intervals_between',
+        fetch_result=True,
+        auto_begin=False
+    ) %}
 
         select {{ dbt.datediff(start_date, end_date, datepart) }} as diff
 

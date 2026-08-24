@@ -56,7 +56,7 @@
   ) }}
 
   {% if refresh_plan['action'] == 'reload' %}
-    {% call statement('main', language=language, auto_begin=False) -%}
+    {% call statement('main', language=language) -%}
       {{ fabric_atomic_reload_sql(
           target_relation,
           compiled_code,
@@ -70,7 +70,7 @@
         compiled_code,
         language
     ) %}
-    {% call statement('main', language=language, auto_begin=False) -%}
+    {% call statement('main', language=language) -%}
       {{ fabric_atomic_replace_sql(
           target_relation,
           existing_relation,
@@ -106,19 +106,10 @@
     {%- do quoted_columns.append(adapter.quote(column_name)) -%}
   {%- endfor -%}
   {{ get_use_database_sql(target_relation.database) }}
-  BEGIN TRY
-    BEGIN TRANSACTION;
-    TRUNCATE TABLE {{ target_relation.include(database=False) }};
-    INSERT INTO {{ target_relation.include(database=False) }}
-      ({{ quoted_columns | join(', ') }})
-    {{ compiled_code }};
-    COMMIT TRANSACTION;
-  END TRY
-  BEGIN CATCH
-    IF @@TRANCOUNT > 0
-      ROLLBACK TRANSACTION;
-    THROW;
-  END CATCH;
+  TRUNCATE TABLE {{ target_relation.include(database=False) }};
+  INSERT INTO {{ target_relation.include(database=False) }}
+    ({{ quoted_columns | join(', ') }})
+  {{ compiled_code }};
 {% endmacro %}
 
 {% macro fabric_atomic_replace_sql(
@@ -142,20 +133,11 @@
     create_sql
 ) %}
   {{ get_use_database_sql(target_relation.database) }}
-  BEGIN TRY
-    BEGIN TRANSACTION;
-    {{ create_sql }}
-    {% if existing_relation is not none %}
-      DROP {{ existing_relation.type }} {{ existing_relation.include(database=False) }};
-    {% endif %}
-    EXEC sp_rename
-      '{{ intermediate_relation.include(database=False) | replace("'", "''") }}',
-      '{{ target_relation.identifier | replace("'", "''") }}';
-    COMMIT TRANSACTION;
-  END TRY
-  BEGIN CATCH
-    IF @@TRANCOUNT > 0
-      ROLLBACK TRANSACTION;
-    THROW;
-  END CATCH;
+  {{ create_sql }}
+  {% if existing_relation is not none %}
+    DROP {{ existing_relation.type }} {{ existing_relation.include(database=False) }};
+  {% endif %}
+  EXEC sp_rename
+    '{{ intermediate_relation.include(database=False) | replace("'", "''") }}',
+    '{{ target_relation.identifier | replace("'", "''") }}';
 {% endmacro %}

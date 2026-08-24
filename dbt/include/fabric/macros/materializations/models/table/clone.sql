@@ -7,3 +7,78 @@
     CREATE TABLE {{target_relation}}
     AS CLONE OF {{defer_relation}}
 {% endmacro %}
+
+{% materialization clone, adapter='fabric' %}
+
+  {%- set relations = {'relations': []} -%}
+
+  {%- if not defer_relation -%}
+    {{ log("No relation found in state manifest for " ~ model.unique_id, info=True) }}
+    {{ return(relations) }}
+  {%- endif -%}
+
+  {%- set existing_relation = load_cached_relation(this) -%}
+
+  {%- if existing_relation and not flags.FULL_REFRESH -%}
+    {{ log("Relation " ~ existing_relation ~ " already exists", info=True) }}
+    {{ return(relations) }}
+  {%- endif -%}
+
+  {%- set other_existing_relation = load_cached_relation(defer_relation) -%}
+  {%- set can_clone_table = can_clone_table() -%}
+  {%- set grant_config = config.get('grants') -%}
+
+  {%- if other_existing_relation
+        and other_existing_relation.type == 'table'
+        and can_clone_table -%}
+
+    {%- set target_relation = this.incorporate(type='table') -%}
+    {% if existing_relation is not none and not existing_relation.is_table %}
+      {{ log(
+          "Dropping relation " ~ existing_relation.render()
+          ~ " because it is of type " ~ existing_relation.type
+      ) }}
+      {{ drop_relation_if_exists(existing_relation) }}
+    {% endif %}
+
+    {% if target_relation.database == defer_relation.database
+          and target_relation.schema == defer_relation.schema
+          and target_relation.identifier == defer_relation.identifier %}
+      {{ log(
+          "Target relation and defer relation are the same, skipping clone for relation: "
+          ~ target_relation.render()
+      ) }}
+    {% else %}
+      {% call statement('main') %}
+        {{ create_or_replace_clone(target_relation, defer_relation) }}
+      {% endcall %}
+
+      {% set should_revoke = should_revoke(
+          existing_relation,
+          full_refresh_mode=True
+      ) %}
+      {% do apply_grants(
+          target_relation,
+          grant_config,
+          should_revoke=should_revoke
+      ) %}
+      {% do persist_docs(target_relation, model) %}
+      {% do adapter.commit() %}
+    {% endif %}
+
+    {{ return({'relations': [target_relation]}) }}
+
+  {%- else -%}
+
+    {%- set target_relation = this.incorporate(type='view') -%}
+    {% set search_name = "materialization_view_" ~ adapter.type() %}
+    {% if not search_name in context %}
+      {% set search_name = "materialization_view_default" %}
+    {% endif %}
+    {% set materialization_macro = context[search_name] %}
+    {% set relations = materialization_macro() %}
+    {{ return(relations) }}
+
+  {%- endif -%}
+
+{% endmaterialization %}

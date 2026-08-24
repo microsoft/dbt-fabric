@@ -266,6 +266,7 @@ class TestTableConstraintReconciliation:
             "schema.yml",
         )
         run_dbt(["run", "-s", "constraint_refresh"])
+        original_object_id = _object_id(project, "constraint_refresh")
 
         write_file(
             constraint_schema_yml.format(
@@ -277,8 +278,15 @@ class TestTableConstraintReconciliation:
             "models",
             "schema.yml",
         )
+        write_file(
+            table_model_sql.replace("{{ value }}", "replacement"),
+            "models",
+            "constraint_refresh.sql",
+        )
         run_dbt_and_capture(["run", "-s", "constraint_refresh"], expect_pass=False)
 
+        assert _object_id(project, "constraint_refresh") == original_object_id
+        assert _value(project, "constraint_refresh") == "value"
         assert _constraint_columns(
             project,
             "constraint_refresh",

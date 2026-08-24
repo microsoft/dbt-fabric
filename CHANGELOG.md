@@ -4,6 +4,22 @@
 
 ## Improvements
 
+* **Warehouse transaction support** — model, seed, snapshot, function, hook,
+  grant, constraint, statistics, and table-clone operations now participate in
+  dbt-managed `BEGIN`/`COMMIT`/`ROLLBACK` boundaries. Failed table reloads,
+  relation replacements, incremental writes, schema changes, seed resets, and
+  table or function creation restore the previous target instead of leaving
+  partial data or temporary relations. Clone and function grants,
+  documentation metadata, and transactional hooks commit with their resources.
+  Statements inside an open transaction are not retried individually, avoiding
+  replay of non-idempotent work.
+
+* **Transaction-safe metadata queries** — read-only relation, column, index,
+  freshness, and catalog queries no longer open transactions. This prevents
+  adapter introspection during operations such as
+  `dbt_external_tables.stage_external_sources` from accidentally owning and
+  rolling back subsequent DDL when the operation connection closes.
+
 * **Schema-aware full refreshes** — table models and incremental models running with
   `--full-refresh` preserve the existing table object when its ordered schema, identity
   properties, and `cluster_by` layout are unchanged. The adapter performs an atomic

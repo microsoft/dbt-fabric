@@ -1,15 +1,20 @@
 import datetime as dt
 import re
 import struct
+import traceback
 from contextlib import contextmanager
 from typing import Any
 
 import agate
 import dbt_common.exceptions
 from dbt_common.clients.agate_helper import empty_table
+from dbt_common.events.contextvars import get_node_info
+from dbt_common.events.functions import fire_event
+from dbt_common.utils.casting import cast_to_str
 
 from dbt.adapters.contracts.connection import AdapterResponse, Connection, ConnectionState
 from dbt.adapters.events.logging import AdapterLogger
+from dbt.adapters.events.types import RollbackFailed
 from dbt.adapters.fabric.base_connection_manager import BaseFabricConnectionManager
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
@@ -100,9 +105,8 @@ class FabricConnectionManager(BaseFabricConnectionManager):
             logger.debug(f"Database error: {str(e)}")
 
             try:
-                # attempt to release the connection
                 self.release()
-            except mssql_python.Error:
+            except Exception:
                 logger.debug("Failed to release connection!")
 
             raise dbt_common.exceptions.DbtDatabaseError(str(e).strip()) from e
@@ -307,7 +311,7 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         return datatypes[data_type]
 
     def execute(
-        self, sql: str, auto_begin: bool = True, fetch: bool = False, limit: int | None = None
+        self, sql: str, auto_begin: bool = False, fetch: bool = False, limit: int | None = None
     ) -> tuple[AdapterResponse, agate.Table]:
         sql = self._add_query_comment(sql)
         _, cursor = self.add_query(sql, auto_begin)
@@ -327,6 +331,30 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         response = self.get_response(cursor)
         return response, table
 
+    def add_begin_query(self):
+        return self.add_query("BEGIN TRANSACTION", auto_begin=False)
+
+    def add_commit_query(self):
+        return self.add_query("IF @@TRANCOUNT > 0 COMMIT TRANSACTION", auto_begin=False)
+
+    @classmethod
+    def _rollback_handle(cls, connection: Connection) -> None:
+        cursor = None
+        try:
+            cursor = connection.handle.cursor()
+            cursor.execute("IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION")
+        except Exception:
+            fire_event(
+                RollbackFailed(
+                    conn_name=cast_to_str(connection.name),
+                    exc_info=traceback.format_exc(),
+                    node_info=get_node_info(),
+                )
+            )
+        finally:
+            if cursor is not None:
+                cursor.close()
+
     def add_query(
         self,
         sql: str,
@@ -345,6 +373,11 @@ class FabricConnectionManager(BaseFabricConnectionManager):
             bindings = ()
         else:
             bindings = [b.isoformat() if isinstance(b, dt.datetime) else b for b in bindings]
+
+        connection = self.get_thread_connection()
+        if auto_begin or connection.transaction_open:
+            retry_limit = 1
+
         return super().add_query(
             sql, auto_begin, bindings, abridge_sql_log, retryable_exceptions, retry_limit
         )

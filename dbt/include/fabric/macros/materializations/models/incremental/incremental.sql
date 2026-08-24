@@ -33,19 +33,12 @@
   {%- set target_relation = this.incorporate(type='table') -%}
   {%- set existing_relation = load_cached_relation(this) -%}
 
-  {# Can't overwrite a view with a table - we must drop #}
-  {% if existing_relation is not none and existing_relation.type == 'view' %}
-    {{ log("Dropping relation " ~ existing_relation ~ " because it is a view and target is a table.") }}
-    {% do adapter.drop_relation(existing_relation) %}
-    {%- set existing_relation = none -%}
-  {% endif %}
-
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
   {# `BEGIN` happens here: #}
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
   {# Full rebuild when no target table exists or full refresh requested #}
-  {% if existing_relation is none or full_refresh_mode %}
+  {% if existing_relation is none or full_refresh_mode or existing_relation.type == 'view' %}
 
     {% set refresh_plan = fabric_full_refresh_table(
         target_relation,
@@ -100,9 +93,6 @@
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
   {% do persist_docs(target_relation, model) %}
 
-  {# `COMMIT` happens here #}
-  {% do adapter.commit() %}
-
   {# Add or reconcile constraints including FK relations. #}
   {% if full_refresh_mode and refresh_plan['action'] == 'reload' %}
     {{ reconcile_model_constraints(target_relation, refresh_plan) }}
@@ -116,6 +106,10 @@
           or (full_refresh_mode and refresh_plan['action'] == 'reload')
       )
   ) }}
+
+  {# `COMMIT` happens here #}
+  {% do adapter.commit() %}
+
   {{ run_hooks(post_hooks, inside_transaction=False) }}
 
   {{ return({'relations': [target_relation]}) }}

@@ -24,8 +24,6 @@
   {% do apply_grants(target_relation, grant_config, should_revoke=should_revoke) %}
 
   {% do persist_docs(target_relation, model) %}
-  {# `COMMIT` happens here #}
-  {{ adapter.commit() }}
 
   {# Add or reconcile constraints including FK relations. #}
   {% if refresh_plan['action'] == 'reload' %}
@@ -37,6 +35,10 @@
       target_relation,
       existing_table=(refresh_plan['action'] == 'reload')
   ) }}
+
+  {# `COMMIT` happens here #}
+  {{ adapter.commit() }}
+
   {{ run_hooks(post_hooks, inside_transaction=False) }}
   {{ return({'relations': [target_relation]}) }}
 

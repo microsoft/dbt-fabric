@@ -7,7 +7,11 @@
 {% endmacro %}
 
 {% macro fabric__get_columns_in_relation(relation) -%}
-    {% call statement('get_columns_in_relation', fetch_result=True) %}
+    {% call statement(
+        'get_columns_in_relation',
+        fetch_result=True,
+        auto_begin=False
+    ) %}
         {{ get_use_database_sql(relation.database) }}
         with mapping as (
             select
