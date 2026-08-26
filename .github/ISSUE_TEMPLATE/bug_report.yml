@@ -1,0 +1,92 @@
+name: Bug report
+description: Report a reproducible problem with dbt-fabric.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please search existing issues before submitting a new one and remove any sensitive information from logs.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Describe the bug
+      description: What happened, and what behavior did you expect?
+      placeholder: A clear and concise description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Provide the smallest dbt project, model, or command sequence that reproduces the problem.
+      placeholder: |
+        1. Configure ...
+        2. Run `dbt ...`
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: input
+    id: dbt_fabric_version
+    attributes:
+      label: dbt-fabric version
+      description: Run `dbt --version` to find the installed adapter version.
+      placeholder: "1.9.0"
+    validations:
+      required: true
+
+  - type: input
+    id: dbt_core_version
+    attributes:
+      label: dbt-core version
+      placeholder: "1.9.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      placeholder: "3.12.4"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Data platform
+      options:
+        - Fabric Warehouse
+        - Fabric SQL database
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: operating_system
+    attributes:
+      label: Operating system
+      placeholder: "Windows 11, macOS 15, or Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and additional context
+      description: Paste relevant logs, stack traces, screenshots, or other context. Remove credentials, connection strings, and other sensitive information.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched the existing issues and did not find a duplicate.
+          required: true
+        - label: I removed credentials and other sensitive information from this report.
+          required: true
