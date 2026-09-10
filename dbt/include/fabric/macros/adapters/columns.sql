@@ -71,7 +71,7 @@
     {%- set schema_name = relation.schema -%}
 
     {% set generate_tmp_relation_script %}
-        SELECT TRIM(REPLACE(STRING_AGG(ColumnName + ' ', ',-'), '-', CHAR(10)))  AS ColumnDef
+        SELECT STRING_AGG(ColumnName, ',' + CHAR(10)) AS ColumnDef
         FROM
         (
             SELECT
