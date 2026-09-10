@@ -30,6 +30,14 @@
 
 ## Bug Fixes
 
+* **Removed the `check_for_nested_cte` heuristic** — the table materialization no longer
+  counts occurrences of `with ` in the model query to decide whether a contract-enforced
+  model may be built. That count also matched comments, string literals and table hints,
+  so models were rejected at compile time over SQL the adapter never had to judge.
+  Contract-enforced models take the contract path based on the contract flag alone, and
+  dbt's schema validation and the warehouse report whatever they reject. Resolves
+  [#387](https://github.com/microsoft/dbt-fabric/issues/387).
+
 * **Service principal authentication with `mssql-python`** — retain support for the
   `ServicePrincipal` profile alias and stop adding the unsupported `Authority Id`
   connection-string keyword. `ActiveDirectoryServicePrincipal` now uses the
