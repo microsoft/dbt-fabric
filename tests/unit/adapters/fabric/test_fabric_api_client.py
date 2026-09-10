@@ -6,13 +6,6 @@ import pytest
 from dbt.adapters.fabric.fabric_api_client import FabricApiClient, FabricApiError
 
 
-@pytest.fixture(autouse=True)
-def reset_singleton():
-    FabricApiClient._instance = None
-    yield
-    FabricApiClient._instance = None
-
-
 @pytest.fixture
 def token_provider():
     mock = MagicMock()
@@ -45,8 +38,8 @@ def _make_response(status_code=200, json_data=None, headers=None, text=""):
     return resp
 
 
-class TestSingleton:
-    def test_create_returns_same_instance(self, credentials, token_provider):
+class TestCreate:
+    def test_create_reuses_the_client_of_a_credential_context(self, credentials, token_provider):
         first = FabricApiClient.create(credentials, token_provider)
         second = FabricApiClient.create(credentials, token_provider)
         assert first is second

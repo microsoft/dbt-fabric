@@ -1,6 +1,7 @@
 import importlib
 import re
 import struct
+import threading
 import time
 from collections.abc import Callable
 from itertools import chain, repeat
@@ -22,6 +23,9 @@ from azure.identity import (
 from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
 
 DOTTED_PATH_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$")
+
+# A cached token is refreshed once less than this much of its validity is left.
+REFRESH_THRESHOLD_SECONDS = 300
 
 
 def get_notebookutils_access_token(scope: str) -> AccessToken:
@@ -114,18 +118,25 @@ def load_token_credential(
 class FabricTokenProvider:
     SQL_CREDENTIAL_SCOPE = "https://database.windows.net/.default"
     FABRIC_CREDENTIAL_SCOPE = "https://analysis.windows.net/powerbi/api/.default"
-    _tokens: dict[str, AccessToken] = {}
     SQL_COPT_SS_ACCESS_TOKEN = 1256
 
     def __init__(self, credentials: BaseFabricCredentials):
         self.credentials = credentials
         self._custom_credential: TokenCredential | None = None
+        # Cached tokens and the locks guarding them belong to this provider, so
+        # a provider can only ever hand out tokens for its own credentials.
+        self._tokens: dict[str, AccessToken] = {}
+        self._scope_locks: dict[str, threading.Lock] = {}
+        self._scope_locks_guard = threading.Lock()
+        self._custom_credential_lock = threading.Lock()
 
     def get_access_token(self, scope: str | None = None) -> str:
         """Return a valid access token for the given scope, refreshing if near expiry.
 
-        Tokens are cached per scope and reused until they have less than 5 minutes
-        of validity remaining.
+        Tokens are cached per scope on this provider and reused until they have
+        less than 5 minutes of validity remaining. Concurrent callers of the same
+        scope share a single acquisition; other scopes and other credential
+        contexts keep running while that acquisition is in flight.
 
         Args:
             scope: The OAuth scope. Defaults to the Fabric API scope if not provided.
@@ -134,25 +145,59 @@ class FabricTokenProvider:
             ValueError: If the configured authentication method is not supported,
                 or if required credentials (client_id, etc.) are missing.
         """
-        MAX_REMAINING_TIME = 300
-
         if self.credentials.access_token:
             return self.credentials.access_token
 
         scope = scope or self.credentials.token_scope or self.FABRIC_CREDENTIAL_SCOPE
 
-        current_token = self._tokens.get(scope)
-        time_remaining = (
-            (current_token.expires_on - time.time()) if current_token else MAX_REMAINING_TIME
-        )
+        cached = self._cached_token(scope)
+        if cached is not None:
+            return cached
 
-        if current_token and time_remaining >= MAX_REMAINING_TIME:
-            return current_token.token
+        with self._scope_lock(scope):
+            # Another thread may have refreshed this scope while we waited.
+            cached = self._cached_token(scope)
+            if cached is not None:
+                return cached
 
-        credential: Any | None = None
-        token: AccessToken
+            # A failure propagates instead of being cached as a token: the next
+            # call retries rather than serving a stale or foreign token.
+            token = self._acquire_token(scope)
+            self._tokens[scope] = token
+            return token.token
 
-        if self.credentials.authentication.lower() == "activedirectoryserviceprincipal":
+    def _cached_token(self, scope: str) -> str | None:
+        """Return the cached token for a scope while it is still fresh enough."""
+        token = self._tokens.get(scope)
+        if token is not None and token.expires_on - time.time() >= REFRESH_THRESHOLD_SECONDS:
+            return token.token
+        return None
+
+    def _scope_lock(self, scope: str) -> threading.Lock:
+        """Return this provider's lock for a scope, creating it on first use."""
+        with self._scope_locks_guard:
+            return self._scope_locks.setdefault(scope, threading.Lock())
+
+    def _acquire_token(self, scope: str) -> AccessToken:
+        """Acquire a fresh token for a scope from the configured credential."""
+        authentication = self.credentials.authentication.lower()
+
+        if authentication == "notebookutils":
+            return get_notebookutils_access_token(scope)
+
+        return self._token_credential(authentication).get_token(scope)
+
+    def _token_credential(self, authentication: str) -> TokenCredential:
+        """Return the azure-identity credential for the configured auth method.
+
+        Args:
+            authentication: The lower-cased ``authentication`` credential value.
+
+        Raises:
+            ValueError: If the authentication method is not supported, or if
+                required credentials (client_id, etc.) are missing.
+        """
+        if authentication == "activedirectoryserviceprincipal":
             if not all(
                 [
                     self.credentials.client_id,
@@ -164,51 +209,53 @@ class FabricTokenProvider:
                     "client_id, client_secret, and tenant_id must be provided "
                     "for ActiveDirectoryServicePrincipal authentication."
                 )
-            credential = ClientSecretCredential(
+            return ClientSecretCredential(
                 client_id=self.credentials.client_id,  # type: ignore
                 client_secret=self.credentials.client_secret,  # type: ignore
                 tenant_id=self.credentials.tenant_id,  # type: ignore
             )
-        elif self.credentials.authentication.lower() == "activedirectorydefault":
-            credential = DefaultAzureCredential()
-        elif self.credentials.authentication.lower() == "activedirectoryinteractive":
-            credential = InteractiveBrowserCredential()
-        elif self.credentials.authentication.lower() == "activedirectorydevicecodeflow":
-            credential = DeviceCodeCredential()
-        elif self.credentials.authentication.lower() == "activedirectorymsi":
-            credential = ManagedIdentityCredential()
-        elif self.credentials.authentication.lower() == "cli":
-            credential = AzureCliCredential()
-        elif self.credentials.authentication.lower() == "environment":
-            credential = EnvironmentCredential()
-        elif self.credentials.authentication.lower() == "notebookutils":
-            token = get_notebookutils_access_token(scope)
-        elif self.credentials.authentication.lower() == "workload_identity":
-            if self._custom_credential is None:
-                self._custom_credential = ClientAssertionCredential(
+        if authentication == "activedirectorydefault":
+            return DefaultAzureCredential()
+        if authentication == "activedirectoryinteractive":
+            return InteractiveBrowserCredential()
+        if authentication == "activedirectorydevicecodeflow":
+            return DeviceCodeCredential()
+        if authentication == "activedirectorymsi":
+            return ManagedIdentityCredential()
+        if authentication == "cli":
+            return AzureCliCredential()
+        if authentication == "environment":
+            return EnvironmentCredential()
+        if authentication == "workload_identity":
+            return self._custom_token_credential(
+                lambda: ClientAssertionCredential(
                     tenant_id=self.credentials.tenant_id,
                     client_id=self.credentials.client_id,
                     func=_build_federated_token_callable(self.credentials),
                 )
-            credential = self._custom_credential
-        elif self.credentials.authentication.lower() == "token_credential":
-            if self._custom_credential is None:
-                assert self.credentials.credential_class is not None
-                self._custom_credential = load_token_credential(
-                    self.credentials.credential_class,
+            )
+        if authentication == "token_credential":
+            assert self.credentials.credential_class is not None
+            credential_class = self.credentials.credential_class
+            return self._custom_token_credential(
+                lambda: load_token_credential(
+                    credential_class,
                     self.credentials.credential_kwargs,
                 )
-            credential = self._custom_credential
-        else:
-            raise ValueError(
-                f"Unsupported authentication method: {self.credentials.authentication}"
             )
 
-        if credential is not None:
-            token = credential.get_token(scope)
+        raise ValueError(f"Unsupported authentication method: {self.credentials.authentication}")
 
-        self._tokens[scope] = token
-        return token.token
+    def _custom_token_credential(self, factory: Callable[[], TokenCredential]) -> TokenCredential:
+        """Build this provider's custom credential once and reuse it afterwards.
+
+        Args:
+            factory: Builds the credential configured for these credentials.
+        """
+        with self._custom_credential_lock:
+            if self._custom_credential is None:
+                self._custom_credential = factory()
+            return self._custom_credential
 
     def get_sql_attrs_before(self) -> dict[int, bytes] | None:
         """Build the SQL connection attrs_before dict with an encoded access token.

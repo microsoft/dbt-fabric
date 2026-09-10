@@ -214,9 +214,6 @@ class TestBuildFederatedTokenCallable:
 
 
 class TestFabricTokenProviderWorkloadIdentity:
-    def setup_method(self):
-        FabricTokenProvider._tokens.clear()
-
     def test_creates_client_assertion_credential(self):
         creds = FakeWorkloadCredentials(
             federated_token_url="https://oidc.example.com/token",
@@ -261,7 +258,7 @@ class TestFabricTokenProviderWorkloadIdentity:
             provider.get_access_token("https://example.com/.default")
             first = provider._custom_credential
 
-            FabricTokenProvider._tokens.clear()
+            provider._tokens.clear()
             provider.get_access_token("https://example.com/.default")
             second = provider._custom_credential
 

@@ -16,6 +16,7 @@ from dbt.adapters.contracts.connection import AdapterResponse, Connection, Conne
 from dbt.adapters.events.logging import AdapterLogger
 from dbt.adapters.events.types import RollbackFailed
 from dbt.adapters.fabric.base_connection_manager import BaseFabricConnectionManager
+from dbt.adapters.fabric.credential_context import credential_runtime_state
 from dbt.adapters.fabric.fabric_credentials import FabricCredentials
 
 logger = AdapterLogger("fabric")
@@ -92,7 +93,6 @@ def byte_array_to_datetime(value: bytes) -> dt.datetime:
 
 class FabricConnectionManager(BaseFabricConnectionManager):
     TYPE = "fabric"
-    _host: str | None = None
 
     @contextmanager
     def exception_handler(self, sql):
@@ -128,7 +128,9 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         """Resolve the SQL endpoint hostname from config or via the Fabric API.
 
         Checks ``credentials.host`` first, then falls back to querying the
-        Fabric API using the configured workspace.
+        Fabric API using the configured workspace. The result is cached on the
+        credentials, so it is resolved once per credential context instead of
+        once per process.
 
         Args:
             credentials: Fabric connection credentials.
@@ -136,18 +138,17 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         Raises:
             DbtConfigError: If neither host nor workspace is configured.
         """
-        if cls._host is None:
-            if credentials.host:
-                cls._host = credentials.host
-            elif credentials.workspace_id or credentials.workspace_name:
-                api = cls.get_fabric_api_client(credentials)
-                cls._host = api.get_warehouse_connection_string()
-            else:
-                raise dbt_common.exceptions.DbtConfigError(
-                    "Either host or workspace_id must be provided."
-                )
-        assert cls._host is not None
-        return cls._host
+        return credential_runtime_state(credentials).get_or_create(
+            "host", lambda: cls._resolve_host(credentials)
+        )
+
+    @classmethod
+    def _resolve_host(cls, credentials: FabricCredentials) -> str:
+        if credentials.host:
+            return credentials.host
+        if credentials.workspace_id or credentials.workspace_name:
+            return cls.get_fabric_api_client(credentials).get_warehouse_connection_string()
+        raise dbt_common.exceptions.DbtConfigError("Either host or workspace_id must be provided.")
 
     @classmethod
     def open(cls, connection: Connection) -> Connection:
