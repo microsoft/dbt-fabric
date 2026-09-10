@@ -28,7 +28,26 @@
   Schema, identity, physical-layout, or non-reconcilable custom-constraint changes use an
   atomic CTAS/drop/rename replacement.
 
+* **Native column widening** — `fabric__alter_column_type` issues a single
+  `ALTER TABLE ... ALTER COLUMN`, restating the column's nullability and collation, instead of
+  copying the whole target into a scratch table and back for every changed column. Widening a
+  column — `varchar(8000)` to `varchar(max)`, for example — is a metadata-only change in Fabric
+  Warehouse, so the table and its rows stay in place. dbt no longer rebuilds a model to change a
+  column type: identity columns and columns whose nullability cannot be read are refused up
+  front, and anything else the warehouse cannot apply as metadata-only — a narrowing, an
+  incompatible type, a clustering column, or a column carrying manually created statistics,
+  including those from the `statistics` config — is rejected by the warehouse and has to be
+  applied with `dbt run --full-refresh` or by dropping the statistics first. Resolves
+  [#451](https://github.com/microsoft/dbt-fabric/issues/451).
+
 ## Bug Fixes
+
+* **`varchar(max)` compared as the narrowest column** — Fabric reports the length of a
+  `varchar(max)` column as `-1`, which the inherited size comparison read as narrower than every
+  explicit length. Incremental models and snapshots now widen a column to `varchar(max)` instead
+  of silently leaving it too narrow, and `on_schema_change: sync_all_columns` no longer schedules
+  a narrowing of a target that is already `varchar(max)`. Resolves
+  [#451](https://github.com/microsoft/dbt-fabric/issues/451).
 
 * **Service principal authentication with `mssql-python`** — retain support for the
   `ServicePrincipal` profile alias and stop adding the unsupported `Authority Id`

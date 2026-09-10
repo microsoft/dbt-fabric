@@ -99,6 +99,44 @@ class TestFabricColumnIsNumeric:
         assert col.is_numeric() is False
 
 
+class TestFabricColumnCanExpandTo:
+    """Fabric reports the length of a varchar(max) column as -1."""
+
+    MAX = -1
+
+    def _column(self, char_size, dtype="varchar"):
+        return FabricColumn(column="payload", dtype=dtype, char_size=char_size)
+
+    @pytest.mark.parametrize(
+        ("current_size", "target_size", "expected"),
+        [
+            (8000, MAX, True),
+            (1, MAX, True),
+            (MAX, 8000, False),
+            (MAX, MAX, False),
+            (7999, 8000, True),
+            (8000, 7999, False),
+            (100, 100, False),
+        ],
+    )
+    def test_string_widths(self, current_size, target_size, expected):
+        current = self._column(current_size)
+        target = self._column(target_size)
+
+        assert current.can_expand_to(target) is expected
+
+    def test_char_can_expand_to_varchar_max(self):
+        current = self._column(10, dtype="char")
+
+        assert current.can_expand_to(self._column(self.MAX)) is True
+
+    def test_non_string_types_never_expand(self):
+        integer = FabricColumn(column="payload", dtype="int")
+
+        assert integer.can_expand_to(self._column(self.MAX)) is False
+        assert self._column(100).can_expand_to(integer) is False
+
+
 class TestFabricColumnQuoted:
     def test_simple_name(self):
         col = FabricColumn(column="my_column", dtype="int")
