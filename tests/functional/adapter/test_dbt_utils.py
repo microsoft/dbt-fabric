@@ -117,6 +117,20 @@ seeds:
             lower_bound_column: lower_bound
             upper_bound_column: upper_bound
             gaps: not_allowed
+      - dbt_utils.relationships_where:
+          arguments:
+            column_name: status
+            to: ref('dbt_utils_reference')
+            field: status
+  - name: dbt_utils_larger
+    data_tests:
+      # id 4 has no match in dbt_utils_subject, so this only passes if from_condition is applied
+      - dbt_utils.relationships_where:
+          arguments:
+            column_name: id
+            to: ref('dbt_utils_subject')
+            field: id
+            from_condition: "id < 4"
 """
 
 
@@ -153,7 +167,7 @@ class TestDbtUtilsFabricSupport:
         run_dbt(["deps"])
         assert len(run_dbt(["seed"])) == 3
         assert len(run_dbt(["run"])) == 6
-        assert len(run_dbt(["test"])) == 3
+        assert len(run_dbt(["test"])) == 5
 
         series = project.run_sql(
             f"select min(generated_number), max(generated_number), count(*) "
