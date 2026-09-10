@@ -1,5 +1,19 @@
 # Changelog
 
+### Unreleased
+
+## Features
+
+* **`audit_helper.compare_and_classify_query_results` support** — the macro now runs on Fabric. Requires `dbt-labs/audit_helper` 0.14.0 or newer, plus this `dbt_project.yml` configuration so dbt selects the adapter implementation:
+
+  ```yaml
+  dispatch:
+    - macro_namespace: audit_helper
+      search_order: ["dbt", "audit_helper"]
+  ```
+
+  The result is unordered; sort in the query that reads it.
+
 ### v1.11.2rc1
 
 ## Improvements
