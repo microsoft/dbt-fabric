@@ -66,67 +66,56 @@
 {% endmacro %}
 
 {% macro fabric__alter_column_type(relation, column_name, new_column_type) %}
+    {#-
+        Fabric Warehouse applies the column changes it supports -- widening a type, such as
+        varchar(8000) to varchar(max) -- as a metadata-only ALTER COLUMN. Rebuilding the
+        relation instead would copy every row of the target for every changed column.
 
-    {%- set table_name= relation.identifier -%}
-    {%- set schema_name = relation.schema -%}
+        Whatever the warehouse cannot apply that way -- a narrowing, an incompatible type, a
+        clustering column, or a column carrying manually created statistics -- it rejects, and
+        dbt does not rebuild the model behind the user's back. Rebuild it with --full-refresh
+        to apply such a change.
 
-    {% set generate_tmp_relation_script %}
-        SELECT TRIM(REPLACE(STRING_AGG(ColumnName + ' ', ',-'), '-', CHAR(10)))  AS ColumnDef
-        FROM
-        (
-            SELECT
-            '[' + REPLACE(CAST(c.COLUMN_NAME AS VARCHAR(128)), ']', ']]') + ']' AS ColumnName
-            FROM INFORMATION_SCHEMA.TABLES t
-            JOIN INFORMATION_SCHEMA.COLUMNS c
-                ON t.TABLE_SCHEMA = c.TABLE_SCHEMA
-                AND t.TABLE_NAME = c.TABLE_NAME
-                WHERE t.TABLE_NAME = REPLACE(REPLACE('{{table_name}}','[',''),']','')
-                AND t.TABLE_SCHEMA = REPLACE(REPLACE('{{schema_name}}','[',''),']','')
-                AND c.COLUMN_NAME <> REPLACE(REPLACE('{{column_name}}','[',''),']','')
-        ) T
-    {% endset %}
+        https://learn.microsoft.com/en-us/sql/t-sql/statements/alter-table-transact-sql?view=fabric#alter-column
+    -#}
+    {%- set existing_column = adapter.get_columns_in_relation(relation)
+            | selectattr('name', 'equalto', column_name) | list | first -%}
 
-    {%- set query_result = run_query(generate_tmp_relation_script) -%}
-    {%- set query_result_text = query_result.rows[0][0] -%}
+    {%- if not existing_column -%}
+        {% do exceptions.raise_compiler_error(
+            "Cannot alter column " ~ adapter.quote(column_name) ~ ": it does not exist in " ~ relation
+        ) %}
+    {%- endif -%}
 
-    {% set tempTableName %}
-        {{ relation.schema }}.{{ relation.identifier }}_{{ range(1300, 19000) | random }}
-    {% endset %}
-    {{ log("Cannot Alter table type, as it is not supported. Using random table as a temp table. - " ~ tempTableName) }}
+    {%- if existing_column.is_identity -%}
+        {% do exceptions.raise_compiler_error(
+            "Cannot alter identity column " ~ adapter.quote(column_name) ~ " in " ~ relation
+            ~ ": Fabric Warehouse does not support altering identity columns."
+            ~ " Rebuild the model with --full-refresh to change its type."
+        ) %}
+    {%- endif -%}
 
-    {% set tempTable %}
-        CREATE TABLE {{tempTableName}}
-        AS SELECT {{query_result_text}}, CAST([{{ column_name | replace(']', ']]') }}] AS {{new_column_type}}) AS [{{ column_name | replace(']', ']]') }}] FROM {{ relation.schema }}.{{ relation.identifier }}
-    {% endset %}
+    {#- ALTER COLUMN drops the nullability and collation that are not restated, so both have to
+        be known before the column can be altered without losing them. -#}
+    {%- if existing_column.is_nullable is none -%}
+        {% do exceptions.raise_compiler_error(
+            "Cannot alter column " ~ adapter.quote(column_name) ~ " in " ~ relation
+            ~ ": its nullability is unknown, and ALTER COLUMN would drop a NOT NULL constraint."
+            ~ " Rebuild the model with --full-refresh to change its type."
+        ) %}
+    {%- endif -%}
 
-    {% call statement('create_temp_table') -%}
-        {{ tempTable }}
-    {%- endcall %}
+    {%- set nullability = 'NULL' if existing_column.is_nullable else 'NOT NULL' -%}
+    {%- set collation = ' COLLATE ' ~ existing_column.collation_name
+            if existing_column.collation_name and 'char' in new_column_type | lower else '' -%}
 
-    {% set dropTable %}
-        DROP TABLE {{ relation.schema }}.{{ relation.identifier }}
-    {% endset %}
+    {% do log("Altering " ~ relation ~ " column " ~ adapter.quote(column_name) ~ " to " ~ new_column_type
+        ~ "; rebuild the model with --full-refresh if Fabric Warehouse rejects the change.") %}
 
-    {% call statement('drop_table') -%}
-        {{ dropTable }}
-    {%- endcall %}
-
-    {% set createTable %}
-        CREATE TABLE {{ relation.schema }}.{{ relation.identifier }}
-        AS SELECT * FROM {{tempTableName}}
-    {% endset %}
-
-    {% call statement('create_Table') -%}
-        {{ createTable }}
-    {%- endcall %}
-
-    {% set dropTempTable %}
-        DROP TABLE {{tempTableName}}
-    {% endset %}
-
-    {% call statement('drop_temp_table') -%}
-        {{ dropTempTable }}
-    {%- endcall %}
+    {% call statement('alter_column_type') %}
+        ALTER TABLE {{ relation }}
+        ALTER COLUMN {{ adapter.quote(column_name) }} {{ new_column_type }}{{ collation }} {{ nullability }}
+    {% endcall %}
 {% endmacro %}
 
 {% macro fabric__alter_relation_add_remove_columns(relation, add_columns, remove_columns) %}

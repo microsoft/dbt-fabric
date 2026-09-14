@@ -1,5 +1,19 @@
 # Changelog
 
+### Unreleased
+
+## Features
+
+* **`audit_helper.compare_and_classify_query_results` support** — the macro now runs on Fabric. Requires `dbt-labs/audit_helper` 0.14.0 or newer, plus this `dbt_project.yml` configuration so dbt selects the adapter implementation:
+
+  ```yaml
+  dispatch:
+    - macro_namespace: audit_helper
+      search_order: ["dbt", "audit_helper"]
+  ```
+
+  The result is unordered; sort in the query that reads it.
+
 ### v1.11.2rc1
 
 ## Improvements
@@ -28,6 +42,18 @@
   Schema, identity, physical-layout, or non-reconcilable custom-constraint changes use an
   atomic CTAS/drop/rename replacement.
 
+* **Native column widening** — `fabric__alter_column_type` issues a single
+  `ALTER TABLE ... ALTER COLUMN`, restating the column's nullability and collation, instead of
+  copying the whole target into a scratch table and back for every changed column. Widening a
+  column — `varchar(8000)` to `varchar(max)`, for example — is a metadata-only change in Fabric
+  Warehouse, so the table and its rows stay in place. dbt no longer rebuilds a model to change a
+  column type: identity columns and columns whose nullability cannot be read are refused up
+  front, and anything else the warehouse cannot apply as metadata-only — a narrowing, an
+  incompatible type, a clustering column, or a column carrying manually created statistics,
+  including those from the `statistics` config — is rejected by the warehouse and has to be
+  applied with `dbt run --full-refresh` or by dropping the statistics first. Resolves
+  [#451](https://github.com/microsoft/dbt-fabric/issues/451).
+
 ## Bug Fixes
 
 * **Removed the `check_for_nested_cte` heuristic** — the table materialization no longer
@@ -37,6 +63,12 @@
   Contract-enforced models take the contract path based on the contract flag alone, and
   dbt's schema validation and the warehouse report whatever they reject. Resolves
   [#387](https://github.com/microsoft/dbt-fabric/issues/387).
+* **`varchar(max)` compared as the narrowest column** — Fabric reports the length of a
+  `varchar(max)` column as `-1`, which the inherited size comparison read as narrower than every
+  explicit length. Incremental models and snapshots now widen a column to `varchar(max)` instead
+  of silently leaving it too narrow, and `on_schema_change: sync_all_columns` no longer schedules
+  a narrowing of a target that is already `varchar(max)`. Resolves
+  [#451](https://github.com/microsoft/dbt-fabric/issues/451).
 
 * **Service principal authentication with `mssql-python`** — retain support for the
   `ServicePrincipal` profile alias and stop adding the unsupported `Authority Id`

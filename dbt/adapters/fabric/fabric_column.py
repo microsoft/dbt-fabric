@@ -44,6 +44,22 @@ class FabricColumn(Column):
     def is_numeric(self) -> bool:
         return self.dtype.lower() in ["numeric", "decimal", "money", "smallmoney"]
 
+    def can_expand_to(self, other_column: Column) -> bool:
+        """Fabric reports the length of a `varchar(max)` column as -1, which is wider than
+        every explicit length. The raw size comparison in the base class reads that as the
+        narrowest possible column instead, so `varchar(max)` needs to be compared apart."""
+        if not self.is_string() or not other_column.is_string():
+            return False
+
+        current_size = self.string_size()
+        target_size = other_column.string_size()
+
+        if current_size < 0:
+            # A varchar(max) column cannot be expanded any further.
+            return False
+
+        return target_size < 0 or target_size > current_size
+
     @property
     def quoted(self) -> str:
         return "[{}]".format(self.column.replace("]", "]]"))
