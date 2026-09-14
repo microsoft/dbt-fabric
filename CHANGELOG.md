@@ -76,6 +76,13 @@
   `Authentication`, `UID`, and `PWD` fields supported by `mssql-python`. Resolves
   [#434](https://github.com/microsoft/dbt-fabric/issues/434).
 
+* **Obsolete dbt-utils `*_where` test overrides** — `dbt_utils.relationships_where` now
+  dispatches to the upstream macro, which has used T-SQL-safe `1=1` condition defaults since
+  dbt-utils 0.7.0 and reports the same failure columns as other adapters. The unreachable
+  `fabric__test_not_null_where` and `fabric__test_unique_where` overrides are removed;
+  dbt-utils dropped both tests in 1.0.0. Resolves
+  [#446](https://github.com/microsoft/dbt-fabric/issues/446).
+
 ### v1.11.0
 
 ## Features
