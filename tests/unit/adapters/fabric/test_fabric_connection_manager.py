@@ -113,7 +113,6 @@ class TestServicePrincipalConnectionString:
             connection.state = ConnectionState.OPEN
             return connection
 
-        FabricConnectionManager._host = None
         with (
             mock.patch("mssql_python.connect", return_value=handle) as connect,
             mock.patch.object(

@@ -141,9 +141,6 @@ class TestLoadTokenCredential:
 
 
 class TestFabricTokenProviderTokenCredential:
-    def setup_method(self):
-        FabricTokenProvider._tokens.clear()
-
     def test_get_access_token_with_token_credential(self):
         creds = FakeCredentials()
         provider = FabricTokenProvider(creds)
@@ -159,7 +156,7 @@ class TestFabricTokenProviderTokenCredential:
         first_cred = provider._custom_credential
         assert first_cred is not None
 
-        FabricTokenProvider._tokens.clear()
+        provider._tokens.clear()
         provider.get_access_token("https://example.com/.default")
         second_cred = provider._custom_credential
 

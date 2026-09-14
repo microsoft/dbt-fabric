@@ -1,12 +1,13 @@
 import logging
 import time
 import urllib.parse
-from typing import Any, Self
+from typing import Any
 
 import dbt_common.exceptions
 import requests
 
 from dbt.adapters.fabric.base_credentials import BaseFabricCredentials
+from dbt.adapters.fabric.credential_context import credential_runtime_state
 from dbt.adapters.fabric.fabric_token_provider import FabricTokenProvider
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,6 @@ class FabricApiError(dbt_common.exceptions.DbtRuntimeError):
 
 class FabricApiClient:
     _WAREHOUSE_SNAPSHOT_TIMEOUT_SECONDS = 60 * 30  # 30 minutes
-    _instance: Self | None = None
 
     def __init__(
         self, credentials: BaseFabricCredentials, token_provider: FabricTokenProvider
@@ -38,16 +38,21 @@ class FabricApiClient:
     @classmethod
     def create(
         cls, credentials: BaseFabricCredentials, token_provider: FabricTokenProvider
-    ) -> Self:
-        """Return a shared singleton instance, creating one on first call.
+    ) -> "FabricApiClient":
+        """Return the client for this credentials/token provider pair, creating it once.
+
+        The client (including the workspace and warehouse state it resolves) is
+        kept on the credentials object, so a second credential context never
+        receives the first context's client.
 
         Args:
             credentials: Fabric connection credentials.
             token_provider: Provider for Azure access tokens.
         """
-        if cls._instance is None:
-            cls._instance = FabricApiClient(credentials, token_provider)
-        return cls._instance
+        return credential_runtime_state(credentials).get_or_create(
+            ("fabric_api_client", token_provider),
+            lambda: FabricApiClient(credentials, token_provider),
+        )
 
     def _get_auth_headers(self) -> dict[str, str]:
         token = self._token_provider.get_access_token()
