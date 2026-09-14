@@ -56,6 +56,13 @@
 
 ## Bug Fixes
 
+* **Removed the `check_for_nested_cte` heuristic** — the table materialization no longer
+  counts occurrences of `with ` in the model query to decide whether a contract-enforced
+  model may be built. That count also matched comments, string literals and table hints,
+  so models were rejected at compile time over SQL the adapter never had to judge.
+  Contract-enforced models take the contract path based on the contract flag alone, and
+  dbt's schema validation and the warehouse report whatever they reject. Resolves
+  [#387](https://github.com/microsoft/dbt-fabric/issues/387).
 * **`varchar(max)` compared as the narrowest column** — Fabric reports the length of a
   `varchar(max)` column as `-1`, which the inherited size comparison read as narrower than every
   explicit length. Incremental models and snapshots now widen a column to `varchar(max)` instead
