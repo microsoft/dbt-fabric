@@ -2,7 +2,35 @@
 
 ### Unreleased
 
+## Fixes
+
+* **Legacy `authentication` aliases broken in token acquisition** — profiles using
+  `authentication: ServicePrincipal` or `authentication: fabricnotebook` failed
+  with `Unsupported authentication method` because the token provider's
+  dispatch logic only recognized the canonical `ActiveDirectoryServicePrincipal`
+  and `notebookutils` names. Both legacy aliases are now normalized before
+  dispatch, so existing profiles keep working. ([#434](https://github.com/microsoft/dbt-fabric/issues/434))
+
+* **Schema-aware table reload failed for models starting with a CTE** — the
+  reload path (unchanged schema on a second run) rendered
+  `INSERT INTO t (...) WITH cte AS (...) SELECT ...`, which T-SQL rejects
+  because `WITH` must be the first clause of a statement. The model SQL is now
+  loaded through a disposable view first, so the `INSERT` selects from the view
+  by name instead of inlining a query that may start with `WITH`.
+  ([#453](https://github.com/microsoft/dbt-fabric/issues/453))
+
 ## Features
+
+* **IDENTITY column support for `materialized='table'` models** — a contract-enforced
+  table model can now declare a single `bigint` column as a Fabric `IDENTITY` column
+  via `meta.identity: auto` (Fabric assigns the value) or `meta.identity: insert`
+  (the model's own query supplies explicit values, written through
+  `SET IDENTITY_INSERT ... ON/OFF` and reseeded with `DBCC CHECKIDENT` so later
+  `auto` inserts don't collide). Declaring, changing, or removing the identity
+  column forces a full table replace; an unchanged identity column still allows
+  the normal schema-aware reload (`TRUNCATE` + `INSERT`). Requires
+  `contract.enforced: true`; only one identity column is allowed per table, and it
+  must be `bigint`. Not yet supported for incremental models.
 
 * **`audit_helper.compare_and_classify_query_results` support** — the macro now runs on Fabric. Requires `dbt-labs/audit_helper` 0.14.0 or newer, plus this `dbt_project.yml` configuration so dbt selects the adapter implementation:
 

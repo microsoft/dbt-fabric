@@ -169,6 +169,46 @@ class TestTableRefreshReplacesSelfReference:
         assert _value(project, "self_reference") == "original"
 
 
+class TestTableRefreshWithLeadingCte:
+    """Regression test for https://github.com/microsoft/dbt-fabric/issues/453:
+    a table model whose compiled SQL starts with a CTE must survive the
+    schema-aware reload path (second run with an unchanged schema), not just
+    the initial CTAS build.
+    """
+
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "cte_table.sql": """
+            {{ config(materialized='table') }}
+            with source as (
+                select cast(1 as int) as id, cast('first' as varchar(20)) as value
+            )
+            select id, value from source
+            """
+        }
+
+    def test_reload_with_leading_cte_succeeds(self, project):
+        run_dbt(["run", "-s", "cte_table"])
+        original_object_id = _object_id(project, "cte_table")
+
+        write_file(
+            """
+            {{ config(materialized='table') }}
+            with source as (
+                select cast(1 as int) as id, cast('second' as varchar(20)) as value
+            )
+            select id, value from source
+            """,
+            "models",
+            "cte_table.sql",
+        )
+        run_dbt(["run", "-s", "cte_table"])
+
+        assert _object_id(project, "cte_table") == original_object_id
+        assert _value(project, "cte_table") == "second"
+
+
 class TestIncrementalFullRefreshPreservesObject:
     @pytest.fixture(scope="class")
     def models(self):

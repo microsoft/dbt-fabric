@@ -10,7 +10,7 @@ from dbt_common.contracts.constraints import (
 from dbt.adapters.fabric.fabric_adapter import FabricAdapter
 from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.fabric_relation import FabricRelation
-from dbt.adapters.fabric.table_refresh import FabricTableConstraint
+from dbt.adapters.fabric.table_refresh import FabricTableConstraint, IdentityColumn
 
 
 class TestConvertBooleanType:
@@ -207,6 +207,113 @@ class TestTableRefreshConstraintPlanning:
         assert plan["reason"] == "query references the target relation"
 
 
+class TestTableRefreshIdentityPlanning:
+    @pytest.fixture
+    def adapter(self):
+        adapter = _make_adapter_instance()
+        columns = [
+            FabricColumn(
+                "id",
+                "bigint",
+                char_size=8,
+                numeric_precision=19,
+                numeric_scale=0,
+                is_nullable=False,
+            )
+        ]
+        adapter._describe_query_columns = lambda sql: columns
+        adapter.get_columns_in_relation = lambda relation: columns
+        adapter._get_table_cluster_by = lambda relation: []
+        adapter.get_constraints_in_relation = lambda relation: []
+        return adapter
+
+    @pytest.fixture
+    def relation(self):
+        return FabricRelation.create(
+            database="warehouse",
+            schema="dbo",
+            identifier="refresh_table",
+            type="table",
+        )
+
+    def test_get_identity_column_resolves_declared_identity(self, adapter):
+        columns = {"id": {"name": "id", "data_type": "bigint", "meta": {"identity": "auto"}}}
+
+        identity_column = adapter.get_identity_column(columns, contract_enforced=True)
+
+        assert identity_column == IdentityColumn(name="id", mode="auto")
+
+    def test_get_identity_column_returns_none_without_declaration(self, adapter):
+        columns = {"id": {"name": "id", "data_type": "bigint", "meta": {}}}
+
+        assert adapter.get_identity_column(columns, contract_enforced=True) is None
+
+    def test_table_refresh_plan_passes_through_identity_column(self, adapter, relation):
+        """Target already has identity; the model declares the same column, so this
+        is a plain reload, not a schema change."""
+        adapter.get_columns_in_relation = lambda relation: [
+            FabricColumn(
+                "id",
+                "bigint",
+                char_size=8,
+                numeric_precision=19,
+                numeric_scale=0,
+                is_nullable=False,
+                is_identity=True,
+            )
+        ]
+        columns = {"id": {"name": "id", "data_type": "bigint", "meta": {"identity": "insert"}}}
+
+        plan = adapter.get_table_refresh_plan(
+            relation,
+            "select cast(1 as bigint) as id",
+            columns=columns,
+            contract_enforced=True,
+        )
+
+        assert plan["action"] == "reload"
+        assert plan["identity_column"] == IdentityColumn(name="id", mode="insert")
+
+    def test_table_refresh_plan_forces_replace_when_identity_newly_declared(
+        self, adapter, relation
+    ):
+        """Target has no identity column yet; the model newly declares one."""
+        adapter.get_columns_in_relation = lambda relation: [
+            FabricColumn(
+                "id",
+                "bigint",
+                char_size=8,
+                numeric_precision=19,
+                numeric_scale=0,
+                is_nullable=False,
+            )
+        ]
+        columns = {"id": {"name": "id", "data_type": "bigint", "meta": {"identity": "auto"}}}
+
+        plan = adapter.get_table_refresh_plan(
+            relation,
+            "select cast(1 as bigint) as id",
+            columns=columns,
+            contract_enforced=True,
+        )
+
+        assert plan["action"] == "replace"
+        assert plan["reason"] == "identity column 'id' added"
+
+    def test_table_refresh_plan_rejects_identity_without_contract(self, adapter, relation):
+        columns = {"id": {"name": "id", "data_type": "bigint", "meta": {"identity": "auto"}}}
+
+        with pytest.raises(
+            dbt_common.exceptions.DbtDatabaseError, match="require `contract.enforced: true`"
+        ):
+            adapter.get_table_refresh_plan(
+                relation,
+                "select cast(1 as bigint) as id",
+                columns=columns,
+                contract_enforced=False,
+            )
+
+
 class TestTableRefreshMetadata:
     @pytest.mark.parametrize(
         ("data_type", "max_length", "expected"),
@@ -401,6 +508,55 @@ class TestValidIncrementalStrategies:
             "microbatch",
             "merge",
         ]
+
+
+class TestRenderRawColumnsConstraints:
+    def test_identity_column_gets_identity_suffix(self):
+        raw_columns = {
+            "id": {"name": "id", "data_type": "bigint", "meta": {"identity": "auto"}},
+            "amount": {"name": "amount", "data_type": "int", "meta": {}},
+        }
+
+        rendered = FabricAdapter.render_raw_columns_constraints(raw_columns)
+
+        assert rendered == ["id bigint IDENTITY", "amount int"]
+
+    def test_no_identity_declared_renders_unchanged(self):
+        raw_columns = {
+            "id": {"name": "id", "data_type": "bigint", "meta": {}},
+        }
+
+        rendered = FabricAdapter.render_raw_columns_constraints(raw_columns)
+
+        assert rendered == ["id bigint"]
+
+    def test_identity_column_with_not_null_constraint(self):
+        raw_columns = {
+            "id": {
+                "name": "id",
+                "data_type": "bigint",
+                "meta": {"identity": "insert"},
+                "constraints": [{"type": "not_null"}],
+            },
+        }
+
+        rendered = FabricAdapter.render_raw_columns_constraints(raw_columns)
+
+        assert rendered == ["id bigint IDENTITY not null"]
+
+    def test_quoted_identity_column(self):
+        raw_columns = {
+            "order id": {
+                "name": "order id",
+                "data_type": "bigint",
+                "quote": True,
+                "meta": {"identity": "auto"},
+            },
+        }
+
+        rendered = FabricAdapter.render_raw_columns_constraints(raw_columns)
+
+        assert rendered == ["[order id] bigint IDENTITY"]
 
 
 class TestRenderColumnConstraint:

@@ -6,6 +6,69 @@ from dbt_common.exceptions import DbtDatabaseError
 
 from dbt.adapters.fabric.fabric_column import FabricColumn
 
+IDENTITY_DATA_TYPE = "bigint"
+IDENTITY_MODES = ("auto", "insert")
+
+
+@dataclass(frozen=True)
+class IdentityColumn:
+    """The single column, if any, declared as `meta.identity: auto|insert`."""
+
+    name: str
+    mode: str
+
+
+def resolve_identity_column(
+    raw_columns: dict[str, dict[str, Any]],
+    contract_enforced: bool,
+) -> IdentityColumn | None:
+    """Validate and resolve the model's declared IDENTITY column, if any.
+
+    Fabric Warehouse IDENTITY columns must be `bigint`, support no seed/increment,
+    and at most one is allowed per table. Declaration happens via a column's
+    `meta.identity` key, which must be the string 'auto' (Fabric assigns the value)
+    or 'insert' (the model's own query supplies explicit values).
+    """
+    identity_columns: list[IdentityColumn] = []
+    for raw_column in raw_columns.values():
+        meta = raw_column.get("meta") or {}
+        if "identity" not in meta:
+            continue
+
+        name = str(raw_column.get("name"))
+        mode_value = meta["identity"]
+        if not isinstance(mode_value, str) or mode_value.strip().casefold() not in IDENTITY_MODES:
+            raise DbtDatabaseError(
+                f"Invalid `meta.identity` value {mode_value!r} for column {name!r}. "
+                "Use `identity: auto` or `identity: insert`."
+            )
+        mode = mode_value.strip().casefold()
+
+        data_type = str(raw_column.get("data_type") or "").strip().casefold()
+        if data_type != IDENTITY_DATA_TYPE:
+            raise DbtDatabaseError(
+                f"Fabric IDENTITY columns must be declared with data_type: bigint, got "
+                f"{raw_column.get('data_type')!r} for column {name!r}."
+            )
+
+        identity_columns.append(IdentityColumn(name=name, mode=mode))
+
+    if not identity_columns:
+        return None
+
+    if len(identity_columns) > 1:
+        names = ", ".join(column.name for column in identity_columns)
+        raise DbtDatabaseError(f"Fabric tables support at most one IDENTITY column, got: {names}.")
+
+    identity_column = identity_columns[0]
+    if not contract_enforced:
+        raise DbtDatabaseError(
+            f"Column {identity_column.name!r} declares `meta.identity` but IDENTITY "
+            "columns require `contract.enforced: true`."
+        )
+
+    return identity_column
+
 
 @dataclass(frozen=True)
 class FabricTableColumn:
@@ -57,9 +120,17 @@ class FabricTableColumn:
             self.identity,
         )
 
-    def can_reload_into(self, target: "FabricTableColumn") -> bool:
-        query_definition = self.comparison_key[:5] + self.comparison_key[6:]
-        target_definition = target.comparison_key[:5] + target.comparison_key[6:]
+    def can_reload_into(
+        self, target: "FabricTableColumn", *, ignore_identity: bool = False
+    ) -> bool:
+        # The compiled query can never truly report `is_identity` for the designated
+        # identity column (it only ever produces a placeholder/explicit value for
+        # contract validation), while the real target column correctly reports it.
+        # When this is the model's declared identity column, that expected mismatch
+        # is not a schema change, so the `identity` field is dropped from comparison.
+        end = 7 if ignore_identity else None
+        query_definition = self.comparison_key[:5] + self.comparison_key[6:end]
+        target_definition = target.comparison_key[:5] + target.comparison_key[6:end]
         if query_definition != target_definition:
             return False
 
@@ -97,18 +168,49 @@ def build_refresh_plan(
     target_columns: list[FabricTableColumn],
     requested_cluster_by: str | list[str] | None,
     target_cluster_by: list[str],
+    desired_identity_column: IdentityColumn | None = None,
 ) -> dict[str, Any]:
-    if any(column.identity for column in query_columns + target_columns):
-        return _replace_plan("identity column present", query_columns)
+    desired_identity_name = (
+        desired_identity_column.name.casefold() if desired_identity_column else None
+    )
+    target_identity_columns = [column for column in target_columns if column.identity]
+    target_identity_column = target_identity_columns[0] if target_identity_columns else None
+    target_identity_name = (
+        target_identity_column.name.casefold() if target_identity_column else None
+    )
+
+    # Whether a column should carry IDENTITY is decided by the model's own declared
+    # `meta.identity` config, not by comparing it to the (always non-identity) column
+    # the compiled query describes. Any mismatch here is a real structural change.
+    if desired_identity_name != target_identity_name:
+        if target_identity_column is None and desired_identity_column is not None:
+            reason = f"identity column '{desired_identity_column.name}' added"
+        elif desired_identity_column is None and target_identity_column is not None:
+            reason = f"identity column '{target_identity_column.name}' removed"
+        elif target_identity_column is not None and desired_identity_column is not None:
+            reason = (
+                f"identity column changed from '{target_identity_column.name}' "
+                f"to '{desired_identity_column.name}'"
+            )
+        else:
+            # Unreachable: desired_identity_name != target_identity_name implies at
+            # least one of the two columns is not None.
+            reason = "identity column changed"
+        return _replace_plan(reason, query_columns, desired_identity_column)
 
     if len(query_columns) != len(target_columns):
-        return _replace_plan("column count changed", query_columns)
+        return _replace_plan("column count changed", query_columns, desired_identity_column)
 
     for query_column, target_column in zip(query_columns, target_columns, strict=True):
-        if not query_column.can_reload_into(target_column):
+        is_identity_column = (
+            desired_identity_name is not None
+            and query_column.name.casefold() == desired_identity_name
+        )
+        if not query_column.can_reload_into(target_column, ignore_identity=is_identity_column):
             return _replace_plan(
                 f"column definition changed for {query_column.name}",
                 query_columns,
+                desired_identity_column,
             )
 
     requested_cluster_columns = [
@@ -116,12 +218,13 @@ def build_refresh_plan(
     ]
     target_cluster_columns = [column.casefold() for column in target_cluster_by]
     if requested_cluster_columns != target_cluster_columns:
-        return _replace_plan("physical layout changed", query_columns)
+        return _replace_plan("physical layout changed", query_columns, desired_identity_column)
 
     return {
         "action": "reload",
         "reason": "schema and physical layout unchanged",
         "column_names": [column.name for column in query_columns],
+        "identity_column": desired_identity_column,
     }
 
 
@@ -330,11 +433,16 @@ def _invalid_identifier_list(value: str) -> DbtDatabaseError:
     )
 
 
-def _replace_plan(reason: str, columns: list[FabricTableColumn]) -> dict[str, Any]:
+def _replace_plan(
+    reason: str,
+    columns: list[FabricTableColumn],
+    identity_column: IdentityColumn | None = None,
+) -> dict[str, Any]:
     return {
         "action": "replace",
         "reason": reason,
         "column_names": [column.name for column in columns],
+        "identity_column": identity_column,
     }
 
 

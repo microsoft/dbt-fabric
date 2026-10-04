@@ -27,6 +27,14 @@ DOTTED_PATH_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+
 # A cached token is refreshed once less than this much of its validity is left.
 REFRESH_THRESHOLD_SECONDS = 300
 
+# Legacy/alternate spellings of ``authentication`` accepted alongside their
+# canonical (lower-cased) names, so existing profiles keep working across
+# refactors of the dispatch logic below. Keys and values are lower-cased.
+AUTHENTICATION_ALIASES = {
+    "serviceprincipal": "activedirectoryserviceprincipal",
+    "fabricnotebook": "notebookutils",
+}
+
 
 def get_notebookutils_access_token(scope: str) -> AccessToken:
     """Acquire an access token via Fabric notebookutils (for use inside Fabric notebooks).
@@ -181,6 +189,7 @@ class FabricTokenProvider:
     def _acquire_token(self, scope: str) -> AccessToken:
         """Acquire a fresh token for a scope from the configured credential."""
         authentication = self.credentials.authentication.lower()
+        authentication = AUTHENTICATION_ALIASES.get(authentication, authentication)
 
         if authentication == "notebookutils":
             return get_notebookutils_access_token(scope)
