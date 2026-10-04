@@ -5,12 +5,18 @@ from dbt.adapters.fabric.fabric_column import FabricColumn
 from dbt.adapters.fabric.table_refresh import (
     FabricTableColumn,
     FabricTableConstraint,
+    IdentityColumn,
     build_refresh_plan,
     desired_constraint,
     diff_constraints,
     query_references_relation,
     requires_constraint_replacement,
+    resolve_identity_column,
 )
+
+
+def _raw_column(name="id", data_type="bigint", meta=None):
+    return {"name": name, "data_type": data_type, "meta": meta or {}}
 
 
 def _column(
@@ -45,6 +51,7 @@ class TestBuildRefreshPlan:
             "action": "reload",
             "reason": "schema and physical layout unchanged",
             "column_names": ["id", "name"],
+            "identity_column": None,
         }
 
     @pytest.mark.parametrize(
@@ -75,13 +82,83 @@ class TestBuildRefreshPlan:
 
         assert plan["action"] == "reload"
 
-    def test_replace_when_identity_is_present(self):
-        column = _column(data_type="bigint", max_length=8, precision=19, identity=True)
+    def test_replace_when_identity_added(self):
+        """A target table with no identity column, but the model now declares one."""
+        column = _column(data_type="bigint", max_length=8, precision=19, identity=False)
+        desired = IdentityColumn(name="id", mode="auto")
 
-        plan = build_refresh_plan([column], [column], None, [])
+        plan = build_refresh_plan([column], [column], None, [], desired)
 
         assert plan["action"] == "replace"
-        assert plan["reason"] == "identity column present"
+        assert plan["reason"] == "identity column 'id' added"
+        assert plan["identity_column"] == desired
+
+    def test_replace_when_identity_removed(self):
+        """A target table with an identity column, but the model no longer declares one."""
+        query_column = _column(data_type="bigint", max_length=8, precision=19, identity=False)
+        target_column = _column(data_type="bigint", max_length=8, precision=19, identity=True)
+
+        plan = build_refresh_plan([query_column], [target_column], None, [], None)
+
+        assert plan["action"] == "replace"
+        assert plan["reason"] == "identity column 'id' removed"
+        assert plan["identity_column"] is None
+
+    def test_replace_when_identity_renamed(self):
+        """The declared identity column name no longer matches the target's."""
+        query_columns = [
+            _column(name="order_id", data_type="bigint", max_length=8, precision=19),
+        ]
+        target_columns = [
+            _column(data_type="bigint", max_length=8, precision=19, identity=True),
+        ]
+        desired = IdentityColumn(name="order_id", mode="auto")
+
+        plan = build_refresh_plan(query_columns, target_columns, None, [], desired)
+
+        assert plan["action"] == "replace"
+        assert plan["reason"] == "identity column changed from 'id' to 'order_id'"
+
+    @pytest.mark.parametrize("mode", ["auto", "insert"])
+    def test_reload_allowed_when_identity_column_matches(self, mode):
+        """The query never reports `is_identity`, so this must not force a replace."""
+        query_column = _column(data_type="bigint", max_length=8, precision=19, identity=False)
+        target_column = _column(data_type="bigint", max_length=8, precision=19, identity=True)
+        desired = IdentityColumn(name="id", mode=mode)
+
+        plan = build_refresh_plan([query_column], [target_column], None, [], desired)
+
+        assert plan["action"] == "reload"
+        assert plan["identity_column"] == desired
+
+    def test_replace_when_identity_column_has_other_structural_change(self):
+        """Ignoring the `identity` flag must not blind the comparison to real changes."""
+        query_column = _column(
+            data_type="bigint", max_length=8, precision=19, nullable=False, identity=False
+        )
+        target_column = _column(
+            data_type="bigint", max_length=16, precision=19, nullable=False, identity=True
+        )
+        desired = IdentityColumn(name="id", mode="auto")
+
+        plan = build_refresh_plan([query_column], [target_column], None, [], desired)
+
+        assert plan["action"] == "replace"
+        assert plan["reason"] == "column definition changed for id"
+
+    def test_reload_allowed_when_identity_column_matches_alongside_other_columns(self):
+        """A matching identity column plus other unchanged columns should still reload."""
+        id_query = _column(data_type="bigint", max_length=8, precision=19, identity=False)
+        id_target = _column(data_type="bigint", max_length=8, precision=19, identity=True)
+        name_column = _column(name="name", data_type="varchar", max_length=100)
+        desired = IdentityColumn(name="id", mode="insert")
+
+        plan = build_refresh_plan(
+            [id_query, name_column], [id_target, name_column], None, [], desired
+        )
+
+        assert plan["action"] == "reload"
+        assert plan["column_names"] == ["id", "name"]
 
     def test_replace_when_cluster_by_changes(self):
         columns = [_column(), _column(name="created_at", data_type="datetime2")]
@@ -359,3 +436,55 @@ class TestConstraintDiff:
                 "expression": "id > 0",
             }
         )
+
+
+class TestResolveIdentityColumn:
+    def test_no_identity_declared_returns_none(self):
+        columns = {"id": _raw_column(), "name": _raw_column(name="name", data_type="varchar")}
+
+        assert resolve_identity_column(columns, contract_enforced=True) is None
+
+    @pytest.mark.parametrize("mode", ["auto", "AUTO", " auto ", "insert", "INSERT"])
+    def test_valid_modes_resolve(self, mode):
+        columns = {"id": _raw_column(meta={"identity": mode})}
+
+        identity_column = resolve_identity_column(columns, contract_enforced=True)
+
+        assert identity_column == IdentityColumn(name="id", mode=mode.strip().casefold())
+
+    def test_invalid_mode_string_is_rejected(self):
+        columns = {"id": _raw_column(meta={"identity": "yes"})}
+
+        with pytest.raises(DbtDatabaseError, match="Invalid `meta.identity` value"):
+            resolve_identity_column(columns, contract_enforced=True)
+
+    def test_boolean_true_is_rejected(self):
+        """The user explicitly requires string `auto`/`insert`, not a boolean."""
+        columns = {"id": _raw_column(meta={"identity": True})}
+
+        with pytest.raises(DbtDatabaseError, match="Invalid `meta.identity` value"):
+            resolve_identity_column(columns, contract_enforced=True)
+
+    def test_non_bigint_data_type_is_rejected(self):
+        columns = {"id": _raw_column(data_type="int", meta={"identity": "auto"})}
+
+        with pytest.raises(DbtDatabaseError, match="must be declared with data_type: bigint"):
+            resolve_identity_column(columns, contract_enforced=True)
+
+    def test_multiple_identity_columns_are_rejected(self):
+        columns = {
+            "id": _raw_column(meta={"identity": "auto"}),
+            "order_id": _raw_column(name="order_id", meta={"identity": "auto"}),
+        }
+
+        with pytest.raises(DbtDatabaseError, match="at most one IDENTITY column"):
+            resolve_identity_column(columns, contract_enforced=True)
+
+    def test_identity_without_contract_is_rejected(self):
+        columns = {"id": _raw_column(meta={"identity": "auto"})}
+
+        with pytest.raises(DbtDatabaseError, match="require `contract.enforced: true`"):
+            resolve_identity_column(columns, contract_enforced=False)
+
+    def test_empty_columns_mapping_returns_none(self):
+        assert resolve_identity_column({}, contract_enforced=True) is None

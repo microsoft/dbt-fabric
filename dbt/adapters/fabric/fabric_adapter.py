@@ -22,11 +22,13 @@ from dbt.adapters.fabric.fabric_relation import FabricRelation
 from dbt.adapters.fabric.table_refresh import (
     FabricTableColumn,
     FabricTableConstraint,
+    IdentityColumn,
     build_refresh_plan,
     desired_constraint,
     diff_constraints,
     query_references_relation,
     requires_constraint_replacement,
+    resolve_identity_column,
 )
 from dbt.adapters.reference_keys import _make_ref_key_dict
 from dbt.adapters.sql.impl import CREATE_SCHEMA_MACRO_NAME, SQLAdapter
@@ -84,6 +86,8 @@ class FabricAdapter(BaseFabricAdapter, SQLAdapter):
         sql: str,
         cluster_by: str | list[str] | None = None,
         constraints: list[object] | None = None,
+        columns: dict[str, dict[str, object]] | None = None,
+        contract_enforced: bool = False,
     ) -> dict[str, object]:
         """Choose whether a full refresh can preserve the existing table object."""
         query_columns = [
@@ -96,6 +100,7 @@ class FabricAdapter(BaseFabricAdapter, SQLAdapter):
         target_cluster_by = self._get_table_cluster_by(relation)
         target_constraints = self.get_constraints_in_relation(relation)
         raw_constraints = constraints or []
+        desired_identity_column = resolve_identity_column(columns or {}, contract_enforced)
         desired_constraints: list[FabricTableConstraint] = []
         raw_constraints_by_name: dict[str, object] = {}
         replacement_required = False
@@ -119,6 +124,7 @@ class FabricAdapter(BaseFabricAdapter, SQLAdapter):
             target_columns,
             cluster_by,
             target_cluster_by,
+            desired_identity_column,
         )
         constraints_to_drop, constraints_to_add = diff_constraints(
             desired_constraints,
@@ -147,11 +153,21 @@ class FabricAdapter(BaseFabricAdapter, SQLAdapter):
                 "action": "replace",
                 "reason": "query references the target relation",
                 "column_names": [column.name for column in query_columns],
+                "identity_column": desired_identity_column,
                 "constraints_to_drop": constraints_to_drop,
                 "constraints_to_add": constraints_to_add,
                 "constraint_add_sql": refresh_plan["constraint_add_sql"],
             }
         return refresh_plan
+
+    @available.parse(lambda *a, **k: None)
+    def get_identity_column(
+        self,
+        columns: dict[str, dict[str, object]],
+        contract_enforced: bool = False,
+    ) -> IdentityColumn | None:
+        """Validate and return the model's declared IDENTITY column, if any."""
+        return resolve_identity_column(columns or {}, contract_enforced)
 
     def _describe_query_columns(self, sql: str) -> list[FabricColumn]:
         escaped_sql = sql.replace("'", "''")
@@ -454,6 +470,35 @@ class FabricAdapter(BaseFabricAdapter, SQLAdapter):
             raise
         finally:
             conn.transaction_open = False
+
+    @available
+    @classmethod
+    def render_raw_columns_constraints(
+        cls, raw_columns: dict[str, dict[str, object]]
+    ) -> list[str]:
+        """Render column DDL, including `IDENTITY` for the model's declared identity column.
+
+        Mirrors dbt-core's BaseAdapter.render_raw_columns_constraints, with an
+        additional IDENTITY suffix appended for the column resolved by
+        `resolve_identity_column` (see `meta.identity` in `table_refresh.py`).
+        """
+        identity_column = resolve_identity_column(raw_columns, contract_enforced=True)
+
+        rendered_column_constraints = []
+        for v in raw_columns.values():
+            col_name = cls.quote(v["name"]) if v.get("quote") else v["name"]
+            rendered_column_constraint = [f"{col_name} {v['data_type']}"]
+            if identity_column is not None and str(v["name"]) == identity_column.name:
+                rendered_column_constraint.append("IDENTITY")
+            raw_constraints = v.get("constraints", None)
+            for con in raw_constraints if isinstance(raw_constraints, list) else []:
+                constraint = cls._parse_column_constraint(con)
+                c = cls.process_parsed_constraint(constraint, cls.render_column_constraint)
+                if c is not None:
+                    rendered_column_constraint.append(c)
+            rendered_column_constraints.append(" ".join(rendered_column_constraint))
+
+        return rendered_column_constraints
 
     @available
     @classmethod

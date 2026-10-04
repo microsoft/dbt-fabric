@@ -136,6 +136,63 @@ class TestServicePrincipalConnectionString:
         assert "tenant-id" not in connection_string
 
 
+class TestServicePrincipalAliasConnectionFlow:
+    """Regression test for https://github.com/microsoft/dbt-fabric/issues/434:
+    the legacy ``authentication: ServicePrincipal`` alias must still be able
+    to open a connection end-to-end, using the real ``FabricTokenProvider``
+    (only the underlying azure-identity credential is mocked).
+    """
+
+    def test_serviceprincipal_alias_opens_connection_via_access_token(self):
+        credentials = FabricCredentials(
+            database="warehouse",
+            schema="dbo",
+            host="server.datawarehouse.fabric.microsoft.com",
+            authentication="ServicePrincipal",
+            tenant_id="tenant-id",
+            client_id="client-id",
+            client_secret="client-secret",
+            lock_timeout=0,
+        )
+        connection = SimpleNamespace(
+            state=ConnectionState.INIT,
+            credentials=credentials,
+            handle=None,
+        )
+        handle = mock.MagicMock()
+
+        def retry_connection(connection, connect, **kwargs):
+            connection.handle = connect()
+            connection.state = ConnectionState.OPEN
+            return connection
+
+        from azure.core.credentials import AccessToken
+        from azure.identity import ClientSecretCredential
+
+        with (
+            mock.patch("mssql_python.connect", return_value=handle) as connect,
+            mock.patch.object(
+                ClientSecretCredential,
+                "get_token",
+                return_value=AccessToken(token="alias-token", expires_on=9999999999),
+            ),
+            mock.patch.object(
+                FabricConnectionManager,
+                "retry_connection",
+                side_effect=retry_connection,
+            ),
+        ):
+            FabricConnectionManager.open(connection)
+
+        # The connection succeeded (no "Unsupported authentication method"
+        # error) and the token was attached via attrs_before rather than the
+        # connection string.
+        connect.assert_called_once()
+        assert connection.state == ConnectionState.OPEN
+        attrs_before = connect.call_args.kwargs.get("attrs_before")
+        assert attrs_before is not None
+
+
 class TestTransactionManagement:
     def test_execute_does_not_auto_begin_by_default(self):
         assert (
