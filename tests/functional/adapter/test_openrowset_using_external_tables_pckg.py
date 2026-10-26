@@ -31,7 +31,7 @@ ONELAKE_BASE = (
 
 EXTERNAL_TABLES_PACKAGE = {
     "packages": [
-        {"package": "dbt-labs/dbt_external_tables", "version": "0.12.2"},
+        {"package": "dbt-labs/dbt_external_tables", "version": "0.12.4"},
     ]
 }
 
@@ -185,7 +185,7 @@ class TestOpenrowsetParquet:
         query_results = project.run_sql(
             f"select count(*) as cnt from {project.test_schema}.customers_ext", fetch="one"
         )
-        assert query_results[0] >= 0
+        assert query_results[0] > 0
 
 
 class TestOpenrowsetCsvWithOptions:
@@ -216,7 +216,7 @@ class TestOpenrowsetCsvWithOptions:
         query_results = project.run_sql(
             f"select count(*) as cnt from {project.test_schema}.products_ext", fetch="one"
         )
-        assert query_results[0] >= 0
+        assert query_results[0] > 0
 
 
 class TestOpenrowsetJsonl:
@@ -247,11 +247,11 @@ class TestOpenrowsetJsonl:
         query_results = project.run_sql(
             f"select count(*) as cnt from {project.test_schema}.events_ext", fetch="one"
         )
-        assert query_results[0] >= 0
+        assert query_results[0] > 0
 
 
 class TestOpenrowsetRestageAndDrop:
-    """Re-staging is a no-op by default; ext_full_refresh forces drop + recreate."""
+    """An aliased source survives schema creation, no-op restaging, and full refresh."""
 
     @pytest.fixture(scope="class")
     def packages(self):
@@ -265,10 +265,14 @@ class TestOpenrowsetRestageAndDrop:
     def models(self):
         return {
             "parquet_model.sql": parquet_model_sql,
-            "sources.yml": sources_parquet_yml,
+            "sources.yml": sources_parquet_yml.replace(
+                "- name: customers_ext\n",
+                '- name: customers_ext\n        identifier: "customer\'s ] external"\n',
+            ),
         }
 
     def test__restage_is_noop_then_full_refresh_drops_and_recreates(self, project):
+        project.run_sql(f"drop schema [{project.test_schema}]")
         run_dbt(["deps"])
         run_dbt(["run-operation", "stage_external_sources"])
 
@@ -295,6 +299,15 @@ class TestOpenrowsetRestageAndDrop:
         # The view should still be queryable after being recreated.
         results = run_dbt(["run", "-s", "parquet_model"])
         assert len(results) == 1
+        assert (
+            project.run_sql(
+                "select count(*) from sys.views "
+                f"where schema_id = schema_id('{project.test_schema}') "
+                "and name = 'customer''s ] external'",
+                fetch="one",
+            )[0]
+            == 1
+        )
 
 
 class TestOpenrowsetParquetRejectsUnsupportedOption:

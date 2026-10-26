@@ -1,5 +1,4 @@
-{#- Upstream uses UNPIVOT or LATERAL. T-SQL UNPIVOT requires fixed types; we use UNION ALL instead.
-    ROW_NUMBER() ORDER BY uses a subquery trick since T-SQL requires ORDER BY in window functions. #}
+{#- Hash values before UNION ALL to keep heterogeneous columns type-compatible. #}
 {% macro fabric__test_expect_select_column_values_to_be_unique_within_record(model,
                                                     column_list,
                                                     quote_columns,
@@ -12,7 +11,7 @@
 {% elif quote_columns %}
     {%- set columns=[] %}
         {% for column in column_list -%}
-            {% set columns = columns.append( adapter.quote(column) ) %}
+            {% do columns.append( adapter.quote(column) ) %}
         {%- endfor %}
 {% else %}
     {{ exceptions.raise_compiler_error(
@@ -23,7 +22,7 @@
 with column_values as (
 
     select
-        row_number() over(order by (SELECT 'does order really matter here?')) as row_index,
+        row_number() over(order by {{ columns | join(", ") }}) as row_index,
         {% for column in columns -%}
         {{ column }}{% if not loop.last %},{% endif %}
         {%- endfor %}
@@ -32,27 +31,13 @@ with column_values as (
     {% if row_condition %}
         and {{ row_condition }}
     {% endif %}
-    {% if ignore_row_if == "all_values_are_missing" %}
-        and
-        (
-            {% for column in columns -%}
-            {{ column }} is not null{% if not loop.last %} and {% endif %}
-            {%- endfor %}
-        )
-    {% elif ignore_row_if == "any_value_is_missing" %}
-        and
-        (
-            {% for column in columns -%}
-            {{ column }} is not null{% if not loop.last %} or {% endif %}
-            {%- endfor %}
-        )
-    {% endif %}
+        and {{ dbt_expectations.ignore_row_if_expression(ignore_row_if, columns) }}
 
 ),
 unpivot_columns as (
 
     {% for column in columns %}
-    select row_index, '{{ column }}' as column_name, {{ column }} as column_value from column_values
+    select row_index, {{ dbt.hash(column) }} as column_value from column_values
     {% if not loop.last %}union all{% endif %}
     {% endfor %}
 ),

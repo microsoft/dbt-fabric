@@ -106,3 +106,98 @@ class TestAuditHelperClassification:
             ("nonunique_pk", 2, 2),
             ("removed", 1, 1),
         ]
+
+
+class TestAuditHelperComparisons:
+    @pytest.fixture(scope="class")
+    def packages(self):
+        return AUDIT_HELPER_PACKAGE
+
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return AUDIT_HELPER_DISPATCH
+
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "columns_a.sql": """
+                select 1 as id, cast('abc' as varchar(10)) as label,
+                    cast(1 as decimal(10,2)) as amount, 1 as only_a
+            """,
+            "columns_b.sql": """
+                select 1 as id, cast('abc' as varchar(20)) as label,
+                    cast(1 as decimal(12,3)) as amount, 1 as only_b
+            """,
+            "metadata_comparison.sql": """
+                {{ config(materialized='table') }}
+                {{ audit_helper.compare_relation_columns(ref('columns_a'), ref('columns_b')) }}
+            """,
+            "all_columns_comparison.sql": """
+                {{ audit_helper.compare_all_columns(
+                    ref('columns_a'), ref('columns_b'), primary_key='id', exclude_columns=['only_a']
+                ) }}
+            """,
+            "which_columns_differ.sql": """
+                {% set a %}
+                    select 1 as [id key], 10 as [select], 1 as [customer's value],
+                        cast('2024-01-01' as date) as updated_at
+                    union all select 2, 20, 2, cast('2024-01-02' as date)
+                    union all select 3, 30, 3, cast('2024-01-03' as date)
+                {% endset %}
+                {% set b %}
+                    select 2 as [id key], 20 as [select], 2 as [customer's value],
+                        cast('2024-01-02' as date) as updated_at
+                    union all select 3, 31, 3, cast('2024-01-03' as date)
+                    union all select 4, 40, 4, cast('2024-01-04' as date)
+                {% endset %}
+                {{ audit_helper.compare_which_query_columns_differ(
+                    a, b, primary_key_columns=['id key'],
+                    columns=['select', "customer's value"], event_time='updated_at'
+                ) }}
+            """,
+            "query_comparison.sql": """
+                {{ audit_helper.compare_queries(
+                    'select 1 as id union all select 2', 'select 1 as id union all select 3',
+                    summarize=false, limit=1
+                ) }}
+            """,
+        }
+
+    def test_metadata_event_bounds_and_comparison_contracts(self, project):
+        run_dbt(["deps"])
+        assert len(run_dbt(["run", "--select", "columns_a", "columns_b"])) == 2
+        assert len(run_dbt(["run", "--exclude", "columns_a", "columns_b"])) == 4
+        metadata = {
+            row[0]: tuple(row[1:])
+            for row in project.run_sql(
+                f"select column_name, has_data_type_match, in_a_only, in_b_only, in_both "
+                f"from {project.test_schema}.metadata_comparison",
+                fetch="all",
+            )
+        }
+        assert metadata == {
+            "id": (1, 0, 0, 1),
+            "label": (0, 0, 0, 1),
+            "amount": (0, 0, 0, 1),
+            "only_a": (0, 1, 0, 0),
+            "only_b": (0, 0, 1, 0),
+        }
+        assert dict(
+            project.run_sql(
+                f"select * from {project.test_schema}.which_columns_differ", fetch="all"
+            )
+        ) == {"id key": 0, "select": 1, "customer's value": 0}
+        assert [
+            tuple(row)
+            for row in project.run_sql(
+                f"select column_name, perfect_match, conflicting_values "
+                f"from {project.test_schema}.all_columns_comparison order by column_name",
+                fetch="all",
+            )
+        ] == [("AMOUNT", 1, 0), ("ID", 1, 0), ("LABEL", 1, 0)]
+        assert (
+            project.run_sql(
+                f"select count(*) from {project.test_schema}.query_comparison", fetch="one"
+            )[0]
+            == 1
+        )

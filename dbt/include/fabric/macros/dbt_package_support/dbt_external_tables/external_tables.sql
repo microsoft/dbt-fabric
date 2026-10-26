@@ -79,11 +79,6 @@
 
     {%- set ddl %}
 {{ get_use_database_sql(source_node.database) }}
-IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '{{ source_node.schema }}')
-BEGIN
-EXEC('CREATE SCHEMA [{{ source_node.schema }}]')
-END;
-
 EXEC('
 CREATE VIEW {{ view_relation | replace("'", "''") }} AS
 SELECT *
@@ -93,6 +88,16 @@ FROM {{ openrowset_sql | replace("'", "''") }}
 
     {{ return(ddl) }}
 
+{% endmacro %}
+
+{% macro fabric__create_external_schema(source_node) %}
+    {% set schema_ddl %}create schema {{ adapter.quote(source_node.schema) }}{% endset %}
+    {% set ddl %}
+        {{ get_use_database_sql(source_node.database) }}
+        if not exists (select 1 from sys.schemas where name = '{{ source_node.schema | replace("'", "''") }}')
+            exec('{{ schema_ddl | replace("'", "''") }}');
+    {% endset %}
+    {{ return(ddl) }}
 {% endmacro %}
 
 

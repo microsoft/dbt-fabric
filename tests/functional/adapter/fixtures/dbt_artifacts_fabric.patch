@@ -1,0 +1,453 @@
+diff --git a/dbt_project.yml b/dbt_project.yml
+index 74ff8cd..19ed876 100644
+--- a/dbt_project.yml
++++ b/dbt_project.yml
+@@ -17,7 +17,7 @@ models:
+       +materialized: incremental
+       +full_refresh: false
+       +persist_docs:
+-        # Databricks and SQL Server don't offer column-level support for persisting docs
+-        columns: '{{ target.type != "databricks" and target.type != "sqlserver" }}'
+-        relation: '{{ target.type != "sqlserver" }}'
++        # These adapters don't offer column-level support for persisting docs.
++        columns: '{{ target.type not in ["databricks", "sqlserver", "fabric"] }}'
++        relation: '{{ target.type not in ["sqlserver", "fabric"] }}'
+       +as_columnstore: False
+diff --git a/macros/upload_results/get_column_name_lists.sql b/macros/upload_results/get_column_name_lists.sql
+index 29acb2f..3794035 100644
+--- a/macros/upload_results/get_column_name_lists.sql
++++ b/macros/upload_results/get_column_name_lists.sql
+@@ -63,7 +63,7 @@
+             {% if target.type == "bigquery" %} bytes_processed,
+             {% endif %}
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema",
++            {% if target.type in ["sqlserver", "fabric"] %} "schema",
+             {% else %} schema,
+             {% endif %}
+             name,
+@@ -78,7 +78,7 @@
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database", "schema",
++            {% if target.type in ["sqlserver", "fabric"] %} "database", "schema",
+             {% else %} database, schema,
+             {% endif %}
+             name,
+@@ -107,7 +107,7 @@
+             total_node_runtime,
+             rows_affected,
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema",
++            {% if target.type in ["sqlserver", "fabric"] %} "schema",
+             {% else %} schema,
+             {% endif %}
+             name,
+@@ -122,7 +122,7 @@
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database", "schema",
++            {% if target.type in ["sqlserver", "fabric"] %} "database", "schema",
+             {% else %} database, schema,
+             {% endif %}
+             name,
+@@ -148,7 +148,7 @@
+             total_node_runtime,
+             rows_affected,
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema",
++            {% if target.type in ["sqlserver", "fabric"] %} "schema",
+             {% else %} schema,
+             {% endif %}
+             name,
+@@ -163,7 +163,7 @@
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database", "schema",
++            {% if target.type in ["sqlserver", "fabric"] %} "database", "schema",
+             {% else %} database, schema,
+             {% endif %}
+             name,
+@@ -183,7 +183,7 @@
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database", "schema",
++            {% if target.type in ["sqlserver", "fabric"] %} "database", "schema",
+             {% else %} database, schema,
+             {% endif %}
+             source_name,
+diff --git a/models/dim_dbt__current_models.sql b/models/dim_dbt__current_models.sql
+index 5454c35..145e09f 100644
+--- a/models/dim_dbt__current_models.sql
++++ b/models/dim_dbt__current_models.sql
+@@ -42,19 +42,19 @@ with
+             node_id,
+             max(
+                 case
+-                    when was_full_refresh {% if target.type == "sqlserver" %} = 1 {% endif %}
++                    when was_full_refresh {% if target.type in ["sqlserver", "fabric"] %} = 1 {% endif %}
+                     then query_completed_at
+                 end
+             ) as last_full_refresh_run_completed_at,
+             max(
+                 case
+-                    when was_full_refresh {% if target.type == "sqlserver" %} = 1 {% endif %}
++                    when was_full_refresh {% if target.type in ["sqlserver", "fabric"] %} = 1 {% endif %}
+                     then total_node_runtime
+                 end
+             ) as last_full_refresh_run_total_runtime,
+             max(
+                 case
+-                    when was_full_refresh {% if target.type == "sqlserver" %} = 1 {% endif %}
++                    when was_full_refresh {% if target.type in ["sqlserver", "fabric"] %} = 1 {% endif %}
+                     then rows_affected
+                 end
+             ) as last_full_refresh_run_rows_affected
+@@ -77,19 +77,19 @@ with
+             {% endif %},
+             max(
+                 case
+-                    when not was_full_refresh {% if target.type == "sqlserver" %} = 1 {% endif %}
++                    when not was_full_refresh {% if target.type in ["sqlserver", "fabric"] %} = 1 {% endif %}
+                     then query_completed_at
+                 end
+             ) as last_incremental_run_completed_at,
+             max(
+                 case
+-                    when not was_full_refresh {% if target.type == "sqlserver" %} = 1 {% endif %}
++                    when not was_full_refresh {% if target.type in ["sqlserver", "fabric"] %} = 1 {% endif %}
+                     then total_node_runtime
+                 end
+             ) as last_incremental_run_total_runtime,
+             max(
+                 case
+-                    when not was_full_refresh {% if target.type == "sqlserver" %} = 1 {% endif %}
++                    when not was_full_refresh {% if target.type in ["sqlserver", "fabric"] %} = 1 {% endif %}
+                     then rows_affected
+                 end
+             ) as last_incremental_run_rows_affected
+diff --git a/models/dim_dbt__models.sql b/models/dim_dbt__models.sql
+index 34f066a..c222b01 100644
+--- a/models/dim_dbt__models.sql
++++ b/models/dim_dbt__models.sql
+@@ -9,10 +9,10 @@ with
+             node_id,
+             run_started_at,
+             name,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             depends_on_nodes,
+diff --git a/models/dim_dbt__seeds.sql b/models/dim_dbt__seeds.sql
+index cf005fb..118851c 100644
+--- a/models/dim_dbt__seeds.sql
++++ b/models/dim_dbt__seeds.sql
+@@ -9,10 +9,10 @@ with
+             node_id,
+             run_started_at,
+             name,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             package_name,
+diff --git a/models/dim_dbt__snapshots.sql b/models/dim_dbt__snapshots.sql
+index d1d0a99..913261b 100644
+--- a/models/dim_dbt__snapshots.sql
++++ b/models/dim_dbt__snapshots.sql
+@@ -9,10 +9,10 @@ with
+             node_id,
+             run_started_at,
+             name,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             depends_on_nodes,
+diff --git a/models/dim_dbt__sources.sql b/models/dim_dbt__sources.sql
+index c6e3263..20440c8 100644
+--- a/models/dim_dbt__sources.sql
++++ b/models/dim_dbt__sources.sql
+@@ -8,10 +8,10 @@ with
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             source_name,
+diff --git a/models/fct_dbt__model_executions.sql b/models/fct_dbt__model_executions.sql
+index 3b7c236..74e05ba 100644
+--- a/models/fct_dbt__model_executions.sql
++++ b/models/fct_dbt__model_executions.sql
+@@ -17,7 +17,7 @@ with
+             rows_affected
+             {% if target.type == "bigquery" %}, bytes_processed {% endif %},
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             name,
+diff --git a/models/fct_dbt__seed_executions.sql b/models/fct_dbt__seed_executions.sql
+index 1e6465a..8c75376 100644
+--- a/models/fct_dbt__seed_executions.sql
++++ b/models/fct_dbt__seed_executions.sql
+@@ -16,7 +16,7 @@ with
+             total_node_runtime,
+             rows_affected,
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             name,
+diff --git a/models/fct_dbt__snapshot_executions.sql b/models/fct_dbt__snapshot_executions.sql
+index 58ca440..92c946e 100644
+--- a/models/fct_dbt__snapshot_executions.sql
++++ b/models/fct_dbt__snapshot_executions.sql
+@@ -16,7 +16,7 @@ with
+             total_node_runtime,
+             rows_affected,
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             name,
+diff --git a/models/sources/model_executions.sql b/models/sources/model_executions.sql
+index ac0dbaa..f7adce5 100644
+--- a/models/sources/model_executions.sql
++++ b/models/sources/model_executions.sql
+@@ -16,7 +16,7 @@ select
+         cast(null as {{ type_int() }}) as bytes_processed,
+     {% endif %}
+     cast(null as {{ type_string() }}) as materialization,
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "schema"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "schema"
+     {% else %} schema
+     {% endif %},
+     cast(null as {{ type_string() }}) as name,
+diff --git a/models/sources/models.sql b/models/sources/models.sql
+index c9cf09e..a47b390 100644
+--- a/models/sources/models.sql
++++ b/models/sources/models.sql
+@@ -5,10 +5,10 @@ select
+     cast(null as {{ type_string() }}) as command_invocation_id,
+     cast(null as {{ type_string() }}) as node_id,
+     cast(null as {{ type_timestamp() }}) as run_started_at,
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "database"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "database"
+     {% else %} database
+     {% endif %},
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "schema"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "schema"
+     {% else %} schema
+     {% endif %},
+     cast(null as {{ type_string() }}) as name,
+diff --git a/models/sources/seed_executions.sql b/models/sources/seed_executions.sql
+index c4440b5..a343c44 100644
+--- a/models/sources/seed_executions.sql
++++ b/models/sources/seed_executions.sql
+@@ -13,7 +13,7 @@ select
+     cast(null as {{ type_float() }}) as total_node_runtime,
+     cast(null as {{ type_int() }}) as rows_affected,
+     cast(null as {{ type_string() }}) as materialization,
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "schema"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "schema"
+     {% else %} schema
+     {% endif %},
+     cast(null as {{ type_string() }}) as name,
+diff --git a/models/sources/seeds.sql b/models/sources/seeds.sql
+index 5126ab2..5f6c38f 100644
+--- a/models/sources/seeds.sql
++++ b/models/sources/seeds.sql
+@@ -5,10 +5,10 @@ select
+     cast(null as {{ type_string() }}) as command_invocation_id,
+     cast(null as {{ type_string() }}) as node_id,
+     cast(null as {{ type_timestamp() }}) as run_started_at,
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "database"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "database"
+     {% else %} database
+     {% endif %},
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "schema"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "schema"
+     {% else %} schema
+     {% endif %},
+     cast(null as {{ type_string() }}) as name,
+diff --git a/models/sources/snapshot_executions.sql b/models/sources/snapshot_executions.sql
+index c4440b5..a343c44 100644
+--- a/models/sources/snapshot_executions.sql
++++ b/models/sources/snapshot_executions.sql
+@@ -13,7 +13,7 @@ select
+     cast(null as {{ type_float() }}) as total_node_runtime,
+     cast(null as {{ type_int() }}) as rows_affected,
+     cast(null as {{ type_string() }}) as materialization,
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "schema"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "schema"
+     {% else %} schema
+     {% endif %},
+     cast(null as {{ type_string() }}) as name,
+diff --git a/models/sources/snapshots.sql b/models/sources/snapshots.sql
+index d4ebcf7..a9b9b45 100644
+--- a/models/sources/snapshots.sql
++++ b/models/sources/snapshots.sql
+@@ -5,10 +5,10 @@ select
+     cast(null as {{ type_string() }}) as command_invocation_id,
+     cast(null as {{ type_string() }}) as node_id,
+     cast(null as {{ type_timestamp() }}) as run_started_at,
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "database"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "database"
+     {% else %} database
+     {% endif %},
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "schema"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "schema"
+     {% else %} schema
+     {% endif %},
+     cast(null as {{ type_string() }}) as name,
+diff --git a/models/sources/sources.sql b/models/sources/sources.sql
+index 4f85135..843a81b 100644
+--- a/models/sources/sources.sql
++++ b/models/sources/sources.sql
+@@ -5,10 +5,10 @@ select
+     cast(null as {{ type_string() }}) as command_invocation_id,
+     cast(null as {{ type_string() }}) as node_id,
+     cast(null as {{ type_timestamp() }}) as run_started_at,
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "database"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "database"
+     {% else %} database
+     {% endif %},
+-    cast(null as {{ type_string() }}) as {% if target.type == "sqlserver" %} "schema"
++    cast(null as {{ type_string() }}) as {% if target.type in ["sqlserver", "fabric"] %} "schema"
+     {% else %} schema
+     {% endif %},
+     cast(null as {{ type_string() }}) as source_name,
+diff --git a/models/staging/stg_dbt__model_executions.sql b/models/staging/stg_dbt__model_executions.sql
+index c025ac3..4b7dd40 100644
+--- a/models/staging/stg_dbt__model_executions.sql
++++ b/models/staging/stg_dbt__model_executions.sql
+@@ -18,7 +18,7 @@ with
+             rows_affected
+             {% if target.type == "bigquery" %}, bytes_processed {% endif %},
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},  -- noqa
+             name,
+diff --git a/models/staging/stg_dbt__models.sql b/models/staging/stg_dbt__models.sql
+index 61c619f..cd7d5d4 100644
+--- a/models/staging/stg_dbt__models.sql
++++ b/models/staging/stg_dbt__models.sql
+@@ -9,10 +9,10 @@ with
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},  -- noqa
+             name,
+diff --git a/models/staging/stg_dbt__seed_executions.sql b/models/staging/stg_dbt__seed_executions.sql
+index 2fcb154..9d14b72 100644
+--- a/models/staging/stg_dbt__seed_executions.sql
++++ b/models/staging/stg_dbt__seed_executions.sql
+@@ -17,7 +17,7 @@ with
+             total_node_runtime,
+             rows_affected,
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},  -- noqa
+             name,
+diff --git a/models/staging/stg_dbt__seeds.sql b/models/staging/stg_dbt__seeds.sql
+index de2052c..3550036 100644
+--- a/models/staging/stg_dbt__seeds.sql
++++ b/models/staging/stg_dbt__seeds.sql
+@@ -9,10 +9,10 @@ with
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             name,
+diff --git a/models/staging/stg_dbt__snapshot_executions.sql b/models/staging/stg_dbt__snapshot_executions.sql
+index 25cc25e..4c09675 100644
+--- a/models/staging/stg_dbt__snapshot_executions.sql
++++ b/models/staging/stg_dbt__snapshot_executions.sql
+@@ -17,7 +17,7 @@ with
+             total_node_runtime,
+             rows_affected,
+             materialization,
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},  -- noqa
+             name,
+diff --git a/models/staging/stg_dbt__snapshots.sql b/models/staging/stg_dbt__snapshots.sql
+index 8b2a66a..b9ae572 100644
+--- a/models/staging/stg_dbt__snapshots.sql
++++ b/models/staging/stg_dbt__snapshots.sql
+@@ -9,10 +9,10 @@ with
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             name,
+diff --git a/models/staging/stg_dbt__sources.sql b/models/staging/stg_dbt__sources.sql
+index 508d869..753c97c 100644
+--- a/models/staging/stg_dbt__sources.sql
++++ b/models/staging/stg_dbt__sources.sql
+@@ -9,10 +9,10 @@ with
+             command_invocation_id,
+             node_id,
+             run_started_at,
+-            {% if target.type == "sqlserver" %} "database"
++            {% if target.type in ["sqlserver", "fabric"] %} "database"
+             {% else %} database
+             {% endif %},
+-            {% if target.type == "sqlserver" %} "schema"
++            {% if target.type in ["sqlserver", "fabric"] %} "schema"
+             {% else %} schema
+             {% endif %},
+             source_name,

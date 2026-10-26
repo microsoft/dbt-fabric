@@ -1,4 +1,10 @@
 {% materialization function, adapter='fabric', supported_languages=['sql', 'python'] %}
+    {% if model.get('overloads') %}
+        {{ exceptions.raise_compiler_error(
+            "Fabric does not support overloaded UDFs. Define each function with a distinct name."
+        ) }}
+    {% endif %}
+
     {% set existing_relation = load_cached_relation(this) %}
     {% set target_relation = this.incorporate(type=this.Function) %}
     {% set grant_config = config.get('grants') %}

@@ -2,7 +2,40 @@
 
 ### Unreleased
 
+## Known limitations
+
+* **Inline SQL writes require an upstream dbt Core fix** — Core 1.12.5 can report
+  success for `dbt run-operation --sql` while rolling back transactional writes
+  when the connection closes. Normal materializations have separate commit paths.
+  Tracked in [dbt-labs/dbt#16784](https://github.com/dbt-labs/dbt/issues/16784).
+  Proposed fix: [dbt-labs/dbt#16785](https://github.com/dbt-labs/dbt/pull/16785).
+  The fix is pending upstream review, not released or bundled with this adapter;
+  Fabric retains rollback-on-close behavior.
+
 ## Fixes
+
+* **Additional package gaps** — audit-helper metadata comparison now preserves
+  type parameters and all presence flags, handles empty metadata, and passes the
+  correct event-time bounds arguments with safely quoted identifiers. Profiler
+  results materialize as views, retain fractional averages and wide extrema,
+  compute medians per group, and center values for stable standard deviations.
+  External-tables schema creation escapes identifiers and dynamic SQL literals;
+  refreshed integration coverage uses 0.12.4 and verifies aliased sources.
+
+* **Package compatibility refresh** — aligned the Fabric
+  `dbt_expectations` within-record uniqueness override with 0.10.10: retain
+  quoted-column lists, order row numbers by their values, delegate missing-value
+  filtering, and hash mixed-type values before unpivoting. Corrected integer
+  percentage division, list-based standard-deviation grouping, zero-variance
+  handling, and failure-row results.
+  Grouped-recency tests now support empty grouping lists, cast timestamps before
+  aggregation, and report filtered-empty inputs as failures.
+
+* **dbt-date Unix timestamp range and precision** — split integer epochs into
+  int-sized day/second/microsecond increments instead of overflowing `DATEADD`,
+  and use `DATEDIFF_BIG` for dates beyond 2038. Preserve microsecond precision,
+  truncate nanoseconds to Warehouse's supported precision, and provide the
+  upstream default `format="seconds"`.
 
 * **Legacy `authentication` aliases broken in token acquisition** — profiles using
   `authentication: ServicePrincipal` or `authentication: fabricnotebook` failed
@@ -20,6 +53,25 @@
   ([#453](https://github.com/microsoft/dbt-fabric/issues/453))
 
 ## Features
+
+* **dbt_artifacts and dbt_constraints integration** — added all 11 artifacts upload
+  serializers and Fabric constraint creation, lookup, permission, and rebuild
+  lifecycle macros. Artifacts 2.11.1 also needs the included unpublished upstream
+  model/configuration patch; adapter dispatch cannot fix those model branches.
+  Constraint keys are non-enforced, cross-database foreign keys are rejected,
+  and existing nullable columns require contract-driven rebuilds for `NOT NULL`.
+
+* **dbt Core 1.12 support** — raised the minimum requirements to `dbt-core>=1.12.0,<2.0`,
+  `dbt-adapters>=1.24.5,<2.0`, and `dbt-common>=1.37.5,<2.0`. The development
+  environment now resolves published dbt Core 1.12 patch releases. The lockfile
+  pins Core 1.12.5 and adapters 1.24.5 through the configured CFS proxy. Contributor
+  setup uses that feed directly, without temporary metadata or environment
+  configuration; published runtime dependency requirements remain index-independent.
+  This upgrade does not add managed dbt State support.
+
+* **UDF overload validation** — overloaded UDFs introduced in dbt Core 1.12 are
+  rejected before executing SQL, preventing an overload from replacing the
+  original Fabric function. Define functions with distinct names instead.
 
 * **IDENTITY column support for `materialized='table'` models** — a contract-enforced
   table model can now declare a single `bigint` column as a Fabric `IDENTITY` column
