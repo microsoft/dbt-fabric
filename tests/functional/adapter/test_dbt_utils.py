@@ -99,6 +99,21 @@ select
     {{ prefix_relations | length }} as prefix_count
 """
 
+STAR_SQL = """
+{{ config(materialized="table") }}
+select {{ dbt_utils.star(
+    from=ref("dbt_utils_subject"),
+    prefix="prefixed_",
+    rename={"StAtUs": "renamed_status"}
+) }}
+from {{ ref("dbt_utils_subject") }}
+"""
+
+RECENT_SQL = """
+select id, {{ dbt.current_timestamp() }} as updated_at
+from {{ ref("dbt_utils_subject") }}
+"""
+
 SCHEMA_YML = """
 version: 2
 seeds:
@@ -131,6 +146,14 @@ seeds:
             to: ref('dbt_utils_subject')
             field: id
             from_condition: "id < 4"
+models:
+  - name: dbt_utils_recent
+    data_tests:
+      - dbt_utils.recency:
+          arguments:
+            field: updated_at
+            datepart: day
+            interval: 1
 """
 
 
@@ -160,14 +183,30 @@ class TestDbtUtilsFabricSupport:
             "dbt_utils_width_bucket.sql": WIDTH_BUCKET_SQL,
             "dbt_utils_urls.sql": URL_SQL,
             "dbt_utils_relations.sql": RELATIONS_SQL,
+            "dbt_utils_star.sql": STAR_SQL,
+            "dbt_utils_recent.sql": RECENT_SQL,
             "schema.yml": SCHEMA_YML,
         }
 
     def test_dbt_utils_macros_and_tests(self, project):
         run_dbt(["deps"])
         assert len(run_dbt(["seed"])) == 3
-        assert len(run_dbt(["run"])) == 6
-        assert len(run_dbt(["test"])) == 5
+        assert len(run_dbt(["run"])) == 8
+        assert len(run_dbt(["test"])) == 6
+        assert len(run_dbt(["build", "--select", "dbt_utils_recent", "--empty"])) == 2
+        assert (
+            project.run_sql(
+                f"select count(*) from {project.test_schema}.dbt_utils_recent", fetch="one"
+            )[0]
+            == 0
+        )
+
+        renamed = project.run_sql(
+            f"select prefixed_id, renamed_status "
+            f"from {project.test_schema}.dbt_utils_star order by prefixed_id",
+            fetch="all",
+        )
+        assert [tuple(row) for row in renamed] == [(1, "new"), (2, "new"), (3, "paid")]
 
         series = project.run_sql(
             f"select min(generated_number), max(generated_number), count(*) "

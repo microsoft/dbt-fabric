@@ -1,14 +1,14 @@
-{#- Override: uses DATEADD from epoch '1970-01-01' instead of TO_TIMESTAMP()/FROM_UNIXTIME(). T-SQL requires DATEADD with explicit scale units (s/ms/mcs/ns) to convert Unix timestamps. -#}
-{%- macro fabric__from_unixtimestamp(epochs, format) -%}
+{#- Split epoch units into int-sized DATEADD increments; Warehouse timestamps have microsecond precision. -#}
+{%- macro fabric__from_unixtimestamp(epochs, format="seconds") -%}
 
     {%- if format == "seconds" -%}
-    {%- set scale = "S" -%}
+    {%- set units_per_second = 1 -%}
     {%- elif format == "milliseconds" -%}
-    {%- set scale = "ms" -%}
+    {%- set units_per_second = 1000 -%}
     {%- elif format == "microseconds" -%}
-    {%- set scale = "mcs" -%}
+    {%- set units_per_second = 1000000 -%}
     {%- elif format == "nanoseconds" -%}
-    {%- set scale = "ns" -%}
+    {%- set units_per_second = 1000000000 -%}
     {%- else -%}
     {{ exceptions.raise_compiler_error(
         "value " ~ format ~ " for `format` for from_unixtimestamp is not supported."
@@ -16,10 +16,17 @@
     }}
     {% endif -%}
 
-    {%- if format == "nanoseconds" -%}
-        dateadd(ns, {{ epochs }} % 1000000000, dateadd(s,{{ epochs }} / 1000000000,cast('1970-01-01' as datetime2(7))) )
-    {%- else -%}
-        dateadd({{ scale }}, {{ epochs }}, '1970-01-01')
-    {% endif -%}
+    dateadd(microsecond,
+        cast((cast({{ epochs }} as bigint) % {{ units_per_second }})
+            {% if format == "nanoseconds" %}/ 1000{% else %}* {{ 1000000 // units_per_second }}{% endif %}
+            as int),
+        dateadd(second,
+            cast((cast({{ epochs }} as bigint) / {{ units_per_second }}) % 86400 as int),
+            dateadd(day,
+                cast((cast({{ epochs }} as bigint) / {{ units_per_second }}) / 86400 as int),
+                cast('1970-01-01' as datetime2(6))
+            )
+        )
+    )
 
 {%- endmacro %}

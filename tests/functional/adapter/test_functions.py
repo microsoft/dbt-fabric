@@ -5,6 +5,7 @@ from dbt_common.events.event_catcher import EventCatcher
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.contracts.graph.nodes import FunctionNode
 from dbt.events.types import JinjaLogWarning
+from dbt.exceptions import ParsingError
 from dbt.tests.adapter.functions import files
 from dbt.tests.adapter.functions.test_udfs import (
     CanFindScalarFunctionRelation,
@@ -13,7 +14,7 @@ from dbt.tests.adapter.functions.test_udfs import (
     SqlUDFDefaultArgSupport,
     UDFsBasic,
 )
-from dbt.tests.util import run_dbt
+from dbt.tests.util import run_dbt, write_file
 
 FABRIC_UDF_SQL = "SELECT @price * 2"
 
@@ -121,3 +122,70 @@ class TestFabricDefaultArgsSupportSQLUDFs(FabricSqlUDF, SqlUDFDefaultArgSupport)
 
 class TestFabricCanFindScalarFunctionRelation(FabricSqlUDF, CanFindScalarFunctionRelation):
     pass
+
+
+class TestFabricUDFPartialParsing(FabricSqlUDF):
+    def test_changed_function_body(self, project):
+        run_dbt(["build"])
+        write_file("SELECT @price * 3", project.project_root, "functions", "price_for_xlarge.sql")
+        run_dbt(["build"])
+
+        result = run_dbt(["show", "--inline", "SELECT {{ function('price_for_xlarge') }}(100)"])
+        assert int(result.results[0].agate_table.rows[0].values()[0]) == 300
+
+
+class TestFabricJavaScriptUDFNotSupported:
+    @pytest.fixture(scope="class")
+    def functions(self):
+        return {
+            "price_for_xlarge.js": "return price * 2;",
+            "price_for_xlarge.yml": files.MY_UDF_YML,
+        }
+
+    def test_javascript_udf_is_rejected(self, project):
+        with pytest.raises(
+            ParsingError,
+            match="Function 'price_for_xlarge' uses JavaScript, which is not supported on 'fabric'",
+        ):
+            run_dbt(["build"], expect_pass=False)
+
+
+class TestFabricOverloadedUDFNotSupported:
+    @pytest.fixture(scope="class")
+    def functions(self):
+        return {
+            "price_for_xlarge.sql": FABRIC_UDF_SQL,
+            "price_for_xlarge_int.sql": FABRIC_UDF_SQL,
+            "price_for_xlarge.yml": """
+functions:
+  - name: price_for_xlarge
+    config:
+      type: scalar
+    arguments:
+      - name: price
+        data_type: float
+    returns:
+      data_type: float
+    overloads:
+      - defined_in: price_for_xlarge_int
+        arguments:
+          - name: price
+            data_type: int
+        returns:
+          data_type: int
+""",
+        }
+
+    def test_overloaded_udf_is_rejected(self, project):
+        result = run_dbt(["build"], expect_pass=False)
+
+        assert len(result.results) == 1
+        assert result.results[0].status == RunStatus.Error
+        assert "Fabric does not support overloaded UDFs" in result.results[0].message
+        with project.adapter.connection_named("check_function"):
+            relation = project.adapter.get_relation(
+                database=project.database,
+                schema=project.test_schema,
+                identifier="price_for_xlarge",
+            )
+        assert relation is None

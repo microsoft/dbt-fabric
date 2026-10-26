@@ -5,13 +5,31 @@ Python 3.11, 3.12, or 3.13 can be used for developing the adapter. Dependencies 
 
 ## Setup (one-time)
 
+### Package feed
+
+**Microsoft contributors:** use the CFS feed already configured in `pyproject.toml`.
+No index override is needed. See [CFS guidance](https://aka.ms/1es/netiso/CFS) for
+access issues; direct PyPI artifact downloads are blocked on managed devices.
+
+**Non-Microsoft contributors:** use the public PyPI index. Before running setup or
+development commands, set this in each development shell:
+
+```shell
+export UV_DEFAULT_INDEX=https://pypi.org/simple
+```
+
+Setup regenerates your local lockfile for PyPI. Do not commit index-only changes
+to `uv.lock`; the shared lockfile uses CFS.
+
+### Install the environment
+
 ```shell
 make dev
 ```
 
 This runs `uv sync` (creates `.venv`, installs the adapter itself in editable mode, and installs the `dev`
 dependency group — pytest, ruff, mypy, pre-commit, etc. — pinned exactly as recorded in the checked-in
-`uv.lock`) and then installs the git pre-commit hooks.
+`uv.lock`, or your locally regenerated PyPI lockfile) and then installs the git pre-commit hooks.
 
 ## Everyday commands
 
@@ -31,7 +49,8 @@ Everything below is a thin wrapper around `uv run <command>`; you can always cal
 | `make help`        | Lists all available `make` targets                     |
 
 Changed a dependency in `pyproject.toml` (`dependencies` or `[dependency-groups]`)? Run `uv lock` to update
-`uv.lock`, then commit both files together. `uv run ...` will auto-sync your `.venv` to match.
+`uv.lock` using the configured CFS feed, then commit both files together. Run
+`uv sync --locked` to install that resolution. `uv run ...` will auto-sync your `.venv` to match.
 
 ## Packaging
 

@@ -32,7 +32,7 @@
       with main as (
     {% endif %}
 
-    ( {{ audit_query }} )
+    {{ audit_query }}
 
     {% if not loop.last %}
       union all

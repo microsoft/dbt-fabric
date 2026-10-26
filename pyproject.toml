@@ -23,9 +23,9 @@ dependencies = [
     "azure-identity>=1.14.0",
     "azure-core>=1.26.0",
     "requests>=2.33.0",
-    "dbt-common>=1.0.4,<2.0",
-    "dbt-core>=1.11.0",
-    "dbt-adapters>=1.15.5,<2.0",
+    "dbt-common>=1.37.5,<2.0",
+    "dbt-core>=1.12.0,<2.0",
+    "dbt-adapters>=1.24.5,<2.0",
 ]
 
 [project.urls]
@@ -37,11 +37,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    # install latest changes in dbt-core
-    # TODO: how to automate switching from develop to version branches?
-    "dbt-core @ git+https://github.com/dbt-labs/dbt-core.git@1.11.latest#subdirectory=core",
-    "dbt-adapters>=1.15.5,<1.24",
-    "dbt-tests-adapter>=1.15.5,<1.24",
+    # Test against published patches in the adapter's matching Core minor series.
+    "dbt-core~=1.12.0",
+    "dbt-adapters>=1.24.5,<2.0",
+    "dbt-tests-adapter>=1.20.0,<2.0",
     "pytest==8.0.1",
     "pytest-dotenv==0.5.2",
     "pytest-xdist==3.5.0",
@@ -55,6 +54,11 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[[tool.uv.index]]
+name = "cfs"
+url = "https://pkgs.dev.azure.com/ms-feed-12/1es-public/_packaging/pypi-public/pypi/simple/"
+default = true
 
 [tool.hatch.version]
 path = "dbt/adapters/fabric/__version__.py"
@@ -70,9 +74,6 @@ include = [
     "/README.md",
     "/LICENSE",
 ]
-
-[tool.uv]
-index-url = "https://pypi.org/simple"
 
 [tool.pytest.ini_options]
 filterwarnings = [
