@@ -274,11 +274,15 @@ class FabricConnectionManager(BaseFabricConnectionManager):
         logger.debug("Cancel not supported for Fabric adapter.")
 
     @classmethod
-    def get_response(cls, cursor: Any) -> AdapterResponse:
+    def get_response(
+        cls, cursor: Any, messages: list[tuple[str, str]] | None = None
+    ) -> AdapterResponse:
+        if messages is None:
+            messages = cursor.messages
         messages_to_add = []
         query_id = None
-        if cursor.messages:
-            for msg in cursor.messages:
+        if messages:
+            for msg in messages:
                 marker = "statement id:"
                 pos = msg[1].lower().find(marker)
 
@@ -316,20 +320,28 @@ class FabricConnectionManager(BaseFabricConnectionManager):
     ) -> tuple[AdapterResponse, agate.Table]:
         sql = self._add_query_comment(sql)
         _, cursor = self.add_query(sql, auto_begin)
+        # nextset() clears cursor.messages, so keep the messages of every
+        # result set. Fabric sends the statement ID as one of them.
+        messages: list[tuple[str, str]] = []
+
+        def nextset() -> bool:
+            messages.extend(cursor.messages or [])
+            return bool(cursor.nextset())
+
         if fetch:
             # Get the result of the first non-empty result set (if any)
             while cursor.description is None:
                 logger.debug("Skipping empty result set...")
-                if not cursor.nextset():
+                if not nextset():
                     break
             table = self.get_result_from_cursor(cursor, limit)
         else:
             table = empty_table()
         # Step through all result sets so we process all errors
-        while cursor.nextset():
+        while nextset():
             logger.debug("Stepping through remaining result sets...")
-            pass
-        response = self.get_response(cursor)
+        messages.extend(cursor.messages or [])
+        response = self.get_response(cursor, messages)
         return response, table
 
     def add_begin_query(self):
