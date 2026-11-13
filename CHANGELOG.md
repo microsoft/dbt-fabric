@@ -14,6 +14,13 @@
 
 ## Fixes
 
+* **Snapshot validity windows can overlap** — snapshots now use `run_started_at`
+  as one literal timestamp per invocation instead of `SYSDATETIME()`. A snapshot
+  statement references its time in several CTEs, and Fabric Warehouse can evaluate
+  those references to different values, so a closed version's `dbt_valid_to` could
+  end after its successor's `dbt_valid_from`. All snapshots in one invocation now
+  share the same timestamp. Fixes [#473](https://github.com/microsoft/dbt-fabric/issues/473).
+
 * **Additional package gaps** — audit-helper metadata comparison now preserves
   type parameters and all presence flags, handles empty metadata, and passes the
   correct event-time bounds arguments with safely quoted identifiers. Profiler
